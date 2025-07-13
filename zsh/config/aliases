@@ -1,0 +1,54 @@
+# Misc
+# alias deleteAllHere="rm -Rf .* ; rm -Rf *.* ; rm -Rf *"
+alias gitconfig='git init && echo Name: && read name && echo Email: && read email && git config user.name "$name" && git config user.email "$email"'
+alias gitlog='git log --graph --pretty=format:"%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset" --abbrev-commit'
+alias pipupgrade="pip freeze | sed -e 's/==.*//' | xargs pip install --upgrade"
+alias pipdeleteall='pip freeze | xargs pip uninstall -y'
+alias dockerstopall='docker stop $(docker ps -a -q) ; docker system prune -f ; docker rm -vf $(docker ps -aq) ;'
+alias dockerremoveall='docker stop $(docker ps -a -q) ; docker system prune -f ; docker volume prune ; docker rm -vf $(docker ps -aq) ; docker rmi -f $(docker images -aq)'
+alias sigepweb='open ~/Documents/Development/Python/sigepweb/files ; ~/Documents/Development/Python/sigepweb/venv/bin/python ~/Documents/Development/Python/sigepweb/tests..py'
+
+# Conjunto apagar tela
+alias idledelaydefault='gsettings set org.gnome.settings-daemon.plugins.power idle-dim true && gsettings set org.gnome.desktop.session idle-delay 300'
+alias idledelayalwayson='gsettings set org.gnome.settings-daemon.plugins.power idle-dim false && gsettings set org.gnome.desktop.session idle-delay 0'
+alias nuncaapagartela='idledelayalwayson'
+alias apagartela='idledelaydefault'
+
+# Git
+alias genericpush='read "?Enter git message: " MESSAGE && git add . ; git commit -am ${MESSAGE} --no-verify ; git push --no-verify'
+alias gitreset='git add . && git reset --hard'
+
+# Kill
+alias killcode='pkill -9 -f "Visual Studio Code"'
+alias killchrome='pkill -9 -f "Google Chrome"'
+alias killnode='pkill -9 -f node'
+alias killpython='pkill -9 -f python'
+alias killffmpeg='pkill -9 -f ffmpeg'
+alias killchromecode='killcode ; killchrome'
+alias restartPulse='systemctl --user restart pulseaudio.socket ; systemctl --user restart pulseaudio.service ;'
+
+# Linux
+alias sudo='sudo ' # this is needed to use your aliases with sudo
+alias s='sudo'     # this is needed to use your aliases with sudo
+alias l="ls"
+alias lah="l -lah"
+alias lnc="l --color=\"no\""
+alias cpr="cp -R"
+alias rmr="rm -R"
+
+# Softwares
+alias nano='/opt/homebrew/bin/nano'
+#alias pip='pip3'
+alias brewclean='rm -f Brewfile && brew bundle dump && brew bundle --force cleanup && rm -f Brewfile'
+alias killadobe='sudo pkill -9 -f "Adobe" ; sudo pkill -9 -f "ACCFinderSync" ; sudo pkill -9 -f "CCXProcess.app" ; sudo pkill -9 -f "Core Sync.app" ; sudo pkill -9 -f "CCLibrary.app"'
+
+# Mac OS
+alias cleanmacos='sudo purge; sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder; sudo rm -rf ~/Library/Logs/*; osascript -e "tell app \"Finder\" to empty Trash" &> /dev/null'
+
+alias zs='source ~/.zshrc'  # recarregar config rápido
+alias brewcheck='brew leaves | sort'
+
+# Rsync from mac pro to mac air
+alias rsync_pro_to_air='rsync -avzh --progress --stats --delete /Users/luizotavio/Desktop/videos/ luizotavio@192.168.2.2:/Users/luizotavio/Desktop/videos/'
+alias rsync_air_to_pro='rsync -avzh --progress --stats luizotavio@192.168.2.1:/Users/luizotavio/Desktop/videos/ /Users/luizotavio/Desktop/videos/'
+

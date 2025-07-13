@@ -1,0 +1,29 @@
+bindkey -v
+bindkey -M viins jj vi-cmd-mode
+
+# export KEYTIMEOUT=100
+
+# Use vim keys in tab complete menu:
+bindkey -M menuselect 'h' vi-backward-char
+bindkey -M menuselect 'k' vi-up-line-or-history
+bindkey -M menuselect 'l' vi-forward-char
+bindkey -M menuselect 'j' vi-down-line-or-history
+bindkey -v '^?' backward-delete-char
+
+function zle-line-init zle-keymap-select {
+  # Muda a forma do cursor baseado no modo
+  if [[ $KEYMAP == vicmd ]]; then
+    echo -ne '\e[2 q'  # Cursor em bloco (modo NORMAL)
+    RPS1="-- NORMAL --"
+  else
+    echo -ne '\e[6 q'  # Cursor em linha (modo INSERT)
+    RPS1="-- INSERT --"
+  fi
+  RPS2=$RPS1
+  zle reset-prompt
+}
+
+zle -N zle-line-init
+zle -N zle-keymap-select
+
+autoload -Uz add-zle-hook-widget line-init vi-cmd-mode

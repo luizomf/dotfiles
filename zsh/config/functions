@@ -1,0 +1,74 @@
+function mytouch() {
+  mkdir -p "${1%/*}" && touch "$1"
+  echo "Arquivo \"${1}\" criado com sucesso!"
+}
+
+function componentTs() {
+  # code -r src/components/"$1"/index.tsx src/components/"$1"/"$1".tsx src/components/"$1"/"$1".module.css
+  mkdir -p src/components/"$1"
+  zed -a src/components/"$1"/index.tsx
+  zed -a src/components/"$1"/"$1".spec.tsx
+  zed -a src/components/"$1"/"$1".test.tsx
+  zed -a src/components/"$1"/"$1".stories.tsx
+  zed -a src/components/"$1"/"$1".module.css
+}
+
+function componentJs() {
+  code -r src/components/"$1"/styles.js src/components/"$1"/index.jsx src/components/"$1"/stories.jsx src/components/"$1"/"$1".spec.jsx
+}
+
+function addtocspell() {
+  [ -z "$1" ] && echo "Empty Param" && return
+  echo $1 >>~/Documents/Development/config-files/custom-cspell-dictionary.txt
+}
+
+function aula_c() {
+  [ -z "$1" ] && echo "Empty Param, send a class name" && return
+  ffmpeg -i \
+    "/Users/luizotavio/Desktop/$1.mp4" -vf "scale=1920:1080" -sws_flags lanczos \
+    -c:v libx264 -crf 23 -preset slow -c:a aac -b:a 160k \
+    "/Users/luizotavio/Desktop/$1-c.mp4"
+}
+
+function memoryUsage() {
+  ps -A -o rss,comm | grep -E "$1" | grep -v grep | awk '{ sum += $1 } END { printf "%.2f MB\n", sum / 1024 }'
+}
+
+function deletePythonCache() {
+    # Para o script se qualquer comando falhar
+    set -e
+
+    echo "Limpando diretórios de cache e build..."
+
+    # Encontra todos os diretórios com os nomes especificados e os remove recursivamente.
+    # -type d: busca apenas por diretórios.
+    # -name "nome": busca pelo nome exato.
+    # -o: é o operador "OU".
+    # -exec rm -r {} +: executa 'rm -r' para os itens encontrados. O '+' é mais eficiente
+    #                    e seguro que o xargs, pois agrupa os argumentos.
+    find . -type d \( -name "__pycache__" -o -name ".pytest_cache" -o -name ".tox" -o -name "*.egg-info" -o -name "build" -o -name "dist" \) -exec rm -r {} +
+
+    echo "Limpando arquivos de cache (.pyc, .pyo)..."
+
+    # Encontra todos os arquivos .pyc e .pyo e usa a ação -delete.
+    # -type f: busca apenas por arquivos.
+    # -delete: ação nativa do find para deletar. É a forma mais segura.
+    find . -type f \( -name "*.pyc" -o -name "*.pyo" \) -delete
+
+    echo "Limpeza concluída com sucesso! ✨"
+}
+
+function corteSuave() {
+  local output=${2:-test.mp4}
+  echo "Aplicando corte suave com aceleração leve em: $*"
+  auto-editor "$@" \
+    --edit audio:threshold=0.09,stream=all,mincut=24 \
+    --margin 0.3s,0.5s \
+    --sounded-speed 1.15 \
+    -o "$output"
+}
+
+function iterm() {
+    cwd=$(pwd)
+    open -a iterm $cwd
+}

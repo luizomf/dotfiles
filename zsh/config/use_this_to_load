@@ -1,0 +1,16 @@
+ZSH_CONFIG_DIR="$HOME/dotfiles/zsh/config"
+CONFIG_CONFIG_FILE="${ZSH_CONFIG_DIR}/config"
+FUNCTIONS_CONFIG_FILE="${ZSH_CONFIG_DIR}/functions"
+EXPORTS_CONFIG_FILE="${ZSH_CONFIG_DIR}/exports"
+ALIASES_CONFIG_FILE="${ZSH_CONFIG_DIR}/aliases"
+KEYBINDS_CONFIG_FILE="${ZSH_CONFIG_DIR}/keybinds"
+ZSH_CONFIG_FILES=($CONFIG_CONFIG_FILE $FUNCTIONS_CONFIG_FILE $EXPORTS_CONFIG_FILE $ALIASES_CONFIG_FILE $KEYBINDS_CONFIG_FILE)
+
+for f in "${ZSH_CONFIG_FILES[@]}"; do
+  if test -f "$f"; then
+    source $f
+  else
+    printf "404: $f not found.\n"
+  fi
+done
+
