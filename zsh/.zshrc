@@ -103,4 +103,3 @@ source $ZSH/oh-my-zsh.sh
 # Isso aqui carrega todos os outros arquivos de config
 source "${HOME}/dotfiles/zsh/config/use_this_to_load"
 
-. "$HOME/.local/bin/env"

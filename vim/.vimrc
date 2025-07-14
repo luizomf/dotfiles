@@ -1,3 +1,16 @@
+" --- Gerenciador de Plugins (vim-plug) ---
+call plug#begin('~/.vim/plugged')
+
+" Fuzzy finder para arquivos, buffers, etc.
+Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
+Plug 'junegunn/fzf.vim'
+
+call plug#end()
+
+" --- Atalhos para FZF ---
+" Ctrl+P para buscar arquivos (similar ao VSCode/Sublime)
+nnoremap <C-p> :Files<CR>
+
 " --- Básico ---
 set number              " mostra número das linhas
 syntax on               " highlight de sintaxe

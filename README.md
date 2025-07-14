@@ -18,7 +18,7 @@ Clona, roda o `install.sh` e reza.
 git clone git@github.com:luizomf/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 ./install.sh
-````
+```
 
 **⚠️ Vai sobrescrever teus arquivos. Tamo junto.**
 
