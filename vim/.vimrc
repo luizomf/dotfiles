@@ -44,7 +44,12 @@ nnoremap <leader>q :q<CR>        " sair com <space>q
 nnoremap <leader>x :x<CR>        " salvar e sair com <space>x
 nnoremap <leader>h :noh<CR>      " limpar highlight de busca com <space>h
 
-" Cursor shapes por modo
+" --- Cursor Shape ---
+" Força o formato do cursor no terminal para resolver conflito com ZSH
+let &t_SI = "\<Esc>[6 q" " SI = Start Insert mode -> cursor em linha
+let &t_EI = "\<Esc>[2 q" " EI = End Insert mode -> cursor em bloco (Normal mode)
+
+" Cursor shapes por modo (alternativa para gVim/MacVim)
 " normal / visual / command  = bloco
 " insert / cmd-insert / visual-ex = vertical
 " replace / cmd-replace      = horizontal
