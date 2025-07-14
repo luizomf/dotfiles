@@ -25,16 +25,6 @@ log "셸 Verificando e instalando Oh My Zsh e plugins..."
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
   log "Instalando Oh My Zsh..."
   /bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-
-# --- Neovim e LazyVim ---
-log "🚀 Configurando Neovim e LazyVim..."
-# Remove configuracao antiga do nvim se existir
-rm -rf ~/.config/nvim
-# Clona o LazyVim para a pasta de dotfiles
-rm -rf ~/dotfiles/nvim/* # Limpa a pasta antes de clonar
-git clone https://github.com/LazyVim/starter ~/dotfiles/nvim
-# Cria o symlink para o local esperado pelo nvim
-ln -sfn ~/dotfiles/nvim ~/.config/nvim
 else
   log "Oh My Zsh já está instalado."
 fi
@@ -76,3 +66,4 @@ echo -e "\n\033[1;33mATENÇÃO: Passos manuais necessários:\033[0m"
 echo "1. Inicie o Vim e execute \`:PlugInstall\` para instalar os plugins."
 echo "2. Inicie o Tmux e pressione \`prefix + I\` (Ctrl+b + I) para instalar os plugins."
 echo "3. Reinicie seu terminal para que todas as alterações tenham efeito."
+
