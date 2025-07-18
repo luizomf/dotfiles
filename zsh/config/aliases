@@ -52,3 +52,5 @@ alias brewcheck='brew leaves | sort'
 alias rsync_pro_to_air='rsync -avzh --progress --stats --delete /Users/luizotavio/Desktop/videos/ luizotavio@192.168.2.2:/Users/luizotavio/Desktop/videos/'
 alias rsync_air_to_pro='rsync -avzh --progress --stats luizotavio@192.168.2.1:/Users/luizotavio/Desktop/videos/ /Users/luizotavio/Desktop/videos/'
 
+# Tree ignorando .git, __pycache__, node_modules, .venv, dist, .DS_Store
+alias tr="tree -C -I '__pycache__|node_modules|.git|.venv|dist|.DS_Store|*.egg*'"
