@@ -1,4 +1,5 @@
 #!/bin/sh
+# vim: set filetype=sh :
 
 ZSH_CONFIG_DIR="$HOME/dotfiles/zsh/config"
 CONFIG_CONFIG_FILE="${ZSH_CONFIG_DIR}/config"

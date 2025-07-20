@@ -14,10 +14,6 @@ vim.opt.wrap = false
 vim.opt.hlsearch = true
 vim.opt.incsearch = true
 
-vim.opt.completeopt = { "menu", "menuone", "noselect" }
-vim.opt.encoding = "utf-8"
-vim.opt.fileencoding = "utf-8"
-
 vim.cmd("syntax on")
 
 -- restaura posição do cursor
@@ -25,4 +21,3 @@ vim.cmd([[
   autocmd BufReadPost * if line("'\"") > 0 && line("'\"") <= line("$") |
     \ exe "normal! g`\"" | endif
 ]])
-

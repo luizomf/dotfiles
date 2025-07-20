@@ -1,4 +1,5 @@
 #!/bin/sh
+# vim: set filetype=sh :
 
 function dtouch() {
   mkdir -p "$(dirname "$1")"
