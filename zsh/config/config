@@ -1,3 +1,5 @@
+#!/bin/sh
+
 SAVEHIST=10000
 HISTSIZE=10000
 

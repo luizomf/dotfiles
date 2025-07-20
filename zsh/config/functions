@@ -1,3 +1,5 @@
+#!/bin/sh
+
 function dtouch() {
   mkdir -p "$(dirname "$1")"
   touch "$1"
@@ -43,3 +45,14 @@ function iterm() {
     cwd=$(pwd)
     open -a iterm $cwd
 }
+
+
+restart_terminal() {
+    fc -W       # Salva histórico atual
+    clear       # Limpa tela
+    printf '\033c'  # Reset visual do terminal
+    exec zsh    # Recarrega tudo
+}
+
+
+

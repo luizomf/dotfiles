@@ -1,3 +1,5 @@
+#!/bin/sh
+
 export VARIAVEL='VALOR'
 
 # source $(brew --prefix nvm)/nvm.sh
@@ -18,11 +20,15 @@ export PATH="/opt/homebrew/opt/sqlite/bin:$PATH"
 # To add new things to PATH
 # export PATH="/the/path/needed:$PATH"
 
-export PKG_CONFIG_PATH="/opt/homebrew/opt/curl/lib/pkgconfig"
+# PKG_CONFIG_PATH acumulado corretamente
+export PKG_CONFIG_PATH="/opt/homebrew/opt/curl/lib/pkgconfig:$PKG_CONFIG_PATH"
 export PKG_CONFIG_PATH="/opt/homebrew/opt/sqlite/lib/pkgconfig:$PKG_CONFIG_PATH"
 
-export LDFLAGS="-L/opt/homebrew/lib -L/opt/homebrew/opt/openssl/lib -L/opt/homebrew/opt/openssl@3/lib -L/opt/homebrew/opt/curl/lib -L/opt/homebrew/opt/mysql-client/lib -L/opt/homebrew/opt/libpq/lib -L/opt/homebrew/opt/sqlite/lib "
-export CPPFLAGS="-I/opt/homebrew/include -I/opt/homebrew/opt/openssl/include -I/opt/homebrew/opt/openssl@3/include -I/opt/homebrew/opt/curl/include -I/opt/homebrew/opt/mysql-client/include -I/opt/homebrew/opt/libpq/include -I/opt/homebrew/opt/sqlite/include "
+# LDFLAGS (links de bibliotecas nativas)
+export LDFLAGS="-L/opt/homebrew/lib -L/opt/homebrew/opt/openssl/lib -L/opt/homebrew/opt/openssl@3/lib -L/opt/homebrew/opt/curl/lib -L/opt/homebrew/opt/mysql-client/lib -L/opt/homebrew/opt/libpq/lib -L/opt/homebrew/opt/sqlite/lib"
+
+# CPPFLAGS (cabeçalhos de compilação)
+export CPPFLAGS="-I/opt/homebrew/include -I/opt/homebrew/opt/openssl/include -I/opt/homebrew/opt/openssl@3/include -I/opt/homebrew/opt/curl/include -I/opt/homebrew/opt/mysql-client/include -I/opt/homebrew/opt/libpq/include -I/opt/homebrew/opt/sqlite/include"
 
 export BAT_STYLE="header"
 

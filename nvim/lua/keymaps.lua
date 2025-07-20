@@ -19,7 +19,7 @@ map("n", "<C-l>", "<C-w>l", opts)
 -- Leader shortcuts
 map("n", "<leader>w", ":w<CR>", opts)
 map("n", "<leader>q", ":q<CR>", opts)
-map("n", "<leader>x", ":x<CR>", opts)
+-- map("n", "<leader>x", ":x<CR>", opts)
 map("n", "<leader>h", ":noh<CR>", opts)
 
 -- Diagnósticos (LSP)

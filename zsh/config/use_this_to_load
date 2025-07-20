@@ -1,3 +1,5 @@
+#!/bin/sh
+
 ZSH_CONFIG_DIR="$HOME/dotfiles/zsh/config"
 CONFIG_CONFIG_FILE="${ZSH_CONFIG_DIR}/config"
 FUNCTIONS_CONFIG_FILE="${ZSH_CONFIG_DIR}/functions"

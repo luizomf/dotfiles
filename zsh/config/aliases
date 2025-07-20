@@ -1,3 +1,5 @@
+#!/bin/sh
+
 # Misc
 # alias deleteAllHere="rm -Rf .* ; rm -Rf *.* ; rm -Rf *"
 alias gitconfig='git init && echo Name: && read name && echo Email: && read email && git config user.name "$name" && git config user.email "$email"'
