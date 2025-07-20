@@ -50,6 +50,7 @@ function iterm() {
 
 restart_terminal() {
     fc -W       # Salva histórico atual
+    tmux clear-history 2>/dev/null || true # Limpa o histórico do tmux
     clear       # Limpa tela
     printf '\033c'  # Reset visual do terminal
     exec zsh    # Recarrega tudo

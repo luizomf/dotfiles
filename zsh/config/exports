@@ -2,6 +2,8 @@
 # vim: set filetype=sh :
 
 export VARIAVEL='VALOR'
+export EDITOR="nvim"
+export VISUAL="nvim"
 
 # source $(brew --prefix nvm)/nvm.sh
 

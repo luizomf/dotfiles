@@ -3,3 +3,6 @@
 	email = luizomf@gmail.com
 [init]
 	defaultBranch = main
+[core]
+  editor = nvim
+
