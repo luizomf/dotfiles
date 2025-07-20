@@ -1,3 +1,8 @@
 font-family = JetBrains Mono
 font-size = 28
+font-feature = -calt # disable ligatures
 theme = tokyonight_night
+window-padding-x = 16,8
+window-padding-y = 0,0
+# background = ff0000
+# window-padding-color = background

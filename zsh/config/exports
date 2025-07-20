@@ -4,6 +4,7 @@
 export VARIAVEL='VALOR'
 export EDITOR="nvim"
 export VISUAL="nvim"
+export TABSIZE=2
 
 # source $(brew --prefix nvm)/nvm.sh
 

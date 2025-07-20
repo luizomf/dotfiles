@@ -32,7 +32,12 @@ map("n", "<leader>fg", builtin.live_grep, { desc = "Live grep" })
 map("n", "<leader>fb", builtin.buffers, { desc = "List open buffers" })
 map("n", "<leader>fh", builtin.help_tags, { desc = "Search help tags" })
 map("n", "<leader>fo", builtin.oldfiles, { desc = "Recently opened files" })
-map("n", "<leader>fc", builtin.current_buffer_fuzzy_find, { desc = "Fuzzy search in current buffer" })
+map(
+	"n",
+	"<leader>fc",
+	builtin.current_buffer_fuzzy_find,
+	{ desc = "Fuzzy search in current buffer" }
+)
 map("n", "<leader>fr", builtin.resume, { desc = "Resume last Telescope picker" })
 map("n", "<leader>fs", builtin.lsp_document_symbols, { desc = "Document symbols (LSP)" })
 
@@ -42,3 +47,9 @@ map("n", "<Tab>", ":bnext<CR>", opts)
 map("n", "<S-Tab>", ":bprevious<CR>", opts)
 map("n", "<leader>bd", ":bdelete<CR>", { desc = "Fechar buffer" })
 map("n", "<leader>bu", "<cmd>edit #<CR>", { desc = "Reabrir último buffer" })
+
+-- Formatters
+map({ "n", "v" }, "<leader>f", function()
+	print("Formatting...")
+	require("conform").format({ bufnr = 0, async = false })
+end, { desc = "Format file/selection" })
