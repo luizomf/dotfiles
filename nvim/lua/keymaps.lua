@@ -19,7 +19,6 @@ map("n", "<C-l>", "<C-w>l", opts)
 -- Leader shortcuts
 map("n", "<leader>w", ":w<CR>", opts)
 map("n", "<leader>q", ":q<CR>", opts)
--- map("n", "<leader>x", ":x<CR>", opts)
 map("n", "<leader>h", ":noh<CR>", opts)
 
 -- Diagnósticos (LSP)
@@ -41,4 +40,4 @@ map("n", "<leader><tab>", "<C-^>", { desc = "Toggle last buffer" })
 map("n", "<Tab>", ":bnext<CR>", opts)
 map("n", "<S-Tab>", ":bprevious<CR>", opts)
 map("n", "<leader>bd", ":bdelete<CR>", { desc = "Fechar buffer" })
-map("n", "<leader>bu", "<cmd>edit #<CR>", { desc = "Reabrir último buffer" })
+map("n", "<leader>bu", "<C-^>", { desc = "Reabrir último buffer" })
