@@ -29,6 +29,10 @@ return {
         enable = true,
         additional_vim_regex_highlighting = false,
       },
+      auto_install = true,
+      ignore_install = {},
+      modules = {},
+      sync_install = true,
       indent = { enable = true },
       autotag = { enable = true },
       textobjects = {

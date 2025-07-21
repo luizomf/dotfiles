@@ -17,42 +17,53 @@ return {
             "-",
           },
         },
+        custom_prettier = {
+          command = "prettier",
+          args = {
+            "--stdin-filepath",
+            "$FILENAME",
+            "--config",
+            os.getenv("HOME") .. "/dotfiles/nvim/config_files/prettierrc.json",
+            "--log-level",
+            "silent",
+          },
+        },
       },
       formatters_by_ft = {
         javascript = {
-          "prettier",
+          "custom_prettier",
         },
         typescript = {
-          "prettier",
+          "custom_prettier",
         },
         javascriptreact = {
-          "prettier",
+          "custom_prettier",
         },
         typescriptreact = {
-          "prettier",
+          "custom_prettier",
         },
-        vue = { "prettier" },
-        css = { "prettier" },
+        vue = { "custom_prettier" },
+        css = { "custom_prettier" },
         scss = {
-          "prettier",
+          "custom_prettier",
         },
         less = {
-          "prettier",
+          "custom_prettier",
         },
         html = {
-          "prettier",
+          "custom_prettier",
         },
         json = {
-          "prettier",
+          "custom_prettier",
         },
         yaml = {
-          "prettier",
+          "custom_prettier",
         },
         markdown = {
-          "prettier",
+          "custom_prettier",
         },
         graphql = {
-          "prettier",
+          "custom_prettier",
         },
         lua = {
           "custom_stylua",
@@ -74,6 +85,16 @@ return {
       notify_on_error = true,
       notify_no_formatters = true,
       inherit = false,
+    },
+    keys = {
+      {
+        "<leader>f",
+        function()
+          require("conform").format({ async = false, lsp_fallback = true })
+        end,
+        mode = { "n", "v" },
+        desc = "Format file or range (conform)",
+      },
     },
   },
 }
