@@ -7,8 +7,8 @@ local opts = { noremap = true, silent = true }
 map("i", "jj", "<Esc>", opts)
 
 -- Delete no insert
-map("i", "<C-h>", "<BS>", opts)
-map("i", "<C-l>", "<Del>", opts)
+-- map("i", "<C-h>", "<BS>", opts)
+-- map("i", "<C-l>", "<Del>", opts)
 
 -- Navegação entre splits
 map("n", "<C-h>", "<C-w>h", opts)
@@ -18,11 +18,24 @@ map("n", "<C-l>", "<C-w>l", opts)
 
 -- Leader shortcuts
 map("n", "<leader>w", ":w<CR>", opts)
-map("n", "<leader>q", ":q<CR>", opts)
 map("n", "<leader>h", ":noh<CR>", opts)
 
--- Diagnósticos (LSP)
+-- diagnostics (LSP)
 map("n", "gl", vim.diagnostic.open_float, opts)
+
+-- Toggle diagnostics on/off
+map("n", "<leader>dt", function()
+  if vim.diagnostic.is_enabled() then
+    vim.diagnostic.enable(false)
+  else
+    vim.diagnostic.enable()
+  end
+end)
+
+-- Conform format
+map({ "n", "v" }, "<leader>f", function()
+  require("conform").format({ async = false, lsp_fallback = true })
+end, { desc = "Format file or range (conform)" })
 
 -- Telescope
 local builtin = require("telescope.builtin")
