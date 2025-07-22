@@ -14,6 +14,11 @@ vim.opt.wrap = false
 vim.opt.hlsearch = true
 vim.opt.incsearch = true
 
+vim.opt.scrolloff = math.floor(vim.o.lines / 3)
+vim.opt.sidescrolloff = 8
+
+vim.o.sessionoptions = "blank,buffers,curdir,folds,help,tabpages,winsize,winpos,terminal,localoptions"
+
 vim.cmd("syntax on")
 
 -- restaura posição do cursor

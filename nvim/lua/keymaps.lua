@@ -2,6 +2,7 @@ vim.g.mapleader = " "
 
 local map = vim.keymap.set
 local opts = { noremap = true, silent = true }
+local utils = require("settings.utils")
 
 -- Insert mode: jj = ESC
 map("i", "jj", "<Esc>", opts)
@@ -34,6 +35,7 @@ end)
 
 -- Conform format
 map({ "n", "v" }, "<leader>f", function()
+  utils.notify("Manually formatting with <leader>f...", vim.log.levels.INFO)
   require("conform").format({ async = false, lsp_fallback = true })
 end, { desc = "Format file or range (conform)" })
 

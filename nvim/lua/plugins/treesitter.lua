@@ -1,14 +1,20 @@
 return {
   "nvim-treesitter/nvim-treesitter",
   build = ":TSUpdate",
-  event = { "BufReadPost", "BufNewFile" },
+  event = { "BufReadPre", "BufNewFile" },
   dependencies = {
     "nvim-treesitter/nvim-treesitter-textobjects",
     "windwp/nvim-ts-autotag",
   },
   config = function()
     require("nvim-treesitter.configs").setup({
+      modules = {},
       ensure_installed = {
+        "c",
+        "cpp",
+        "go",
+        "rust",
+        "cmake",
         "bash",
         "lua",
         "vim",
@@ -25,16 +31,23 @@ return {
         "markdown_inline",
         "python",
       },
-      highlight = {
-        enable = true,
-        additional_vim_regex_highlighting = false,
-      },
+      sync_install = false,
       auto_install = true,
       ignore_install = {},
-      modules = {},
-      sync_install = true,
-      indent = { enable = true },
-      autotag = { enable = true },
+
+      highlight = {
+        enable = true,
+        disable = {
+          -- add languages. Ex.: "markdown", "toml", etc
+        },
+        additional_vim_regex_highlighting = false,
+      },
+      indent = {
+        enable = true,
+      },
+      autotag = {
+        enable = true,
+      },
       textobjects = {
         select = {
           enable = true,
@@ -43,21 +56,9 @@ return {
             ["af"] = "@function.outer",
             ["if"] = "@function.inner",
             ["ac"] = "@class.outer",
-            ["ic"] = {
-              query = "@class.inner",
-              desc = "Select inner part of a class region",
-            },
-            ["as"] = {
-              query = "@local.scope",
-              query_group = "locals",
-              desc = "Select language scope",
-            },
+            ["ic"] = "@class.inner",
+            ["as"] = "@scope",
           },
-        },
-        selection_modes = {
-          ["@parameter.outer"] = "v", -- charwise
-          ["@function.outer"] = "V", -- linewise
-          ["@class.outer"] = "<c-v>", -- blockwise
         },
         move = {
           enable = true,
@@ -71,6 +72,7 @@ return {
             ["[c"] = "@class.outer",
           },
         },
+        swap = {},
       },
     })
   end,

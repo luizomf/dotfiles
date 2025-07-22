@@ -18,6 +18,7 @@
 
 -- Disable virtual text, enable signs and underline
 vim.diagnostic.config({
+  virtual_lines = false,
   virtual_text = false,
   underline = true,
   signs = true,
