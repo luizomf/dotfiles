@@ -17,9 +17,13 @@ vim.opt.incsearch = true
 vim.opt.scrolloff = math.floor(vim.o.lines / 3)
 vim.opt.sidescrolloff = 8
 
-vim.o.sessionoptions = "blank,buffers,curdir,folds,help,tabpages,winsize,winpos,terminal,localoptions"
+vim.opt.sessionoptions = "blank,buffers,curdir,folds,help,tabpages,winsize,winpos,terminal,localoptions"
 
 vim.cmd("syntax on")
+
+-- Render tabs and whitespaces
+vim.opt.list = true
+vim.opt.listchars = "tab:>-,trail:-,lead:·,eol:¬"
 
 -- restaura posição do cursor
 vim.cmd([[

@@ -2,7 +2,22 @@ font-family = JetBrains Mono
 font-size = 28
 font-feature = -calt # disable ligatures
 theme = tokyonight_night
+
+# Mouse
+mouse-hide-while-typing = true
+
+# Window
+gtk-single-instance = true
+gtk-tabs-location = bottom
+gtk-wide-tabs = false
 window-padding-x = 16,8
 window-padding-y = 0,0
-# background = ff0000
-# window-padding-color = background
+window-padding-balance = true
+window-decoration = true
+# macos-titlebar-style = hidden
+window-theme = ghostty
+background-opacity = 1
+
+# Other
+copy-on-select = clipboard
+shell-integration-features = cursor,sudo,no-title

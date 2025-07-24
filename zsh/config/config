@@ -24,10 +24,16 @@ setopt auto_list # automatically list choices on ambiguous completion
 setopt auto_menu # automatically use menu completion
 setopt always_to_end # move cursor to end if word had one match
 
-SPACESHIP_NODE_SHOW=false
-SPACESHIP_PACKAGE_SHOW=false
+# SPACESHIP_NODE_SHOW=false
+# SPACESHIP_PACKAGE_SHOW=false
 
 setopt AUTO_PUSHD         # cd empilha diretórios
-setopt PUSHD_IGNORE_DUPS  # não empilha o mesmo dir duas vezes
+# setopt PUSHD_IGNORE_DUPS  # não empilha o mesmo dir duas vezes
 setopt PUSHD_SILENT       # não printa a pilha toda a cada pushd
+
+# .zshrc
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME="omtheme"
+plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
+source $ZSH/oh-my-zsh.sh
 
