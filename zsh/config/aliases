@@ -9,7 +9,6 @@ alias pipupgrade="pip freeze | sed -e 's/==.*//' | xargs pip install --upgrade"
 alias pipdeleteall='pip freeze | xargs pip uninstall -y'
 alias dockerstopall='docker stop $(docker ps -a -q) ; docker system prune -f ; docker rm -vf $(docker ps -aq) ;'
 alias dockerremoveall='docker stop $(docker ps -a -q) ; docker system prune -f ; docker volume prune ; docker rm -vf $(docker ps -aq) ; docker rmi -f $(docker images -aq)'
-alias sigepweb='open ~/Documents/Development/Python/sigepweb/files ; ~/Documents/Development/Python/sigepweb/venv/bin/python ~/Documents/Development/Python/sigepweb/tests..py'
 
 # Conjunto apagar tela
 alias idledelaydefault='gsettings set org.gnome.settings-daemon.plugins.power idle-dim true && gsettings set org.gnome.desktop.session idle-delay 300'
@@ -40,9 +39,9 @@ alias cpr="cp -R"
 alias rmr="rm -R"
 
 # Softwares
-alias nano='/opt/homebrew/bin/nano'
+alias nano='nvim' # se vira
 #alias pip='pip3'
-alias brewclean='rm -f Brewfile && brew bundle dump && brew bundle --force cleanup && rm -f Brewfile'
+alias brewupdate='brew update ; brew upgrade ; omz update ; brew cleanup ; brew bundle dump --file=~/dotfiles/homebrew/Brewfile --describe --force'
 alias killadobe='sudo pkill -9 -f "Adobe" ; sudo pkill -9 -f "ACCFinderSync" ; sudo pkill -9 -f "CCXProcess.app" ; sudo pkill -9 -f "Core Sync.app" ; sudo pkill -9 -f "CCLibrary.app"'
 
 # Mac OS

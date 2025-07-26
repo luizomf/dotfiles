@@ -1,22 +1,51 @@
 tap "homebrew/bundle"
 tap "homebrew/core"
+# General-purpose data compression with high compression ratio
+brew "xz"
+# Cryptography and SSL/TLS Toolkit
+brew "openssl@3"
+# Clone of cat(1) with syntax highlighting and Git integration
 brew "bat"
+# Cross-platform make
 brew "cmake"
+# Play, record, convert, and stream audio and video
 brew "ffmpeg"
+# Command-line fuzzy finder written in Go
 brew "fzf"
+# Improved top (interactive process viewer)
 brew "htop"
+# Free (GNU) replacement for the Pico text editor
 brew "nano"
+# Ambitious Vim-fork focused on extensibility and agility
+brew "neovim"
+# 7-Zip (high compression file archiver) implementation
 brew "p7zip"
+# Package compiler and linker metadata toolkit
 brew "pkgconf"
+# Library for command-line editing
+brew "readline"
+# Python version management
 brew "pyenv"
+# Search tool like grep and The Silver Searcher
 brew "ripgrep"
+# Command-line interface for SQLite
+brew "sqlite"
+# Tool Command Language
+brew "tcl-tk"
+# Terminal multiplexer
 brew "tmux"
+# Display directories as trees (with optional color/HTML output)
 brew "tree"
-brew "vnstat"
+# Executes a program periodically, showing output fullscreen
 brew "watch"
+# Internet file retriever
+brew "wget"
+# General-purpose lossless data-compression library
+brew "zlib"
 cask "font-fira-code"
 cask "font-jetbrains-mono"
-cask "sublime-text"
+# Terminal emulator that uses platform-native UI and GPU acceleration
+cask "ghostty"
 vscode "bradlc.vscode-tailwindcss"
 vscode "britesnow.vscode-toggle-quotes"
 vscode "chadalen.vscode-jetbrains-icon-theme"
@@ -30,6 +59,7 @@ vscode "foxundermoon.shell-format"
 vscode "ms-python.debugpy"
 vscode "ms-python.python"
 vscode "ms-python.vscode-pylance"
+vscode "ms-python.vscode-python-envs"
 vscode "natqe.reload"
 vscode "omthemes.omthemes"
 vscode "streetsidesoftware.code-spell-checker"

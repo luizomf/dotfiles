@@ -21,6 +21,8 @@ else
   brew update
 fi
 
+# Para gerar o Brewfile
+# brew bundle dump --file=~/dotfiles/homebrew/Brewfile --describe --force
 log "📦 Instalando pacotes e aplicações do Brewfile..."
 brew bundle --file="$HOME/dotfiles/homebrew/Brewfile"
 
