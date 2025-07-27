@@ -27,8 +27,10 @@ map("n", "gl", vim.diagnostic.open_float, opts)
 -- Toggle diagnostics on/off
 map("n", "<leader>dt", function()
   if vim.diagnostic.is_enabled() then
+    utils.notify("Diagnostic disabled")
     vim.diagnostic.enable(false)
   else
+    utils.notify("Diagnostic enabled")
     vim.diagnostic.enable()
   end
 end)

@@ -32,4 +32,51 @@ vim.api.nvim_create_user_command("CountWords", function()
   U.count_words()
 end, {})
 
+function U.wrap_in_chars(left, right)
+  left = left or "("
+  right = right or ")"
+
+  -- Pega início e fim da seleção visual
+  local start_pos = vim.fn.getpos("'<")
+  local end_pos = vim.fn.getpos("'>")
+
+  local start_line = start_pos[2]
+  local start_col = start_pos[3]
+  local end_line = end_pos[2]
+  local end_col = end_pos[3]
+
+  -- Corrige ordem se o usuário selecionou ao contrário
+  if start_line > end_line or (start_line == end_line and start_col > end_col) then
+    start_line, end_line = end_line, start_line
+    start_col, end_col = end_col, start_col
+  end
+
+  -- Pegamos a linha original
+  local line = vim.api.nvim_buf_get_lines(0, start_line - 1, start_line, false)[1]
+
+  -- Pega o trecho selecionado
+  local selected = string.sub(line, start_col, end_col)
+
+  -- Monta novo conteúdo com o wrap
+  local wrapped = string.sub(line, 1, start_col - 1) .. left .. selected .. right .. string.sub(line, end_col + 1)
+
+  -- Substitui linha no buffer
+  vim.api.nvim_buf_set_lines(0, start_line - 1, start_line, false, { wrapped })
+
+  -- Move o cursor pro final da seleção
+  vim.api.nvim_win_set_cursor(0, { start_line, start_col + #selected + 1 })
+
+  U.notify("Texto envolvido com: " .. left .. " " .. right)
+end
+
+vim.api.nvim_create_user_command("WrapIn", function(opts)
+  local left = opts.fargs[1] or "("
+  local right = opts.fargs[2] or ")"
+  U.wrap_in_chars(left, right)
+end, {
+  nargs = "*",
+  range = true,
+  desc = "Envolve a seleção visual com os caracteres informados",
+})
+
 return U
