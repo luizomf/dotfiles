@@ -1,7 +1,6 @@
 #!/bin/sh
 # vim: set filetype=sh :
 
-export VARIAVEL='VALOR'
 export EDITOR="nvim"
 export VISUAL="nvim"
 export TABSIZE=2

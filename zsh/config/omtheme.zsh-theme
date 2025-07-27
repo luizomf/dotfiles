@@ -50,11 +50,19 @@ local RESET_ALL="%f%k"
 # Git prompt config
 ZSH_THEME_GIT_PROMPT_PREFIX=" ${FG_CYAN}("
 ZSH_THEME_GIT_PROMPT_SUFFIX="${FG_CYAN})${RESET_ALL}"
-ZSH_THEME_GIT_PROMPT_DIRTY="${FG_RED} ✘${RESET_ALL}"
-ZSH_THEME_GIT_PROMPT_CLEAN="${FG_GREEN} ✔${RESET_ALL}"
+ZSH_THEME_GIT_PROMPT_DIRTY="${FG_RED} ✱${RESET_ALL}"
+ZSH_THEME_GIT_PROMPT_CLEAN="${FG_GREEN} ⭑${RESET_ALL}"
 
+# Desativa o prompt padrão do venv - (.venv)
+# Sem isso, o tema duplicaria o nome do venv
+typeset -g VIRTUAL_ENV_DISABLE_PROMPT=1
+
+# Salvando esse ícone porque por ser útil depois 
 # Prompt principal
-PROMPT='${FG_YELLOW}%~${FG_RESET}$(git_prompt_info)'
-PROMPT+=' %(?:${FG_GREEN} :${FG_RED}[✖ %?])'
+PROMPT=''
+PROMPT+='${FG_YELLOW}%1~${FG_RESET}'
+PROMPT+='$(git_prompt_info)'
+PROMPT+=' %(?:${FG_GREEN}[✔] :${FG_RED}[✖ %?])${RESET_ALL}'
+PROMPT+='${VIRTUAL_ENV:+[${FG_BRIGHT_CYAN}${VIRTUAL_ENV:t}${RESET_ALL}]}'
 PROMPT+=$'\n'
-PROMPT+='${VIM_PROMPT_FG_COLOR}${VIM_PROMPT_BG_COLOR}${VIM_PROMPT_SYMBOL} ${RESET_ALL}'
+PROMPT+='${VIM_PROMPT_FG_COLOR}${VIM_PROMPT_BG_COLOR}${VIM_PROMPT_SYMBOL}${RESET_ALL} '
