@@ -67,10 +67,15 @@ elif [[ "$OP_SYSTEM" == "ubuntu" ]]; then
   sudo apt update -y
   sudo apt upgrade -y
 
-  loginfo "Installing ZSH..."
-  sudo apt install zsh -y
+  loginfo "Installing apps..."
+  sudo apt install \
+    openssl bat cmake ffmpeg fzf htop nano \
+    neovim p7zip pkgconf sqlite3 tcl tk tcl-dev tk-dev tmux \
+    tree watch wget fonts-firacode fonts-jetbrains-mono \
+    -y
+
   sudo chsh -s /usr/bin/zsh
-  
+
 else
   logerror "Wrong system, sorry!"
   exit 1
