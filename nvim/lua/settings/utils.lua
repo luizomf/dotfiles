@@ -33,45 +33,53 @@ vim.api.nvim_create_user_command("CountWords", function()
 end, {})
 
 function U.wrap_in_chars(left, right)
-  left = left or "("
-  right = right or ")"
+  local pairs = {
+    ["("] = ")",
+    ["["] = "]",
+    ["{"] = "}",
+    ["<"] = ">",
+    ["'"] = "'",
+    ['"'] = '"',
+    ["`"] = "`",
+    ["«"] = "»",
+    ["“"] = "”",
+    ["‘"] = "’",
+    ["‹"] = "›",
+  }
 
-  -- Pega início e fim da seleção visual
-  local start_pos = vim.fn.getpos("'<")
-  local end_pos = vim.fn.getpos("'>")
+  -- Esse é um teste
+  -- ainda não sei
+  -- escrever testes em LUA
+  -- Testando testando testando...
 
-  local start_line = start_pos[2]
-  local start_col = start_pos[3]
-  local end_line = end_pos[2]
-  local end_col = end_pos[3]
-
-  -- Corrige ordem se o usuário selecionou ao contrário
-  if start_line > end_line or (start_line == end_line and start_col > end_col) then
-    start_line, end_line = end_line, start_line
-    start_col, end_col = end_col, start_col
+  if not left or left == "" then
+    U.notify("Informe qual caractere será usado.", vim.log.levels.WARN)
+    return
   end
 
-  -- Pegamos a linha original
-  local line = vim.api.nvim_buf_get_lines(0, start_line - 1, start_line, false)[1]
+  right = right or pairs[left] or left
 
-  -- Pega o trecho selecionado
-  local selected = string.sub(line, start_col, end_col)
+  local bufnr = vim.api.nvim_get_current_buf()
+  local start_pos = vim.api.nvim_buf_get_mark(bufnr, "<")
+  local end_pos = vim.api.nvim_buf_get_mark(bufnr, ">")
 
-  -- Monta novo conteúdo com o wrap
-  local wrapped = string.sub(line, 1, start_col - 1) .. left .. selected .. right .. string.sub(line, end_col + 1)
+  if start_pos[1] == end_pos[1] and start_pos[2] == end_pos[2] then
+    U.notify("Seleção vazia ou inválida", vim.log.levels.WARN)
+    return
+  end
 
-  -- Substitui linha no buffer
-  vim.api.nvim_buf_set_lines(0, start_line - 1, start_line, false, { wrapped })
+  local text = vim.api.nvim_buf_get_text(bufnr, start_pos[1] - 1, start_pos[2], end_pos[1] - 1, end_pos[2], {})
+  local joined = table.concat(text, "\n")
+  local wrapped = left .. joined .. right
 
-  -- Move o cursor pro final da seleção
-  vim.api.nvim_win_set_cursor(0, { start_line, start_col + #selected + 1 })
+  vim.api.nvim_buf_set_text(bufnr, start_pos[1] - 1, start_pos[2], end_pos[1] - 1, end_pos[2], { wrapped })
 
-  U.notify("Texto envolvido com: " .. left .. " " .. right)
+  U.notify("Texto envolvido com: " .. left .. right)
 end
 
 vim.api.nvim_create_user_command("WrapIn", function(opts)
-  local left = opts.fargs[1] or "("
-  local right = opts.fargs[2] or ")"
+  local left = opts.fargs[1]
+  local right = opts.fargs[2]
   U.wrap_in_chars(left, right)
 end, {
   nargs = "*",
