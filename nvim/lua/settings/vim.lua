@@ -1,6 +1,7 @@
 vim.opt.number = true
 vim.opt.relativenumber = true
 vim.opt.cursorline = true
+vim.opt.colorcolumn = { 80 }
 
 vim.opt.tabstop = 2
 vim.opt.shiftwidth = 2
@@ -14,6 +15,7 @@ vim.opt.wrap = false
 vim.opt.hlsearch = true
 vim.opt.incsearch = true
 
+-- Tenta manter o cursor mais ao centro no scroll
 vim.opt.scrolloff = math.floor(vim.o.lines / 3)
 vim.opt.sidescrolloff = 8
 
@@ -30,3 +32,10 @@ vim.cmd([[
   autocmd BufReadPost * if line("'\"") > 0 && line("'\"") <= line("$") |
     \ exe "normal! g`\"" | endif
 ]])
+
+-- highlight on yank
+vim.api.nvim_create_autocmd("TextYankPost", {
+  callback = function()
+    vim.highlight.on_yank({ higroup = "IncSearch", timeout = 1000 })
+  end,
+})

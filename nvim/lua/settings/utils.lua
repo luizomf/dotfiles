@@ -2,13 +2,15 @@ local U = {}
 
 -- Notificações
 function U.notify(msg, level, timeout)
-  vim.notify(msg, level or vim.log.levels.INFO, { title = "nvim", timeout = timeout or 2000 })
+  vim.notify(
+    msg,
+    level or vim.log.levels.INFO,
+    { title = "nvim", timeout = timeout or 2000 }
+  )
 end
 
 -- Atalho pra contar Notificações
 vim.api.nvim_create_user_command("Notify", function(opts)
-  -- print(vim.inspect(opts.fargs))
-
   local msg = opts.fargs[1] or "NO MESSAGE"
   local level = opts.fargs[2] or vim.log.levels.INFO
   local timeout = tonumber(opts.fargs[3]) or 2000
@@ -71,17 +73,32 @@ function U.wrap_in_chars(left, right)
   end
 
   -- Corrige end_col se estiver fora da linha
-  local end_line = vim.api.nvim_buf_get_lines(bufnr, end_row - 1, end_row, false)[1]
+  local end_line =
+    vim.api.nvim_buf_get_lines(bufnr, end_row - 1, end_row, false)[1]
   if end_col > #end_line then
     end_col = #end_line
   end
 
-  local lines = vim.api.nvim_buf_get_text(bufnr, start_row - 1, start_col, end_row - 1, end_col, {})
+  local lines = vim.api.nvim_buf_get_text(
+    bufnr,
+    start_row - 1,
+    start_col,
+    end_row - 1,
+    end_col,
+    {}
+  )
 
   lines[1] = left .. lines[1]
   lines[#lines] = lines[#lines] .. right
 
-  vim.api.nvim_buf_set_text(bufnr, start_row - 1, start_col, end_row - 1, end_col, lines)
+  vim.api.nvim_buf_set_text(
+    bufnr,
+    start_row - 1,
+    start_col,
+    end_row - 1,
+    end_col,
+    lines
+  )
 
   U.notify("Texto envolvido com: " .. left .. right)
 end

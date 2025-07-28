@@ -48,9 +48,24 @@ map("n", "<leader>fg", builtin.live_grep, { desc = "Live grep" })
 map("n", "<leader>fb", builtin.buffers, { desc = "List open buffers" })
 map("n", "<leader>fh", builtin.help_tags, { desc = "Search help tags" })
 map("n", "<leader>fo", builtin.oldfiles, { desc = "Recently opened files" })
-map("n", "<leader>fc", builtin.current_buffer_fuzzy_find, { desc = "Fuzzy search in current buffer" })
-map("n", "<leader>fr", builtin.resume, { desc = "Resume last Telescope picker" })
-map("n", "<leader>fs", builtin.lsp_document_symbols, { desc = "Document symbols (LSP)" })
+map(
+  "n",
+  "<leader>fc",
+  builtin.current_buffer_fuzzy_find,
+  { desc = "Fuzzy search in current buffer" }
+)
+map(
+  "n",
+  "<leader>fr",
+  builtin.resume,
+  { desc = "Resume last Telescope picker" }
+)
+map(
+  "n",
+  "<leader>fs",
+  builtin.lsp_document_symbols,
+  { desc = "Document symbols (LSP)" }
+)
 
 -- Buffers
 map("n", "<leader><tab>", "<C-^>", { desc = "Toggle last buffer" })
@@ -61,10 +76,45 @@ map("n", "<leader>bu", "<C-^>", { desc = "Reabrir último buffer" })
 
 -- WrapIn
 -- Wrap com parênteses
-map("v", "<leader>wp", "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('(')<CR>", { desc = "Wrap com ( e )" })
-map("v", "<leader>wq", "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('\\'')<CR>", { desc = "Wrap com ' e '" })
-map("v", "<leader>wQ", "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('\"')<CR>", { desc = 'Wrap com " e "' })
-map("v", "<leader>ws", "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('[')<CR>", { desc = "Wrap com [ e ]" })
-map("v", "<leader>wc", "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('{')<CR>", { desc = "Wrap com { e }" })
-map("v", "<leader>wb", "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('`')<CR>", { desc = "Wrap com ` e `" })
-map("v", "<leader>wh", "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('<')<CR>", { desc = "Wrap com < e >" })
+map(
+  "v",
+  "<leader>wp",
+  "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('(')<CR>",
+  { desc = "Wrap parentheses - ( and )" }
+)
+map(
+  "v",
+  "<leader>wq",
+  "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('\\'')<CR>",
+  { desc = "Wrap single quotes - ' and '" }
+)
+map(
+  "v",
+  "<leader>wQ",
+  "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('\"')<CR>",
+  { desc = 'Wrap double quotes - " and "' }
+)
+map(
+  "v",
+  "<leader>ws",
+  "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('[')<CR>",
+  { desc = "Wrap square brackets - [ and ]" }
+)
+map(
+  "v",
+  "<leader>wc",
+  "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('{')<CR>",
+  { desc = "Wrap curly braces - { and }" }
+)
+map(
+  "v",
+  "<leader>wb",
+  "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('`')<CR>",
+  { desc = "Wrap backtick - ` and `" }
+)
+map(
+  "v",
+  "<leader>wh",
+  "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('<')<CR>",
+  { desc = "Wrap HTML - < and >" }
+)
