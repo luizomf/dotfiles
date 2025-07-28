@@ -40,7 +40,16 @@ if [ "$(uname -s)" == "Linux" ]; then
 elif [ "$(uname -s)" == "Darwin" ]; then 
   OP_SYSTEM="darwin"
 else
-  loginfo "It is not safe to run this script on your system."
+  logerror "It is not safe to run this script on your system."
+  exit 1
 fi
 
-loginfo "${OP_SYSTEM}"
+if [[ "$OP_SYSTEM" == "darwin" ]]; then
+  loginfo "mac os"
+elif [[ "$OP_SYSTEM" == "ubuntu" ]]; then
+  loginfo "ubuntu"
+else
+  logerror "Wrong system, sorry!"
+  exit 1
+fi
+
