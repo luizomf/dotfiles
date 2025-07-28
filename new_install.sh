@@ -80,7 +80,7 @@ elif [[ "$OP_SYSTEM" == "ubuntu" ]]; then
   sudo apt install \
     openssl bat cmake ffmpeg fzf htop nano \
     p7zip pkgconf sqlite3 tcl tk tcl-dev tk-dev tmux \
-    tree watch wget fonts-firacode fonts-jetbrains-mono \
+    tree watch wget fonts-firacode fonts-jetbrains-mono vim \
     -y
 
   git clone https://github.com/neovim/neovim.git ~/neovim
@@ -166,7 +166,7 @@ rm -Rf "$HOME/.tmux.conf"
 ln -sf "$HOME/dotfiles/tmux/.tmux.conf" "$HOME/.tmux.conf"
 
 # Vim (para compatibilidade)
-rm -Rm "$HOME/.vimrc"
+rm -Rf "$HOME/.vimrc"
 ln -sf "$HOME/dotfiles/vim/.vimrc" "$HOME/.vimrc"
 
 # Neovim
