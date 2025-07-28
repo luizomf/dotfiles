@@ -126,3 +126,25 @@ ln -sfn "$HOME/dotfiles/zsh/.zshrc" "$HOME/.zshrc"
 ln -sfn "$HOME/dotfiles/zsh/.zprofile" "$HOME/.zprofile"
 ln -sfn "$HOME/dotfiles/zsh/config/omtheme.zsh-theme" "$ZSH_CUSTOM/themes/omtheme.zsh-theme"
 
+# Git
+ln -sfn "$HOME/dotfiles/git/.gitconfig" "$HOME/.gitconfig"
+
+# Tmux
+ln -sfn "$HOME/dotfiles/tmux/.tmux.conf" "$HOME/.tmux.conf"
+
+# Vim (para compatibilidade)
+ln -sfn "$HOME/dotfiles/vim/.vimrc" "$HOME/.vimrc"
+
+# Neovim
+ln -sfn "$HOME/dotfiles/nvim" "$HOME/.config/nvim"
+
+# Ghostty
+ln -sfn "$HOME/dotfiles/ghostty" "$HOME/.config/ghostty"
+
+# --- Finalização ---
+loginfo "✅ Script de instalação concluído!"
+echo -e "
+[1;33mATENÇÃO: Passos manuais necessários:[0m"
+echo "1. Abra o Neovim ('nvim') para que o Lazy.nvim possa instalar todos os plugins."
+echo "2. Inicie o Tmux e pressione 'prefix + I' (Ctrl+b + I) para instalar os plugins do TPM."
+echo "3. Reinicie seu terminal para que todas as alterações tenham efeito."

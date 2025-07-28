@@ -68,6 +68,7 @@ mkdir -p "$HOME/.config"
 # Zsh
 ln -sfn "$HOME/dotfiles/zsh/.zshrc" "$HOME/.zshrc"
 ln -sfn "$HOME/dotfiles/zsh/.zprofile" "$HOME/.zprofile"
+ln -sfn "$HOME/dotfiles/zsh/config/omtheme.zsh-theme" "$ZSH_CUSTOM/themes/omtheme.zsh-theme"
 
 # Git
 ln -sfn "$HOME/dotfiles/git/.gitconfig" "$HOME/.gitconfig"
