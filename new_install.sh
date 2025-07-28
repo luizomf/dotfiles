@@ -26,14 +26,12 @@ if [ "$(uname -s)" == "Linux" ]; then
     if [ -f /etc/os-release ]; then
         . /etc/os-release
         if [ "$ID" == "ubuntu" ]; then
-            loginfo "Specifically, this is Ubuntu."
             OP_SYSTEM="ubuntu"
         else
-            loginfo "This is another Linux distribution: $PRETTY_NAME"
+            logerror "This is another Linux distribution: $PRETTY_NAME"
         fi
     elif command -v lsb_release &> /dev/null; then
         if lsb_release -d | grep -q "Ubuntu"; then
-            loginfo "Specifically, this is Ubuntu (using lsb_release)."
             OP_SYSTEM="ubuntu"
         fi
     fi
@@ -47,7 +45,15 @@ fi
 if [[ "$OP_SYSTEM" == "darwin" ]]; then
   loginfo "mac os"
 elif [[ "$OP_SYSTEM" == "ubuntu" ]]; then
-  loginfo "ubuntu"
+
+  loginfo "Your system is Ubuntu, updating packages..."
+  sudo apt update -y
+  sudo apt upgrade -y
+
+  loginfo "Installing ZSH..."
+  sudo apt install zsh
+  sudo chsh -s /usr/bin/zsh
+
 else
   logerror "Wrong system, sorry!"
   exit 1
