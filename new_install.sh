@@ -139,24 +139,24 @@ loginfo "🔗 Criando symlinks para os arquivos de configuração..."
 mkdir -p "$HOME/.config"
 
 # Zsh
-ln -sfn "$HOME/dotfiles/zsh/.zshrc" "$HOME/.zshrc"
-ln -sfn "$HOME/dotfiles/zsh/.zprofile" "$HOME/.zprofile"
-ln -sfn "$HOME/dotfiles/zsh/config/omtheme.zsh-theme" "$ZSH_CUSTOM/themes/omtheme.zsh-theme"
+ln -sf "$HOME/dotfiles/zsh/.zshrc" "$HOME/.zshrc"
+ln -sf "$HOME/dotfiles/zsh/.zprofile" "$HOME/.zprofile"
+ln -sf "$HOME/dotfiles/zsh/config/omtheme.zsh-theme" "$ZSH_CUSTOM/themes/omtheme.zsh-theme"
 
 # Git
-ln -sfn "$HOME/dotfiles/git/.gitconfig" "$HOME/.gitconfig"
+ln -sf "$HOME/dotfiles/git/.gitconfig" "$HOME/.gitconfig"
 
 # Tmux
-ln -sfn "$HOME/dotfiles/tmux/.tmux.conf" "$HOME/.tmux.conf"
+ln -sf "$HOME/dotfiles/tmux/.tmux.conf" "$HOME/.tmux.conf"
 
 # Vim (para compatibilidade)
-ln -sfn "$HOME/dotfiles/vim/.vimrc" "$HOME/.vimrc"
+ln -sf "$HOME/dotfiles/vim/.vimrc" "$HOME/.vimrc"
 
 # Neovim
-ln -sfn "$HOME/dotfiles/nvim" "$HOME/.config/nvim"
+ln -sf "$HOME/dotfiles/nvim" "$HOME/.config/nvim"
 
 # Ghostty
-ln -sfn "$HOME/dotfiles/ghostty" "$HOME/.config/ghostty"
+ln -sf "$HOME/dotfiles/ghostty" "$HOME/.config/ghostty"
 
 # --- Finalização ---
 loginfo "✅ Script de instalação concluído!"
