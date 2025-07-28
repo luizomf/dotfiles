@@ -66,13 +66,30 @@ elif [[ "$OP_SYSTEM" == "ubuntu" ]]; then
   loginfo "Your system is Ubuntu, updating packages..."
   sudo apt update -y
   sudo apt upgrade -y
+  
+  loginfo "Installing apps..."
+  sudo apt-get install build-essential libssl-dev zlib1g-dev \
+    libbz2-dev libreadline-dev libsqlite3-dev wget curl \
+    llvm gettext libncurses5-dev tk-dev tcl-dev blt-dev libgdbm-dev \
+    git python2-dev python3-dev aria2 lzma liblzma-dev
 
   loginfo "Installing apps..."
   sudo apt install \
     openssl bat cmake ffmpeg fzf htop nano \
-    neovim p7zip pkgconf sqlite3 tcl tk tcl-dev tk-dev tmux \
+    p7zip pkgconf sqlite3 tcl tk tcl-dev tk-dev tmux \
     tree watch wget fonts-firacode fonts-jetbrains-mono \
     -y
+
+  loginfo "Installing NeoVim..."
+  curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
+  sudo rm -rf /opt/nvim
+  sudo tar -C /opt -xzf nvim-linux-x86_64.tar.gz
+  rm -Rf nvim-linux-x86_64.tar.gz
+  echo "export PATH=\"${PATH}:/opt/nvim-linux-x86_64/bin\"" >> "${HOME}/dotfiles/zsh/config/exports"
+
+  loginfo "Installing Pyenv and uv..."
+  curl -fsSL https://pyenv.run | bash
+  curl -LsSf https://astral.sh/uv/install.sh | sh
 
   sudo chsh -s /usr/bin/zsh
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/mkasberg/ghostty-ubuntu/HEAD/install.sh)"
