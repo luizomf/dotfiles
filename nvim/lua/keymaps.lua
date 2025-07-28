@@ -58,3 +58,13 @@ map("n", "<Tab>", ":bnext<CR>", opts)
 map("n", "<S-Tab>", ":bprevious<CR>", opts)
 map("n", "<leader>bd", ":bdelete<CR>", { desc = "Fechar buffer" })
 map("n", "<leader>bu", "<C-^>", { desc = "Reabrir último buffer" })
+
+-- WrapIn
+-- Wrap com parênteses
+map("v", "<leader>wp", "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('(')<CR>", { desc = "Wrap com ( e )" })
+map("v", "<leader>wq", "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('\\'')<CR>", { desc = "Wrap com ' e '" })
+map("v", "<leader>wQ", "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('\"')<CR>", { desc = 'Wrap com " e "' })
+map("v", "<leader>ws", "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('[')<CR>", { desc = "Wrap com [ e ]" })
+map("v", "<leader>wc", "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('{')<CR>", { desc = "Wrap com { e }" })
+map("v", "<leader>wb", "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('`')<CR>", { desc = "Wrap com ` e `" })
+map("v", "<leader>wh", "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('<')<CR>", { desc = "Wrap com < e >" })
