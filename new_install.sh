@@ -68,10 +68,13 @@ elif [[ "$OP_SYSTEM" == "ubuntu" ]]; then
   sudo apt upgrade -y
   
   loginfo "Installing apps..."
-  sudo apt-get install build-essential libssl-dev zlib1g-dev \
+  sudo apt-get install git build-essential libssl-dev zlib1g-dev \
     libbz2-dev libreadline-dev libsqlite3-dev wget curl \
     llvm gettext tk-dev tcl-dev blt-dev libgdbm-dev \
-    git python3-dev aria2 lzma liblzma-dev
+    git python3-dev aria2 lzma liblzma-dev \
+    cmake ninja-build pkg-config libtool \
+    libtool-bin autoconf automake gettext curl \
+    -y
 
   loginfo "Installing apps..."
   sudo apt install \
@@ -80,18 +83,24 @@ elif [[ "$OP_SYSTEM" == "ubuntu" ]]; then
     tree watch wget fonts-firacode fonts-jetbrains-mono \
     -y
 
-  loginfo "Installing NeoVim..."
-  curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
-  sudo rm -rf /opt/nvim
-  sudo tar -C /opt -xzf nvim-linux-x86_64.tar.gz
-  rm -Rf nvim-linux-x86_64.tar.gz
-  echo "export PATH=\"${PATH}:/opt/nvim-linux-x86_64/bin\"" >> "${HOME}/dotfiles/zsh/config/exports"
+  git clone https://github.com/neovim/neovim.git ~/neovim
+  cd ~/neovim
+  git checkout stable
+  make CMAKE_BUILD_TYPE=Release
+  sudo make install
+  cd build
+  sudo cpack -G DEB
+  sudo dpkg -i nvim-linux*.deb
+  cd ~
+  sudo rm -Rf ~/neovim
 
   loginfo "Installing Pyenv and uv..."
+  rm -Rf "${HOME}/.pyenv"
   curl -fsSL https://pyenv.run | bash
   curl -LsSf https://astral.sh/uv/install.sh | sh
 
-  sudo chsh -s /usr/bin/zsh
+  sudo apt install zsh -y
+  chsh -s /bin/zsh
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/mkasberg/ghostty-ubuntu/HEAD/install.sh)"
 
 else
@@ -139,23 +148,33 @@ loginfo "🔗 Criando symlinks para os arquivos de configuração..."
 mkdir -p "$HOME/.config"
 
 # Zsh
+rm -Rf "$HOME/.zshrc"
 ln -sf "$HOME/dotfiles/zsh/.zshrc" "$HOME/.zshrc"
+
+rm -Rf "$HOME/.zprofile"
 ln -sf "$HOME/dotfiles/zsh/.zprofile" "$HOME/.zprofile"
+
+rm -Rf "$ZSH_CUSTOM/themes/omtheme.zsh-theme"
 ln -sf "$HOME/dotfiles/zsh/config/omtheme.zsh-theme" "$ZSH_CUSTOM/themes/omtheme.zsh-theme"
 
 # Git
+rm -Rf "$HOME/.gitconfig"
 ln -sf "$HOME/dotfiles/git/.gitconfig" "$HOME/.gitconfig"
 
 # Tmux
+rm -Rf "$HOME/.tmux.conf"
 ln -sf "$HOME/dotfiles/tmux/.tmux.conf" "$HOME/.tmux.conf"
 
 # Vim (para compatibilidade)
+rm -Rm "$HOME/.vimrc"
 ln -sf "$HOME/dotfiles/vim/.vimrc" "$HOME/.vimrc"
 
 # Neovim
+rm -Rf "$HOME/.config/nvim"
 ln -sf "$HOME/dotfiles/nvim" "$HOME/.config/nvim"
 
 # Ghostty
+rm -Rf "$HOME/.config/ghostty"
 ln -sf "$HOME/dotfiles/ghostty" "$HOME/.config/ghostty"
 
 # --- Finalização ---
