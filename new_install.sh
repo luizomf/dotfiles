@@ -83,17 +83,17 @@ else
 fi
 
 # --- Zsh e Oh My Zsh ---
-log "Configurando Zsh e Oh My Zsh..."
+loginfo "Configurando Zsh e Oh My Zsh..."
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
-  log "Instalando Oh My Zsh..."
+  loginfo "Instalando Oh My Zsh..."
   /bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 else
-  log "Oh My Zsh já está instalado."
+  loginfo "Oh My Zsh já está instalado."
 fi
 
 # Instala plugins do Zsh
 ZSH_CUSTOM="$HOME/.oh-my-zsh/custom"
-log "🔌 Instalando plugins do Zsh..."
+loginfo "🔌 Instalando plugins do Zsh..."
 if [ ! -d "${ZSH_CUSTOM}/plugins/zsh-autosuggestions" ]; then
   git clone https://github.com/zsh-users/zsh-autosuggestions "${ZSH_CUSTOM}/plugins/zsh-autosuggestions"
 fi
@@ -102,21 +102,21 @@ if [ ! -d "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting" ]; then
 fi
 
 # --- Configuração do Neovim com Lazy.nvim ---
-log "🐘 Configurando Neovim e Lazy.nvim..."
+loginfo "🐘 Configurando Neovim e Lazy.nvim..."
 LAZY_PATH="$HOME/.local/share/nvim/lazy/lazy.nvim"
 if [ ! -d "$LAZY_PATH" ]; then
-  log "Instalando o gerenciador de plugins Lazy.nvim..."
+  loginfo "Instalando o gerenciador de plugins Lazy.nvim..."
   git clone https://github.com/folke/lazy.nvim.git --filter=blob:none "$LAZY_PATH"
 fi
 
 # --- Gerenciador de Plugins do Tmux (TPM) ---
-log "🔄 Instalando TPM para Tmux..."
+loginfo "🔄 Instalando TPM para Tmux..."
 if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
   git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 fi
 
 # --- Criação de Symlinks ---
-log "🔗 Criando symlinks para os arquivos de configuração..."
+loginfo "🔗 Criando symlinks para os arquivos de configuração..."
 
 # Cria o diretório ~/.config se não existir
 mkdir -p "$HOME/.config"
