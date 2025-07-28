@@ -45,34 +45,43 @@ function U.wrap_in_chars(left, right)
     ["“"] = "”",
     ["‘"] = "’",
     ["‹"] = "›",
+    ["「"] = "」",
+    ["『"] = "』",
+    ["【"] = "】",
+    ["《"] = "》",
   }
 
-  -- Esse é um teste
-  -- ainda não sei
-  -- escrever testes em LUA
-  -- Testando testando testando...
+  left = left and vim.trim(left) or ""
+  right = right and vim.trim(right) or ""
 
-  if not left or left == "" then
+  if left == "" then
     U.notify("Informe qual caractere será usado.", vim.log.levels.WARN)
     return
   end
 
-  right = right or pairs[left] or left
+  right = right ~= "" and right or pairs[left] or left
 
   local bufnr = vim.api.nvim_get_current_buf()
-  local start_pos = vim.api.nvim_buf_get_mark(bufnr, "<")
-  local end_pos = vim.api.nvim_buf_get_mark(bufnr, ">")
+  local start_row, start_col = unpack(vim.api.nvim_buf_get_mark(bufnr, "<"))
+  local end_row, end_col = unpack(vim.api.nvim_buf_get_mark(bufnr, ">"))
 
-  if start_pos[1] == end_pos[1] and start_pos[2] == end_pos[2] then
+  if start_row == end_row and start_col == end_col then
     U.notify("Seleção vazia ou inválida", vim.log.levels.WARN)
     return
   end
 
-  local text = vim.api.nvim_buf_get_text(bufnr, start_pos[1] - 1, start_pos[2], end_pos[1] - 1, end_pos[2], {})
-  local joined = table.concat(text, "\n")
-  local wrapped = left .. joined .. right
+  -- Corrige end_col se estiver fora da linha
+  local end_line = vim.api.nvim_buf_get_lines(bufnr, end_row - 1, end_row, false)[1]
+  if end_col > #end_line then
+    end_col = #end_line
+  end
 
-  vim.api.nvim_buf_set_text(bufnr, start_pos[1] - 1, start_pos[2], end_pos[1] - 1, end_pos[2], { wrapped })
+  local lines = vim.api.nvim_buf_get_text(bufnr, start_row - 1, start_col, end_row - 1, end_col, {})
+
+  lines[1] = left .. lines[1]
+  lines[#lines] = lines[#lines] .. right
+
+  vim.api.nvim_buf_set_text(bufnr, start_row - 1, start_col, end_row - 1, end_col, lines)
 
   U.notify("Texto envolvido com: " .. left .. right)
 end
