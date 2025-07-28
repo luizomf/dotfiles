@@ -27,7 +27,7 @@ log "📦 Instalando pacotes e aplicações do Brewfile..."
 brew bundle --file="$HOME/dotfiles/homebrew/Brewfile"
 
 # --- Zsh e Oh My Zsh ---
-log "셸 Configurando Zsh e Oh My Zsh..."
+log "Configurando Zsh e Oh My Zsh..."
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
   log "Instalando Oh My Zsh..."
   /bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
