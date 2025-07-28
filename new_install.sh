@@ -75,6 +75,7 @@ elif [[ "$OP_SYSTEM" == "ubuntu" ]]; then
     -y
 
   sudo chsh -s /usr/bin/zsh
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/mkasberg/ghostty-ubuntu/HEAD/install.sh)"
 
 else
   logerror "Wrong system, sorry!"
