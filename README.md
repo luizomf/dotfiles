@@ -1,25 +1,17 @@
 # dotfiles
 
-EU ESTOU PROGRAMANDO PARA ORGANIZAR ISSO AQUI E DEIXAR TUDO CERTINHO. VOU TESTAR
-TUDO EM MACOS E UBUNTU. ASSIM QUE ESTIVER TUDO PRONTO, AJEITO O README.MD
-(AGUARDE, POR FAVOR...)
+Fiz os testes no Ubuntu 24.04 e no Mac OS Sequoia (ambos ARM). Todos os testes
+foram feitos com uma instalação limpa dos sistemas operacionais.
 
-Isso aqui é só eu tentando **organizar a zona** que era meu `~`.
+Não detectei erros até o momento.
 
-Tem `.zshrc`, `.vimrc`, `.tmux.conf`, `.gitconfig`, `.sei-lá-o-que`, e o caos
-controlado da minha vida digital.
+Mesmo assim, recomendo que você abra o arquivo `install.sh` e execute os
+comandos linha a linha observando o que cada linha vai fazer. Se você executar
+esse script no seu sistema, ele vai rodar direto e não para mais, então ele
+sairá sobrescrevendo, apagando, criando e instalando tudo de uma vez (pra mim é
+mais fácil assim).
 
-Se você tá lendo isso esperando encontrar alguma mágica... mano, só sai daqui
-antes que seja tarde demais.
-
-## Por que isso existe?
-
-Porque eu reiniciei o notebook e perdi tudo. Aprendi a lição e estou começando
-do zero de novo.
-
-## Como usa?
-
-Clona, roda o `install.sh` e reza.
+Se mesmo com o aviso ainda quer rodar, faça isso com o git instalado:
 
 ```bash
 git clone git@github.com:luizomf/dotfiles.git ~/dotfiles

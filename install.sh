@@ -1,43 +1,157 @@
 #!/bin/bash
 
-# função para printar logs de forma legível
-log() {
+# TENHA MUITO CUIDADO COM ESSE SCRIPT, ELE NÃO VAI TE PERDOAR.
+
+# função para printar loginfos de forma legível
+loginfo() {
   echo -e "
-[1;34m$1[0m"
+🔵 [1;34m$1[0m"
+}
+
+logsuccess() {
+  echo -e "
+🟢 [1;32m$1[0m"
+}
+
+logerror() {
+  echo -e "
+🔴 [1;31m$1[0m"
 }
 
 # garante que o script pare em caso de erro
 set -e
 
-# --- Homebrew e Brewfile ---
-log "🍺 Verificando e instalando dependências com Homebrew..."
-if ! command -v brew &> /dev/null; then
-  log "Homebrew não encontrado. Instalando..."
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  (echo; echo 'eval "$(/opt/homebrew/bin/brew shellenv)"') >> "$HOME/.zprofile"
-  eval "$(/opt/homebrew/bin/brew shellenv)"
+# Vamos tentar descobrir o sistema operacional
+OP_SYSTEM=""
+
+if [ "$(uname -s)" == "Linux" ]; then
+    echo "This system is Linux."
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        if [ "$ID" == "ubuntu" ]; then
+            OP_SYSTEM="ubuntu" # aqui é ubuntu
+        else
+            # Aqui não sei qual sistema é, mas é Linux
+            logerror "This is another Linux distribution: $PRETTY_NAME"
+        fi
+    elif command -v lsb_release &> /dev/null; then
+        if lsb_release -d | grep -q "Ubuntu"; then
+            OP_SYSTEM="ubuntu" # aqui também é ubuntu
+        fi
+    fi
+elif [ "$(uname -s)" == "Darwin" ]; then 
+  OP_SYSTEM="darwin" # Aqui é MacOS
 else
-  log "Homebrew já está instalado. Atualizando..."
-  brew update
+  # Eu não vou rodar se não for MacOS ou Ubuntu
+  logerror "It is not safe to run this script on your system."
+  exit 1
 fi
 
-# Para gerar o Brewfile
-# brew bundle dump --file=~/dotfiles/homebrew/Brewfile --describe --force
-log "📦 Instalando pacotes e aplicações do Brewfile..."
-brew bundle --file="$HOME/dotfiles/homebrew/Brewfile"
+if [[ "$OP_SYSTEM" == "darwin" ]]; then
+  # No mac os, vamos usar o homebrew
+
+  # Homebrew e Brewfile
+  loginfo "Verificando e instalando dependências com Homebrew..."
+  if ! command -v brew &> /dev/null; then
+    loginfo "Homebrew não encontrado. Instalando..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    (echo; echo 'eval "$(/opt/homebrew/bin/brew shellenv)"') >> "$HOME/.zprofile"
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+  else
+    loginfo "Homebrew já está instalado. Atualizando..."
+    brew update
+  fi
+
+  # Para gerar o Brewfile
+  # brew bundle dump --file=~/dotfiles/homebrew/Brewfile --describe --force
+  loginfo "Instalando pacotes e aplicações do Brewfile..."
+  brew bundle --file="$HOME/dotfiles/homebrew/Brewfile"
+  
+elif [[ "$OP_SYSTEM" == "ubuntu" ]]; then
+
+  # Aqui é Ubuntu, então apt nos pacotes
+  loginfo "Your system is Ubuntu, updating packages..."
+  sudo apt update -y
+  sudo apt upgrade -y
+  
+  loginfo "Installing apps..."
+  sudo apt-get install git build-essential libssl-dev zlib1g-dev \
+    libbz2-dev libreadline-dev libsqlite3-dev wget curl \
+    llvm gettext tk-dev tcl-dev blt-dev libgdbm-dev \
+    git python3-dev aria2 lzma liblzma-dev \
+    cmake ninja-build pkg-config libtool \
+    libtool-bin autoconf automake gettext curl \
+    -y
+
+  loginfo "Installing apps..."
+  sudo apt install \
+    openssl bat cmake ffmpeg fzf htop nano \
+    p7zip pkgconf sqlite3 tcl tk tcl-dev tk-dev tmux \
+    tree watch wget fonts-firacode fonts-jetbrains-mono vim \
+    -y
+
+  # Infelizmente vamos ter que buildar o neovim do zero
+  # não achei uma versão recente para Ubuntu
+  git clone https://github.com/neovim/neovim.git ~/neovim
+  cd ~/neovim
+  git checkout stable
+  make CMAKE_BUILD_TYPE=Release
+  sudo make install
+  cd build
+  sudo cpack -G DEB
+  sudo dpkg -i nvim-linux*.deb
+  cd ~
+  sudo rm -Rf ~/neovim
+
+  sudo apt install zsh -y
+  chsh -s $(which zsh)
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/mkasberg/ghostty-ubuntu/HEAD/install.sh)"
+
+else
+  # Eu tenho medo de rodar isso noutro sistema que não testei
+  # Mas lendo aqui você pode fazer tudo manualmente
+  logerror "Wrong system, sorry!"
+  exit 1
+fi
+
+if ! command -v pyenv &> /dev/null; then
+  # Pyenv e uv
+  loginfo "Installing Pyenv and uv..."
+  rm -Rf "${HOME}/.pyenv"
+  curl -fsSL https://pyenv.run | bash
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+else
+  loginfo "Pyenv já instalado..."
+fi
+
+if ! command -v uv &> /dev/null; then
+  # UV 
+  loginfo "Installing uv..."
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+else
+  loginfo "UV já instalado..."
+fi
+
+if ! command -v nvm &> /dev/null; then
+  # NVM
+  rm -Rf "${HOME}/.nvm"
+  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+else
+  loginfo "NVM já instalado..."
+fi
 
 # --- Zsh e Oh My Zsh ---
-log "Configurando Zsh e Oh My Zsh..."
+loginfo "Configurando Zsh e Oh My Zsh..."
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
-  log "Instalando Oh My Zsh..."
+  loginfo "Instalando Oh My Zsh..."
   /bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 else
-  log "Oh My Zsh já está instalado."
+  loginfo "Oh My Zsh já está instalado."
 fi
 
 # Instala plugins do Zsh
 ZSH_CUSTOM="$HOME/.oh-my-zsh/custom"
-log "🔌 Instalando plugins do Zsh..."
+loginfo "🔌 Instalando plugins do Zsh..."
 if [ ! -d "${ZSH_CUSTOM}/plugins/zsh-autosuggestions" ]; then
   git clone https://github.com/zsh-users/zsh-autosuggestions "${ZSH_CUSTOM}/plugins/zsh-autosuggestions"
 fi
@@ -46,47 +160,57 @@ if [ ! -d "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting" ]; then
 fi
 
 # --- Configuração do Neovim com Lazy.nvim ---
-log "🐘 Configurando Neovim e Lazy.nvim..."
+loginfo "🐘 Configurando Neovim e Lazy.nvim..."
 LAZY_PATH="$HOME/.local/share/nvim/lazy/lazy.nvim"
 if [ ! -d "$LAZY_PATH" ]; then
-  log "Instalando o gerenciador de plugins Lazy.nvim..."
+  loginfo "Instalando o gerenciador de plugins Lazy.nvim..."
   git clone https://github.com/folke/lazy.nvim.git --filter=blob:none "$LAZY_PATH"
 fi
 
 # --- Gerenciador de Plugins do Tmux (TPM) ---
-log "🔄 Instalando TPM para Tmux..."
+loginfo "🔄 Instalando TPM para Tmux..."
 if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
   git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 fi
 
 # --- Criação de Symlinks ---
-log "🔗 Criando symlinks para os arquivos de configuração..."
+loginfo "🔗 Criando symlinks para os arquivos de configuração..."
 
 # Cria o diretório ~/.config se não existir
 mkdir -p "$HOME/.config"
 
 # Zsh
-ln -sfn "$HOME/dotfiles/zsh/.zshrc" "$HOME/.zshrc"
-ln -sfn "$HOME/dotfiles/zsh/.zprofile" "$HOME/.zprofile"
-ln -sfn "$HOME/dotfiles/zsh/config/omtheme.zsh-theme" "$ZSH_CUSTOM/themes/omtheme.zsh-theme"
+rm -Rf "$HOME/.zshrc"
+ln -sf "$HOME/dotfiles/zsh/.zshrc" "$HOME/.zshrc"
+
+rm -Rf "$HOME/.zprofile"
+ln -sf "$HOME/dotfiles/zsh/.zprofile" "$HOME/.zprofile"
+
+rm -Rf "$ZSH_CUSTOM/themes/omtheme.zsh-theme"
+ln -sf "$HOME/dotfiles/zsh/config/omtheme.zsh-theme" "$ZSH_CUSTOM/themes/omtheme.zsh-theme"
 
 # Git
-ln -sfn "$HOME/dotfiles/git/.gitconfig" "$HOME/.gitconfig"
+rm -Rf "$HOME/.gitconfig"
+ln -sf "$HOME/dotfiles/git/.gitconfig" "$HOME/.gitconfig"
 
 # Tmux
-ln -sfn "$HOME/dotfiles/tmux/.tmux.conf" "$HOME/.tmux.conf"
+rm -Rf "$HOME/.tmux.conf"
+ln -sf "$HOME/dotfiles/tmux/.tmux.conf" "$HOME/.tmux.conf"
 
 # Vim (para compatibilidade)
-ln -sfn "$HOME/dotfiles/vim/.vimrc" "$HOME/.vimrc"
+rm -Rf "$HOME/.vimrc"
+ln -sf "$HOME/dotfiles/vim/.vimrc" "$HOME/.vimrc"
 
 # Neovim
-ln -sfn "$HOME/dotfiles/nvim" "$HOME/.config/nvim"
+rm -Rf "$HOME/.config/nvim"
+ln -sf "$HOME/dotfiles/nvim" "$HOME/.config/nvim"
 
 # Ghostty
-ln -sfn "$HOME/dotfiles/ghostty" "$HOME/.config/ghostty"
+rm -Rf "$HOME/.config/ghostty"
+ln -sf "$HOME/dotfiles/ghostty" "$HOME/.config/ghostty"
 
 # --- Finalização ---
-log "✅ Script de instalação concluído!"
+loginfo "✅ Script de instalação concluído!"
 echo -e "
 [1;33mATENÇÃO: Passos manuais necessários:[0m"
 echo "1. Abra o Neovim ('nvim') para que o Lazy.nvim possa instalar todos os plugins."
