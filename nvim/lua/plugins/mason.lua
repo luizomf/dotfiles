@@ -7,6 +7,7 @@ return {
       "prettier",
       "stylua",
       "ruff",
+      "taplo",
 
       -- lsp
       "lua_ls",

@@ -76,6 +76,7 @@ return {
           -- To organize the imports.
           "ruff_organize_imports",
         },
+        toml = { "taplo" },
       },
       format_on_save = {
         timeout_ms = 500,

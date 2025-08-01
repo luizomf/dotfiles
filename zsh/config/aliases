@@ -3,7 +3,7 @@
 
 # Misc
 # alias deleteAllHere="rm -Rf .* ; rm -Rf *.* ; rm -Rf *"
-alias gitconfig='git init && echo Name: && read name && echo Email: && read email && git config user.name "$name" && git config user.email "$email"'
+# alias gitconfig='git init && echo Name: && read name && echo Email: && read email && git config user.name "$name" && git config user.email "$email"'
 alias gitlog='git log --graph --pretty=format:"%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset" --abbrev-commit'
 alias pipupgrade="pip freeze | sed -e 's/==.*//' | xargs pip install --upgrade"
 alias pipdeleteall='pip freeze | xargs pip uninstall -y'

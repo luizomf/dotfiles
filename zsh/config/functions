@@ -1,6 +1,47 @@
 #!/bin/sh
 # vim: set filetype=sh :
 
+# Reset
+RESET='\033[0m'
+
+# Cores normais
+BLACK='\033[0;30m'
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[0;37m'
+
+# Cores em negrito (bold ou bright)
+BRIGHT_BLACK='\033[1;30m'
+BRIGHT_RED='\033[1;31m'
+BRIGHT_GREEN='\033[1;32m'
+BRIGHT_YELLOW='\033[1;33m'
+BRIGHT_BLUE='\033[1;34m'
+BRIGHT_MAGENTA='\033[1;35m'
+BRIGHT_CYAN='\033[1;36m'
+BRIGHT_WHITE='\033[1;37m'
+
+# Funções para printar mensagens coloridas de forma legível
+log() {
+  printf "${CYAN}%s${RESET}\n" "$1"
+}
+
+loginfo() {
+  log "🔵 $1"
+}
+
+logsuccess() {
+  printf "🟢 ${GREEN}%s${RESET}\n" "$1"
+}
+
+logerror() {
+  printf "🔴 ${RED}%s${RESET}\n" "$1"
+}
+
+
 function dtouch() {
   mkdir -p "$(dirname "$1")"
   touch "$1"
@@ -105,4 +146,50 @@ function show_bg_colors() {
     esac
     print -P "%K{$i}  %-3d %s  %k" $i "$label"
   done
+}
+
+function gitconfig() {
+  set -e
+
+  log "Your name:"
+  read NAME
+
+  log "Your e-mail:"
+  read EMAIL
+
+  log
+
+  # Initialize git
+  log "Command: git init"
+  git init
+
+  # Configurar o nome do usuário"
+  log "Command: git config user.name \"${NAME}\""
+  git config user.name "${NAME}"
+
+  # Configurar o e-mail do usuário"
+  log "Command: git config user.email \"${EMAIL}\""
+  git config user.email "${EMAIL}"
+
+  # Muda o nome do branch para main"
+  log "Command: git branch -m main"
+  git branch -m main
+
+  # Garantir que o Git converta CRLF para LF apenas ao commitar (ótimo para projetos multiplataforma)"
+  log "Command: git config core.autocrlf input"
+  git config core.autocrlf input
+
+  # Forçar o Git a usar LF como fim de linha sempre"
+  log "Command: git config core.eol lf"
+  git config core.eol lf
+
+  # Verificar as configurações aplicadas"
+  log "Command: git config --list --local"
+  # git config --list --local
+  #
+  # Adicionando o repositório"
+  # log "git add ."
+  # log "git commit -m \"initial\""
+  # log "git remote add origin LINK-REPO"
+  # log "git push origin main -u  "
 }

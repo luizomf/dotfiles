@@ -2,20 +2,23 @@
 
 # TENHA MUITO CUIDADO COM ESSE SCRIPT, ELE NÃO VAI TE PERDOAR.
 
-# função para printar loginfos de forma legível
+# Funções para printar mensagens coloridas de forma legível
 loginfo() {
-  echo -e "
-🔵 [1;34m$1[0m"
+  local BLUE='\033[1;34m'
+  local RESET='\033[0m'
+  printf "🔵 ${BLUE}%s${RESET}\n" "$1"
 }
 
 logsuccess() {
-  echo -e "
-🟢 [1;32m$1[0m"
+  local GREEN='\033[1;32m'
+  local RESET='\033[0m'
+  printf "🟢 ${GREEN}%s${RESET}\n" "$1"
 }
 
 logerror() {
-  echo -e "
-🔴 [1;31m$1[0m"
+  local RED='\033[1;31m'
+  local RESET='\033[0m'
+  printf "🔴 ${RED}%s${RESET}\n" "$1"
 }
 
 # garante que o script pare em caso de erro
