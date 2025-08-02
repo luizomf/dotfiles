@@ -3,7 +3,7 @@ return {
   {
     "neovim/nvim-lspconfig",
     dependencies = {
-      -- "mason-org/mason-lspconfig.nvim",
+      "mason-org/mason-lspconfig.nvim",
       "hrsh7th/cmp-nvim-lsp",
       {
         "folke/lazydev.nvim",
@@ -18,6 +18,10 @@ return {
       },
     },
     config = function()
+      require("mason-lspconfig").setup({
+        automatic_enable = false,
+      })
+
       local capabilities = require("cmp_nvim_lsp").default_capabilities()
 
       local on_attach = function(_, bufnr)
@@ -30,30 +34,28 @@ return {
         map("n", "<leader>ca", vim.lsp.buf.code_action, opts)
       end
 
-      -- require("mason-lspconfig").setup({})
-
-      local server_opts = {
+      require("lspconfig").pyright.setup({
         on_attach = on_attach,
         capabilities = capabilities,
-      }
-
-      -- if server_name == "pyright" then
-      --   server_opts.settings = {
-      --     pyright = {
-      --       disableOrganizeImports = true,
-      --     },
-      --     python = {
-      --       analysis = {
-      --         ignore = { "*" },
-      --       },
-      --     },
-      --   }
-      -- end
-
-      require("lspconfig").pyright.setup(server_opts)
-      require("lspconfig").ruff.setup(server_opts)
-      require("lspconfig").ts_ls.setup(server_opts)
-      require("lspconfig").lua_ls.setup(server_opts)
+        settings = {
+          pyright = {},
+          python = {
+            analysis = {},
+          },
+        },
+      })
+      require("lspconfig").ruff.setup({
+        on_attach = on_attach,
+        capabilities = capabilities,
+      })
+      require("lspconfig").ts_ls.setup({
+        on_attach = on_attach,
+        capabilities = capabilities,
+      })
+      require("lspconfig").lua_ls.setup({
+        on_attach = on_attach,
+        capabilities = capabilities,
+      })
     end,
   },
 }
