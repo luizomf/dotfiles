@@ -17,9 +17,6 @@ export NVM_DIR="$HOME/.nvm"
 # brew install openssl
 # brew install curl
 
-export PATH="$(pyenv root)/shims:/opt/homebrew/opt/curl/bin:/opt/homebrew/opt/mysql-client/bin:/opt/homebrew/opt/libpq/bin:$PATH"
-export PATH="/opt/homebrew/opt/sqlite/bin:$PATH"
-
 # To add new things to PATH
 # export PATH="/the/path/needed:$PATH"
 
@@ -42,4 +39,8 @@ eval "$(pyenv init -)"
 . "$HOME/.local/bin/env"
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+export PATH="$(pyenv root)/shims:/opt/homebrew/opt/curl/bin:/opt/homebrew/opt/mysql-client/bin:/opt/homebrew/opt/libpq/bin:$PATH"
+export PATH="/opt/homebrew/opt/sqlite/bin:$PATH"
+
 
