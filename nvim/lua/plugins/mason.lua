@@ -4,16 +4,15 @@ return {
   opts = {
     ensure_installed = {
       -- formatters
-      "prettier",
-      "stylua",
+      -- "prettier", -- install manually with 'npm i -g prettier'
+      -- "stylua", -- install manually with ':MasonInstall stylua'
+
+      -- LSPs
       "ruff",
       "taplo",
-
-      -- lsp
       "lua_ls",
       "ts_ls",
       "pyright",
-      "ruff-lsp",
     },
   },
 }
