@@ -176,6 +176,25 @@ if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
   git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 fi
 
+echo -e "
+[1;33mATENÇÃO: Passos manuais necessários:[0m"
+echo ""
+echo "ABRA OUTRO TERMINAL - NÃO USE ESSA INSTÂNCIA"
+echo ""
+echo "1. Execute 'nvm install --lts'"
+echo "2. Execute 'nvm install-latest-npm'"
+echo "3. Execute 'pyenv install 3.13.5' (ou versões mais novas)"
+echo "4. Execute 'pyenv global 3.13.5' (ou versões mais novas)"
+echo "5. Execute 'uv tool install pyright ruff'"
+echo ""
+echo "ABRA OUTRO TERMINAL (NOVAMENTE) - NÃO USE ESSA INSTÂNCIA"
+echo ""
+echo "1. Abra o Neovim ('nvim') para que o Lazy.nvim possa instalar todos os plugins."
+echo "2. Inicie o Tmux e pressione 'prefix + I' (Ctrl+b + I) para instalar os plugins do TPM."
+echo "3. Reinicie seu terminal para que todas as alterações tenham efeito."
+
+read -p "Ao terminar as tarefas acima, pressione qualquer tecla para continuar..."
+
 # --- Criação de Symlinks ---
 loginfo "🔗 Criando symlinks para os arquivos de configuração..."
 
@@ -214,8 +233,3 @@ ln -sf "$HOME/dotfiles/ghostty" "$HOME/.config/ghostty"
 
 # --- Finalização ---
 loginfo "✅ Script de instalação concluído!"
-echo -e "
-[1;33mATENÇÃO: Passos manuais necessários:[0m"
-echo "1. Abra o Neovim ('nvim') para que o Lazy.nvim possa instalar todos os plugins."
-echo "2. Inicie o Tmux e pressione 'prefix + I' (Ctrl+b + I) para instalar os plugins do TPM."
-echo "3. Reinicie seu terminal para que todas as alterações tenham efeito."
