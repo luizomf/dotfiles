@@ -117,32 +117,6 @@ else
   exit 1
 fi
 
-if ! command -v pyenv &> /dev/null; then
-  # Pyenv e uv
-  loginfo "Installing Pyenv and uv..."
-  rm -Rf "${HOME}/.pyenv"
-  curl -fsSL https://pyenv.run | bash
-  curl -LsSf https://astral.sh/uv/install.sh | sh
-else
-  loginfo "Pyenv já instalado..."
-fi
-
-if ! command -v uv &> /dev/null; then
-  # UV 
-  loginfo "Installing uv..."
-  curl -LsSf https://astral.sh/uv/install.sh | sh
-else
-  loginfo "UV já instalado..."
-fi
-
-if ! command -v nvm &> /dev/null; then
-  # NVM
-  rm -Rf "${HOME}/.nvm"
-  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
-else
-  loginfo "NVM já instalado..."
-fi
-
 # --- Zsh e Oh My Zsh ---
 loginfo "Configurando Zsh e Oh My Zsh..."
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
@@ -176,6 +150,32 @@ if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
   git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 fi
 
+if ! command -v pyenv &> /dev/null; then
+  # Pyenv e uv
+  loginfo "Installing Pyenv and uv..."
+  rm -Rf "${HOME}/.pyenv"
+  curl -fsSL https://pyenv.run | bash
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+else
+  loginfo "Pyenv já instalado..."
+fi
+
+if ! command -v uv &> /dev/null; then
+  # UV 
+  loginfo "Installing uv..."
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+else
+  loginfo "UV já instalado..."
+fi
+
+if ! command -v nvm &> /dev/null; then
+  # NVM
+  rm -Rf "${HOME}/.nvm"
+  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+else
+  loginfo "NVM já instalado..."
+fi
+
 echo -e "
 [1;33mATENÇÃO: Passos manuais necessários:[0m"
 echo ""
@@ -183,16 +183,12 @@ echo "ABRA OUTRO TERMINAL - NÃO USE ESSA INSTÂNCIA"
 echo ""
 echo "1. Execute 'nvm install --lts'"
 echo "2. Execute 'nvm install-latest-npm'"
-echo "3. Execute 'pyenv install 3.13.5' (ou versões mais novas)"
-echo "4. Execute 'pyenv global 3.13.5' (ou versões mais novas)"
-echo "5. Execute 'uv tool install pyright ruff'"
+echo "3. Execute 'npm i -g prettier'"
+echo "4. Execute 'pyenv install 3.13.5' (ou versões mais novas)"
+echo "5. Execute 'pyenv global 3.13.5' (ou versões mais novas)"
+echo "6. Execute 'source $HOME/.local/bin/env'"
+echo "7. Execute 'uv tool install pyright ruff'"
 echo ""
-echo "ABRA OUTRO TERMINAL (NOVAMENTE) - NÃO USE ESSA INSTÂNCIA"
-echo ""
-echo "1. Abra o Neovim ('nvim') para que o Lazy.nvim possa instalar todos os plugins."
-echo "2. Inicie o Tmux e pressione 'prefix + I' (Ctrl+b + I) para instalar os plugins do TPM."
-echo "3. Reinicie seu terminal para que todas as alterações tenham efeito."
-
 read -p "Ao terminar as tarefas acima, pressione qualquer tecla para continuar..."
 
 # --- Criação de Symlinks ---
@@ -231,5 +227,17 @@ ln -sf "$HOME/dotfiles/nvim" "$HOME/.config/nvim"
 rm -Rf "$HOME/.config/ghostty"
 ln -sf "$HOME/dotfiles/ghostty" "$HOME/.config/ghostty"
 
+echo -e "
+[1;33mATENÇÃO: Passos manuais necessários:[0m"
+echo ""
+echo "ABRA OUTRO TERMINAL (NOVAMENTE) - NÃO USE ESSA INSTÂNCIA"
+echo ""
+echo "1. Abra o Neovim ('nvim') para que o Lazy.nvim possa instalar todos os plugins."
+echo "2. Inicie o Tmux e pressione 'prefix + I' (Ctrl+b + I) para instalar os plugins do TPM."
+echo "3. Reinicie seu terminal para que todas as alterações tenham efeito."
+echo ""
+read -p "Ao terminar as tarefas acima, pressione qualquer tecla para continuar..."
+
 # --- Finalização ---
+echo ""
 loginfo "✅ Script de instalação concluído!"
