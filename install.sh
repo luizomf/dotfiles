@@ -95,21 +95,33 @@ elif [[ "$OP_SYSTEM" == "ubuntu" ]]; then
 
   # Infelizmente vamos ter que buildar o neovim do zero
   # não achei uma versão recente para Ubuntu
-  git clone https://github.com/neovim/neovim.git ~/neovim
-  cd ~/neovim
-  git checkout stable
-  make CMAKE_BUILD_TYPE=Release
-  sudo make install
-  cd build
-  sudo cpack -G DEB
-  sudo dpkg -i nvim-linux*.deb
-  cd ~
-  sudo rm -Rf ~/neovim
+  if ! command -v nvim &> /dev/null; then
+    loginfo "Compiling and Installing nvim..."
+    git clone https://github.com/neovim/neovim.git ~/neovim
+    cd ~/neovim
+    git checkout stable
+    make CMAKE_BUILD_TYPE=Release
+    sudo make install
+    cd build
+    sudo cpack -G DEB
+    sudo dpkg -i nvim-linux*.deb
+    cd ~
+    sudo rm -Rf ~/neovim
+  else
+    loginfo "nvim já instalado..."
+  fi
 
-  sudo apt install zsh -y
-  chsh -s $(which zsh)
+  if ! command -v zsh &> /dev/null; then
+    loginfo "Installing ZSH..."
+    sudo apt install zsh -y
+    chsh -s $(which zsh)
+  else
+    loginfo "nvim já instalado..."
+  fi
+
+
+  loginfo "Installing Ghostty..."
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/mkasberg/ghostty-ubuntu/HEAD/install.sh)"
-
 else
   # Eu tenho medo de rodar isso noutro sistema que não testei
   # Mas lendo aqui você pode fazer tudo manualmente
@@ -184,11 +196,14 @@ echo ""
 echo "1. Execute 'nvm install --lts'"
 echo "2. Execute 'nvm install-latest-npm'"
 echo "3. Execute 'npm i -g prettier'"
-echo "4. Execute 'pyenv install 3.13.5' (ou versões mais novas)"
-echo "5. Execute 'pyenv global 3.13.5' (ou versões mais novas)"
-echo "6. Execute 'source $HOME/.local/bin/env'"
-echo "7. Execute 'uv tool install pyright'"
-echo "8. Execute 'uv tool install ruff'"
+echo "4. Execute 'export PYENV_ROOT=\"$HOME/.pyenv\"'"
+echo "5. Execute '[[ -d $PYENV_ROOT/bin ]] && export PATH=\"$PYENV_ROOT/bin:$PATH\"'"
+echo "6. Execute 'eval \"$(pyenv init - bash)\""
+echo "7. Execute 'pyenv install 3.13.5' (ou versões mais novas)"
+echo "8. Execute 'pyenv global 3.13.5' (ou versões mais novas)"
+echo "9. Execute 'source $HOME/.local/bin/env'"
+echo "10. Execute 'uv tool install pyright'"
+echo "11. Execute 'uv tool install ruff'"
 echo ""
 read -p "Ao terminar as tarefas acima, pressione qualquer tecla para continuar..."
 
