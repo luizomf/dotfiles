@@ -49,12 +49,6 @@ return {
       require("lspconfig").pyright.setup({
         on_attach = on_attach,
         capabilities = capabilities,
-        settings = {
-          pyright = {},
-          python = {
-            analysis = {},
-          },
-        },
       })
       require("lspconfig").ruff.setup({
         on_attach = on_attach,

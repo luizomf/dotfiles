@@ -83,6 +83,18 @@ function deletePythonCache() {
     echo "Limpeza concluída com sucesso!"
 }
 
+function cleanNeovimLogs() {
+    echo "🧼 Iniciando limpeza de logs e cache do Neovim..."
+
+    [[ -d ~/.local/state/nvim ]] && rm ~/.local/state/nvim/*.log
+    [[ -d ~/.cache/nvim ]] && {
+        rm ~/.cache/nvim/*.log
+        rm -r ~/.cache/nvim/shada
+        rm -r ~/.cache/nvim/sessions
+    }
+    echo "✅ Neovim limpo com sucesso!"
+}
+
 function iterm() {
     cwd=$(pwd)
     open -a iterm $cwd
