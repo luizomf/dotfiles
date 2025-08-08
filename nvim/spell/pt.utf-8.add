@@ -28,3 +28,10 @@ QueueListener
 neovim.io
 lua.html
 vim.filetype.add
+dataclasses
+TypeAlias
+ClassVar
+dataclass
+BaseAddress
+CachedAddress
+abstractmethod
