@@ -15,5 +15,15 @@
   "singleQuote": true,
   "tabWidth": 2,
   "trailingComma": "all",
-  "useTabs": false
+  "useTabs": false,
+
+  "overrides": [
+    {
+      "files": "*.md",
+      "options": {
+        "printWidth": 98,
+        "proseWrap": "always"
+      }
+    }
+  ]
 }

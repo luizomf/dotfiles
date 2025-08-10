@@ -118,3 +118,30 @@ map(
   "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('<')<CR>",
   { desc = "Wrap HTML - < and >" }
 )
+
+-- Word Wrap
+vim.keymap.set("n", "<leader>ww", function()
+  if vim.wo.wrap then
+    vim.opt.wrap = false
+    vim.opt.linebreak = false
+    vim.opt.breakindent = false
+    print("Softwrap desativado")
+  else
+    vim.opt.wrap = true
+    vim.opt.linebreak = true
+    vim.opt.breakindent = true
+    print("Softwrap ativado")
+  end
+end, { desc = "Toggle Softwrap" })
+
+-- Toggle Spell -- Toggle Spell Checker
+vim.keymap.set("n", "<leader>ss", function()
+  if vim.wo.spell then
+    vim.opt.spell = false
+    print("Spell checker desativado")
+  else
+    vim.opt.spell = true
+    vim.opt.spelllang = { "pt", "en" }
+    print("Spell checker ativado")
+  end
+end, { desc = "Toggle Spell Checker" })
