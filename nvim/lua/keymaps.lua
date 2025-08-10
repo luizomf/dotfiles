@@ -125,12 +125,12 @@ vim.keymap.set("n", "<leader>ww", function()
     vim.opt.wrap = false
     vim.opt.linebreak = false
     vim.opt.breakindent = false
-    print("Softwrap desativado")
+    utils.notify("Softwrap desativado", vim.log.levels.INFO)
   else
     vim.opt.wrap = true
     vim.opt.linebreak = true
     vim.opt.breakindent = true
-    print("Softwrap ativado")
+    utils.notify("Softwrap ativado", vim.log.levels.INFO)
   end
 end, { desc = "Toggle Softwrap" })
 
@@ -138,10 +138,10 @@ end, { desc = "Toggle Softwrap" })
 vim.keymap.set("n", "<leader>ss", function()
   if vim.wo.spell then
     vim.opt.spell = false
-    print("Spell checker desativado")
+    utils.notify("Spell checker desativado", vim.log.levels.INFO)
   else
     vim.opt.spell = true
-    vim.opt.spelllang = { "pt", "en" }
-    print("Spell checker ativado")
+    vim.opt.spelllang = { "pt_br", "pt", "en_us", "en" }
+    utils.notify("Spell checker ativado", vim.log.levels.INFO)
   end
 end, { desc = "Toggle Spell Checker" })

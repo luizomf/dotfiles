@@ -3,6 +3,9 @@ vim.opt.relativenumber = true
 vim.opt.cursorline = true
 vim.opt.colorcolumn = { 80 }
 
+vim.opt.encoding = "utf-8"
+vim.opt.fileencoding = "utf-8"
+
 vim.opt.tabstop = 2
 vim.opt.shiftwidth = 2
 vim.opt.expandtab = true
@@ -24,7 +27,7 @@ vim.opt.sessionoptions =
 
 vim.cmd("syntax on")
 
--- Render tabs and whitespaces
+-- Render tabs and white spaces
 vim.opt.list = true
 vim.opt.listchars = "tab:>-,trail:-,lead:·,eol:¬"
 
