@@ -141,7 +141,7 @@ vim.keymap.set("n", "<leader>ss", function()
     utils.notify("Spell checker desativado", vim.log.levels.INFO)
   else
     vim.opt.spell = true
-    vim.opt.spelllang = { "pt_br", "pt", "en_us", "en" }
+    vim.opt.spelllang = { "pt_br", "en_us", "en", "pt" }
     utils.notify("Spell checker ativado", vim.log.levels.INFO)
   end
 end, { desc = "Toggle Spell Checker" })
