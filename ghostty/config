@@ -19,5 +19,5 @@ window-theme = ghostty
 background-opacity = 1
 
 # Other
-copy-on-select = clipboard
-shell-integration-features = cursor,sudo,no-title
+# copy-on-select = clipboard
+# shell-integration-features = cursor,sudo,no-title
