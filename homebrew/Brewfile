@@ -16,6 +16,8 @@ brew "htop"
 brew "nano"
 # Ambitious Vim-fork focused on extensibility and agility
 brew "neovim"
+# Create, run, and share large language models (LLMs)
+brew "ollama"
 # 7-Zip (high compression file archiver) implementation
 brew "p7zip"
 # Package compiler and linker metadata toolkit
