@@ -56,3 +56,8 @@ alias rsync_air_to_pro='rsync -avzh --progress --stats luizotavio@192.168.2.1:/U
 
 # Tree ignorando .git, __pycache__, node_modules, .venv, dist, .DS_Store
 alias tr="tree -C -I '__pycache__|node_modules|.git|.venv|dist|.DS_Store|*.egg*'"
+
+
+# Thumbhunter
+alias thumbhunter="rm -Rf /Users/luizotavio/Desktop/_THUMBHUNTER/ ; clear ; uv run --no-project --with opencv-python --with pillow --with imagehash --with numpy --python 3.13.5 /Users/luizotavio/Desktop/tutoriais_e_cursos/aivideocut/src/aivideocut/thumbhunter.py --video /Users/luizotavio/Desktop/thumbhunter.mp4 --start 0 --duration 300 --step 0.5 --sharpness-th 80 --min-bright 50 --max-bright 200 --top-k 16 --min-hash-distance 8 --save-all-candidates --outdir /Users/luizotavio/Desktop/_THUMBHUNTER/"
+
