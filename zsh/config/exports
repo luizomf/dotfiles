@@ -4,6 +4,7 @@
 export EDITOR="nvim"
 export VISUAL="nvim"
 export TABSIZE=2
+export SSH_TERM="xterm-256color"
 
 # source $(brew --prefix nvm)/nvm.sh
 
