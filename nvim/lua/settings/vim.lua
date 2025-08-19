@@ -19,8 +19,8 @@ vim.opt.hlsearch = true
 vim.opt.incsearch = true
 
 -- Tenta manter o cursor mais ao centro no scroll
-vim.opt.scrolloff = math.floor(vim.o.lines / 10)
-vim.opt.sidescrolloff = 8
+vim.opt.scrolloff = math.floor(vim.o.lines * 0.145)
+vim.opt.sidescrolloff = math.floor(vim.o.columns * 0.08)
 
 vim.opt.sessionoptions =
   "blank,buffers,curdir,folds,help,tabpages,winsize,winpos,terminal,localoptions"

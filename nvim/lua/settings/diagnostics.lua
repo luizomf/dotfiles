@@ -1,27 +1,9 @@
--- lua/settings/diagnostics.lua
-
--- vim.diagnostic.config({
---   virtual_text = {
---     prefix = "●", -- ou "■", "▎", "● ", etc
---     spacing = 2,
---     source = "if_many", -- mostra o nome do LSP se tiver mais de um
---   },
---   signs = true,
---   underline = true,
---   update_in_insert = false,
---   severity_sort = true,
---   float = {
---     border = "rounded",
---     source = true,
---   },
--- })
-
--- Disable virtual text, enable signs and underline
 vim.diagnostic.config({
   virtual_lines = false,
   virtual_text = false,
   underline = true,
   signs = true,
+  severity_sort = true,
   float = {
     border = "single",
     format = function(diagnostic)
@@ -32,5 +14,7 @@ vim.diagnostic.config({
         diagnostic.code or diagnostic.user_data.lsp.code
       )
     end,
+    -- max_width = math.floor(vim.o.columns * 0.95),
+    -- max_height = math.floor(vim.o.lines * 0.3),
   },
 })

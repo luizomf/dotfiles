@@ -22,6 +22,11 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
   callback = function()
     vim.opt_local.spelllang = { "pt_br", "pt", "en_us", "en" }
     vim.opt_local.spell = true
+
+    vim.api.nvim_set_hl(0, "SpellBad", {
+      sp = "gray",
+      underdashed = true,
+    })
   end,
   desc = "Enable spellcheck for defined filetypes",
 })
