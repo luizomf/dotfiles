@@ -12,7 +12,7 @@ vim.opt.expandtab = true
 vim.opt.autoindent = true
 vim.opt.smartindent = true
 
-vim.opt.mouse = "a"
+vim.opt.mouse = ""
 vim.opt.clipboard = "unnamedplus"
 vim.opt.wrap = false
 vim.opt.hlsearch = true
