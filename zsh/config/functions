@@ -205,3 +205,10 @@ function gitconfig() {
   # log "git remote add origin LINK-REPO"
   # log "git push origin main -u  "
 }
+
+function tmux_respawn_all() {
+  for pane in $(tmux list-panes -a -F '#D'); do 
+    tmux respawn-pane -k -t $pane; 
+  done
+}
+
