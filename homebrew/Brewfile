@@ -6,6 +6,8 @@ brew "openssl@3"
 brew "bat"
 # Cross-platform make
 brew "cmake"
+# Like neofetch, but much faster because written mostly in C
+brew "fastfetch"
 # Play, record, convert, and stream audio and video
 brew "ffmpeg"
 # Command-line fuzzy finder written in Go
