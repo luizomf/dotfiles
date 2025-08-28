@@ -4,6 +4,8 @@ brew "xz"
 brew "openssl@3"
 # Clone of cat(1) with syntax highlighting and Git integration
 brew "bat"
+# Resource monitor. C++ version and continuation of bashtop and bpytop
+brew "btop"
 # Cross-platform make
 brew "cmake"
 # Like neofetch, but much faster because written mostly in C
@@ -48,6 +50,8 @@ brew "zlib"
 cask "aldente"
 # Enable Windows-like alt-tab
 cask "alt-tab"
+# Video editing and image design platform
+cask "capcut"
 cask "font-fira-code"
 cask "font-jetbrains-mono"
 # Terminal emulator that uses platform-native UI and GPU acceleration
