@@ -44,10 +44,22 @@ brew "watch"
 brew "wget"
 # General-purpose lossless data-compression library
 brew "zlib"
+# Menu bar tool to limit maximum charging percentage
+cask "aldente"
+# Enable Windows-like alt-tab
+cask "alt-tab"
 cask "font-fira-code"
 cask "font-jetbrains-mono"
 # Terminal emulator that uses platform-native UI and GPU acceleration
 cask "ghostty"
+# Web browser
+cask "google-chrome"
+# Client for the Google Drive storage service
+cask "google-drive"
+# Open-source software for live streaming and screen recording
+cask "obs"
+# Open-source code editor
+cask "visual-studio-code"
 # Multimedia player
 cask "vlc"
 # Native desktop client for WhatsApp
