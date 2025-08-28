@@ -83,17 +83,7 @@ function deletePythonCache() {
     echo "Limpeza concluída com sucesso!"
 }
 
-function cleanNeovimLogs() {
-    echo "🧼 Iniciando limpeza de logs e cache do Neovim..."
 
-    [[ -d ~/.local/state/nvim ]] && rm ~/.local/state/nvim/*.log
-    [[ -d ~/.cache/nvim ]] && {
-        rm ~/.cache/nvim/*.log
-        rm -r ~/.cache/nvim/shada
-        rm -r ~/.cache/nvim/sessions
-    }
-    echo "✅ Neovim limpo com sucesso!"
-}
 
 function iterm() {
     cwd=$(pwd)
@@ -207,8 +197,34 @@ function gitconfig() {
 }
 
 function tmux_respawn_all() {
+  echo "Iniciando a limpeza do Tmux Resurrect"
+  rm -Rf ~/.local/share/tmux/resurrect/*.*
+  rm -Rf ~/.local/share/tmux/resurrect/last
+
+  echo "Salvando as sessões..."
+  /Users/luizotavio/.tmux/plugins/tmux-resurrect/scripts/save.sh
+
+  echo "Tmux resurrect limpo com sucesso!"
+  sleep 2
+
   for pane in $(tmux list-panes -a -F '#D'); do 
     tmux respawn-pane -k -t $pane; 
   done
+
+  sleep 2
+
+  echo "Salvando as sessões novamente..."
+  /Users/luizotavio/.tmux/plugins/tmux-resurrect/scripts/save.sh
 }
 
+function cleanNeovimLogs() {
+  echo "🧼 Iniciando limpeza de logs e cache do Neovim..."
+
+  [[ -d ~/.local/state/nvim ]] && rm ~/.local/state/nvim/*.log
+  [[ -d ~/.cache/nvim ]] && {
+      rm ~/.cache/nvim/*.log
+      rm -r ~/.cache/nvim/shada
+      rm -r ~/.cache/nvim/sessions
+  }
+  echo "✅ Neovim limpo com sucesso!"
+}
