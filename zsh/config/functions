@@ -273,3 +273,9 @@ tmuxns() {
     tmux new-window -t $session_name -n $arg
   done
 }
+
+function tmux_run_all_panes() {
+  for pane in $(tmux list-panes -a -F "#S:#I"); do 
+    tmux send-keys -t $pane $@ C-m
+  done
+}
