@@ -228,3 +228,38 @@ function cleanNeovimLogs() {
   }
   echo "✅ Neovim limpo com sucesso!"
 }
+
+# Wrapper para resolver um problema chato de SSH:
+# Minha confusão se estou local ou no server
+sshc() {
+  if [ -z "$TMUX" ]; then
+    # Não estamos no tmux
+    command ssh "$@"
+    return
+  fi
+
+  # Pega o estilo atual do tmux
+  original_ss=$(tmux show-options -gqv status-style)
+  original_wsf=$(tmux show-options -gqv window-status-format)
+  original_wscf=$(tmux show-options -gqv window-status-current-format)
+  original_term=$TERM
+
+  # Lógica de limpeza
+  _cleanup() {
+    echo "Sessão SSH encerrada. Restaurando o estilo do tmux..."
+    tmux set-option -g status-style "$original_ss"
+    tmux set-option -g window-status-format "$original_wsf"
+    tmux set-option -g window-status-current-format "$original_wscf"
+    TERM=$original_term
+  }
+
+  trap _cleanup EXIT
+
+  TERM=$SSH_TERM
+  tmux set -g status-style "fg=black,bg=red"
+  tmux set -g window-status-format "#[fg=black,bg=red] #I:#W "
+  tmux set -g window-status-current-format "#[fg=white,bg=black] #I:#W "
+
+  command ssh "$@"
+}
+
