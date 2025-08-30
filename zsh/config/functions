@@ -263,3 +263,13 @@ sshc() {
   command ssh "$@"
 }
 
+tmuxns() {
+  session_name="$1"
+  shift 
+
+  tmux new-session -d -s $session_name
+
+  for arg in "$@"; do
+    tmux new-window -t $session_name -n $arg
+  done
+}
