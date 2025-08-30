@@ -31,6 +31,7 @@ return {
           "lua_ls",
           "ts_ls",
           "pyright",
+          "tailwindcss",
         },
       })
 
@@ -65,6 +66,23 @@ return {
         on_attach = on_attach,
         capabilities = capabilities,
       })
+
+      require("lspconfig").tailwindcss.setup({
+        on_attach = on_attach,
+        capabilities = capabilities,
+        settings = {
+          tailwindCSS = {
+            experimental = {
+              classRegex = {
+                { "cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]" },
+                { "cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]" },
+                { "clsx\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]" },
+                { "twMerge\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]" },
+              },
+            },
+          },
+        },
+      }) -- Just to remember, it ends here
     end,
   },
 }
