@@ -3,6 +3,8 @@ vim.opt.relativenumber = true
 vim.opt.cursorline = true
 vim.opt.colorcolumn = { 80 }
 
+vim.opt.backupcopy = "yes" -- It fixed the bun error on --watch --hot
+
 vim.opt.encoding = "utf-8"
 vim.opt.fileencoding = "utf-8"
 
