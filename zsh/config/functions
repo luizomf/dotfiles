@@ -260,7 +260,7 @@ sshc() {
   tmux set -g window-status-format "#[fg=black,bg=red] #I:#W "
   tmux set -g window-status-current-format "#[fg=white,bg=black] #I:#W "
 
-  command ssh "$@"
+  command ssh -q "$@"
 }
 
 tmuxns() {
