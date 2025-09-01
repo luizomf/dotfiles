@@ -84,7 +84,7 @@ function U.wrap_in_chars(left, right)
     start_row - 1,
     start_col,
     end_row - 1,
-    end_col,
+    end_col + 1, -- I want it to be precise with the selection
     {}
   )
 
@@ -96,7 +96,7 @@ function U.wrap_in_chars(left, right)
     start_row - 1,
     start_col,
     end_row - 1,
-    end_col,
+    end_col + 1, -- I want it to be precise with the selection
     lines
   )
 
