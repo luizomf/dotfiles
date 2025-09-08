@@ -25,3 +25,6 @@ for f in "${ZSH_CONFIG_FILES[@]}"; do
   fi
 done
 
+# Exports
+[[ -f ~/.env ]] && source ~/.env
+
