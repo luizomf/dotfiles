@@ -279,3 +279,7 @@ function tmux_run_all_panes() {
     tmux send-keys -t $pane $@ C-m
   done
 }
+
+function ollama_stop_all() {
+  ollama ps | awk 'NR>1 {print $1}' | xargs -L 1 ollama stop
+}
