@@ -1,7 +1,7 @@
 font-family = JetBrains Mono
 font-size = 28
 font-feature = -calt # disable ligatures
-theme = tokyonight_night
+theme = TokyoNight Night
 
 # Mouse
 mouse-hide-while-typing = true
