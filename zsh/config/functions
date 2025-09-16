@@ -267,10 +267,10 @@ tmuxns() {
   session_name="$1"
   shift 
 
-  tmux new-session -d -s $session_name
+  tmux new-session -d -s $session_name -c "$(pwd)"
 
   for arg in "$@"; do
-    tmux new-window -t $session_name -n $arg
+    tmux new-window -t $session_name -n $arg -c "$(pwd)"
   done
 }
 
