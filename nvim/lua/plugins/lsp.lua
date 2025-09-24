@@ -46,27 +46,31 @@ return {
         map("n", "<leader>ca", vim.lsp.buf.code_action, opts)
       end
 
-      require("lspconfig").pyright.setup({
+      vim.lsp.config("pyright", {
         on_attach = on_attach,
         capabilities = capabilities,
       })
+      vim.lsp.enable("pyright")
 
-      require("lspconfig").ruff.setup({
+      vim.lsp.config("ruff", {
         on_attach = on_attach,
         capabilities = capabilities,
       })
+      vim.lsp.enable("ruff")
 
-      require("lspconfig").ts_ls.setup({
+      vim.lsp.config("ts_ls", {
         on_attach = on_attach,
         capabilities = capabilities,
       })
+      vim.lsp.enable("ts_ls")
 
-      require("lspconfig").lua_ls.setup({
+      vim.lsp.config("lua_ls", {
         on_attach = on_attach,
         capabilities = capabilities,
       })
+      vim.lsp.enable("lua_ls")
 
-      require("lspconfig").tailwindcss.setup({
+      vim.lsp.config("tailwindcss", {
         on_attach = on_attach,
         capabilities = capabilities,
         settings = {
@@ -81,7 +85,47 @@ return {
             },
           },
         },
-      }) -- Just to remember, it ends here
+      })
+      vim.lsp.enable("tailwindcss")
+
+      -- DEPRECATED
+      --
+      -- require("lspconfig").pyright.setup({
+      --   on_attach = on_attach,
+      --   capabilities = capabilities,
+      -- })
+
+      -- require("lspconfig").ruff.setup({
+      --   on_attach = on_attach,
+      --   capabilities = capabilities,
+      -- })
+
+      -- require("lspconfig").ts_ls.setup({
+      --   on_attach = on_attach,
+      --   capabilities = capabilities,
+      -- })
+
+      -- require("lspconfig").lua_ls.setup({
+      --   on_attach = on_attach,
+      --   capabilities = capabilities,
+      -- })
+
+      -- require("lspconfig").tailwindcss.setup({
+      --   on_attach = on_attach,
+      --   capabilities = capabilities,
+      --   settings = {
+      --     tailwindCSS = {
+      --       experimental = {
+      --         classRegex = {
+      --           { "cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]" },
+      --           { "cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]" },
+      --           { "clsx\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]" },
+      --           { "twMerge\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]" },
+      --         },
+      --       },
+      --     },
+      --   },
+      -- }) -- Just to remember, it ends here
     end,
   },
 }
