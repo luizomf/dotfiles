@@ -64,6 +64,8 @@ cask "ghostty"
 cask "google-chrome"
 # Client for the Google Drive storage service
 cask "google-drive"
+# Open-source keystroke visualiser
+cask "keycastr"
 # Open-source software for live streaming and screen recording
 cask "obs"
 # Open-source code editor
