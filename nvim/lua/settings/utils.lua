@@ -113,4 +113,26 @@ end, {
   desc = "Envolve a seleção visual com os caracteres informados",
 })
 
+vim.api.nvim_create_user_command("Rename", function(opts)
+  local old = vim.fn.expand("%:p") -- caminho absoluto do arquivo atual
+  local new = vim.fn.fnamemodify(opts.args, ":p") -- expande argumento para absoluto
+  local is_equal = old == new
+
+  if old == new then
+    U.notify(
+      "MESMO ARQUIVO! Você perderia tudo o que está fazendo 🤔",
+      vim.log.levels.ERROR
+    )
+    return
+  end
+
+  -- salva com o novo nome
+  vim.cmd("saveas " .. vim.fn.fnameescape(new))
+
+  -- fecha o buffer antigo (usando o caminho salvo)
+  vim.cmd("bd " .. vim.fn.fnameescape(old))
+  -- apaga o arquivo antigo (usando o caminho salvo)
+  vim.cmd("silent !rm " .. vim.fn.shellescape(old))
+end, { nargs = 1, complete = "file" })
+
 return U
