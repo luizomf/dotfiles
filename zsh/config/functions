@@ -275,7 +275,7 @@ tmuxns() {
 }
 
 function tmux_run_all_panes() {
-  for window in $(tmux list-panes -a -F "#{session_id}:#{window_id}"); do 
+  for window in $(tmux list-panes -a -F "#D"); do 
     tmux send-keys -t $window $@ C-m
   done
 }
