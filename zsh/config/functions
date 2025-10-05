@@ -95,58 +95,9 @@ restart_terminal() {
     tmux respawn-window -k
 }
 
-function show_fg_colors() {
-  echo
-  echo "🎨 Foreground colors (0–255):"
-  for i in {0..255}; do
-    local label=""
-    case $i in
-      0) label="black" ;;
-      1) label="red" ;;
-      2) label="green" ;;
-      3) label="yellow" ;;
-      4) label="blue" ;;
-      5) label="magenta" ;;
-      6) label="cyan" ;;
-      7) label="white" ;;
-      8) label="brightblack (gray)" ;;
-      9) label="brightred" ;;
-      10) label="brightgreen" ;;
-      11) label="brightyellow" ;;
-      12) label="brightblue" ;;
-      13) label="brightmagenta" ;;
-      14) label="brightcyan" ;;
-      15) label="brightwhite" ;;
-    esac
-    print -P "%F{$i}█  %3d  %-22s%f" $i "$label"
-  done
-}
-
-
-function show_bg_colors() {
-  echo
-  echo "🧱 Background colors (0–255):"
-  for i in {0..255}; do
-    local label=""
-    case $i in
-      0) label="black" ;;
-      1) label="red" ;;
-      2) label="green" ;;
-      3) label="yellow" ;;
-      4) label="blue" ;;
-      5) label="magenta" ;;
-      6) label="cyan" ;;
-      7) label="white" ;;
-      8) label="brightblack (gray)" ;;
-      9) label="brightred" ;;
-      10) label="brightgreen" ;;
-      11) label="brightyellow" ;;
-      12) label="brightblue" ;;
-      13) label="brightmagenta" ;;
-      14) label="brightcyan" ;;
-      15) label="brightwhite" ;;
-    esac
-    print -P "%K{$i}  %-3d %s  %k" $i "$label"
+function show_colors() {
+  for i in {0..255}; do 
+    print -P ">>>  $(printf '%03d' $i)  %F{$i}Dummy text%f  %F{232}%K{$i} dummy text %k%f  <<<"
   done
 }
 
