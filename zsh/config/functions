@@ -152,6 +152,7 @@ function tmux_respawn_all() {
   echo "Iniciando a limpeza do Tmux Resurrect"
   fc -W 
   . ~/.zshrc
+  cleanNeovimLogs
 
   rm -Rf ~/.local/share/tmux/resurrect/*.*
   rm -Rf ~/.local/share/tmux/resurrect/last
