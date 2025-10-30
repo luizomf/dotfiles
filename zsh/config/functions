@@ -91,8 +91,9 @@ function iterm() {
 }
 
 restart_terminal() {
-    . ~/.zshrc
-    tmux respawn-window -k
+  fc -W 
+  . ~/.zshrc
+  tmux respawn-window -k
 }
 
 function show_colors() {
@@ -149,6 +150,9 @@ function gitconfig() {
 
 function tmux_respawn_all() {
   echo "Iniciando a limpeza do Tmux Resurrect"
+  fc -W 
+  . ~/.zshrc
+
   rm -Rf ~/.local/share/tmux/resurrect/*.*
   rm -Rf ~/.local/share/tmux/resurrect/last
 
