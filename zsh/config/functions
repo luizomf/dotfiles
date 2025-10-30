@@ -153,6 +153,7 @@ function tmux_respawn_all() {
   fc -W 
   . ~/.zshrc
   cleanNeovimLogs
+  ~/.zsh_history_sync.py
 
   rm -Rf ~/.local/share/tmux/resurrect/*.*
   rm -Rf ~/.local/share/tmux/resurrect/last
