@@ -242,3 +242,10 @@ function tmux_run_all_panes() {
 function ollama_stop_all() {
   ollama ps | awk 'NR>1 {print $1}' | xargs -L 1 ollama stop
 }
+
+function updateall() {
+  brewupdate
+  uv self update
+  uv tool upgrade pyright mypy ruff
+  npm -g upgrade @google/gemini-cli npm prettier pyright
+}
