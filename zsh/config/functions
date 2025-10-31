@@ -244,7 +244,16 @@ function ollama_stop_all() {
 }
 
 function updateall() {
-  brewupdate
+  fc -W 
+  . ~/.zshrc
+  cleanNeovimLogs
+  $HOME/dotfiles/scripts/zsh_history_sync.py
+
+  brew update 
+  brew upgrade 
+  omz update 
+  brew cleanup 
+  brew bundle dump --file=~/dotfiles/homebrew/Brewfile --describe --force
   uv self update
   uv tool upgrade pyright mypy ruff
   npm -g upgrade @google/gemini-cli npm prettier pyright
