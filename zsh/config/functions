@@ -244,10 +244,12 @@ function ollama_stop_all() {
 }
 
 function updateall() {
+  sleep 1
   fc -W 
-  . ~/.zshrc
+  source ~/.zshrc
   cleanNeovimLogs
-  $HOME/dotfiles/scripts/zsh_history_sync.py
+  pyenv exec $HOME/dotfiles/scripts/zsh_history_sync.py
+  sleep 5
 
   brew update 
   brew upgrade 
@@ -257,4 +259,5 @@ function updateall() {
   uv self update
   uv tool upgrade pyright mypy ruff
   npm -g upgrade @google/gemini-cli npm prettier pyright
+  sleep 1
 }

@@ -1,7 +1,8 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.14
 
 # ruff: noqa: S607,S602
 import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,6 +10,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
 
 ROOT_DIR = Path(__file__).parent.parent
 curr_history_filename = ".zsh_history"
@@ -125,4 +127,13 @@ def merge_and_overwrite_histories(
 
 
 if __name__ == "__main__":
+    print()
+    print("ZSH History Sync starting...")
+    print("Python version:", sys.version)
+
     merge_and_overwrite_histories(CURR_ZSH_HISTORY)
+
+    print()
+    print("ZSH History Sync...")
+    print("Sync done!")
+    print()
