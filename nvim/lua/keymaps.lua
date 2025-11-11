@@ -120,6 +120,11 @@ map(
   { desc = "Wrap HTML - < and >" }
 )
 
+vim.keymap.set("n", "<leader>cfp", function()
+  vim.fn.setreg("+", vim.fn.expand("%:p"))
+  print("Full path copied to clipboard")
+end, { noremap = true, silent = true, desc = "Copy full file path" })
+
 -- Word Wrap
 vim.keymap.set("n", "<leader>ww", function()
   if vim.wo.wrap then
