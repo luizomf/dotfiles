@@ -87,45 +87,6 @@ return {
         },
       })
       vim.lsp.enable("tailwindcss")
-
-      -- DEPRECATED
-      --
-      -- require("lspconfig").pyright.setup({
-      --   on_attach = on_attach,
-      --   capabilities = capabilities,
-      -- })
-
-      -- require("lspconfig").ruff.setup({
-      --   on_attach = on_attach,
-      --   capabilities = capabilities,
-      -- })
-
-      -- require("lspconfig").ts_ls.setup({
-      --   on_attach = on_attach,
-      --   capabilities = capabilities,
-      -- })
-
-      -- require("lspconfig").lua_ls.setup({
-      --   on_attach = on_attach,
-      --   capabilities = capabilities,
-      -- })
-
-      -- require("lspconfig").tailwindcss.setup({
-      --   on_attach = on_attach,
-      --   capabilities = capabilities,
-      --   settings = {
-      --     tailwindCSS = {
-      --       experimental = {
-      --         classRegex = {
-      --           { "cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]" },
-      --           { "cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]" },
-      --           { "clsx\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]" },
-      --           { "twMerge\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]" },
-      --         },
-      --       },
-      --     },
-      --   },
-      -- }) -- Just to remember, it ends here
     end,
   },
 }
