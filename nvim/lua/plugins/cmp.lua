@@ -53,6 +53,9 @@ return {
             behavior = cmp.ConfirmBehavior.Replace,
             select = true,
           }),
+          ["<C-a>"] = cmp.mapping.abort(),
+          ["<C-u>"] = cmp.mapping.scroll_docs(-1),
+          ["<C-d>"] = cmp.mapping.scroll_docs(1),
           ["<C-Space>"] = cmp.mapping.complete(),
         }),
         sources = {
