@@ -10,10 +10,6 @@ brew "btop"
 brew "chafa"
 # Cross-platform make
 brew "cmake"
-# Search tool like grep and The Silver Searcher
-brew "ripgrep"
-# OpenAI's coding agent that runs in your terminal
-brew "codex"
 # Like neofetch, but much faster because written mostly in C
 brew "fastfetch"
 # Play, record, convert, and stream audio and video
@@ -36,6 +32,8 @@ brew "pkgconf"
 brew "readline"
 # Python version management
 brew "pyenv"
+# Search tool like grep and The Silver Searcher
+brew "ripgrep"
 # Command-line interface for SQLite
 brew "sqlite"
 # Tool Command Language
@@ -56,6 +54,8 @@ cask "aldente"
 cask "alt-tab"
 # Video editing and image design platform
 cask "capcut"
+# OpenAI's coding agent that runs in your terminal
+cask "codex"
 cask "font-fira-code"
 cask "font-jetbrains-mono"
 # Terminal emulator that uses platform-native UI and GPU acceleration
