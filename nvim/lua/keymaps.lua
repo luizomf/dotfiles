@@ -71,6 +71,18 @@ map(
   builtin.lsp_document_symbols,
   { desc = "Document symbols (LSP)" }
 )
+map(
+  { "n" },
+  "<leader>as",
+  "<cmd>AutoSession search<cr>",
+  { desc = "AutoSession Search" }
+)
+map(
+  { "n" },
+  "<leader>ass",
+  "<cmd>AutoSession save<cr>",
+  { desc = "AutoSession Save" }
+)
 
 -- Buffers
 map("n", "<leader><tab>", "<C-^>", { desc = "Toggle last buffer" })

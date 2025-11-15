@@ -47,6 +47,28 @@ return {
       lsp_stop_on_restore = false, -- Should language servers be stopped when restoring a session. Can also be a function that will be called if set. Not called on autorestore from startup
       lazy_support = true, -- Automatically detect if Lazy.nvim is being used and wait until Lazy is done to make sure session is restored correctly. Does nothing if Lazy isn't being used
       legacy_cmds = true, -- Define legacy commands: Session*, Autosession (lowercase s), currently true. Set to false to prevent defining them
+
+      ---@type SessionLens
+      session_lens = {
+        picker = "telescope", -- "telescope"|"snacks"|"fzf"|"select"|nil Pickers are detected automatically but you can also set one manually. Falls back to vim.ui.select
+        load_on_setup = true, -- Only used for telescope, registers the telescope extension at startup so you can use :Telescope session-lens
+        picker_opts = nil, -- Table passed to Telescope / Snacks / Fzf-Lua to configure the picker. See below for more information
+        previewer = "summary", -- 'summary'|'active_buffer'|function - How to display session preview. 'summary' shows a summary of the session, 'active_buffer' shows the contents of the active buffer in the session, or a custom function
+
+        ---@type SessionLensMappings
+        mappings = {
+          -- Mode can be a string or a table, e.g. {"i", "n"} for both insert and normal mode
+          delete_session = { "i", "<C-d>" }, -- mode and key for deleting a session from the picker
+          alternate_session = { "i", "<C-s>" }, -- mode and key for swapping to alternate session from the picker
+          copy_session = { "i", "<C-y>" }, -- mode and key for copying a session from the picker
+        },
+
+        ---@type SessionControl
+        session_control = {
+          control_dir = vim.fn.stdpath("data") .. "/auto_session/", -- Auto session control dir, for control files, like alternating between two sessions with session-lens
+          control_filename = "session_control.json", -- File name of the session control file
+        },
+      },
     })
   end,
 }
