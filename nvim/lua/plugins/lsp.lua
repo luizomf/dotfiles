@@ -29,6 +29,7 @@ return {
           "ts_ls",
           "pyright",
           "tailwindcss",
+          "rust_analyzer",
         },
       })
 
@@ -43,6 +44,12 @@ return {
         map("n", "<leader>rn", vim.lsp.buf.rename, opts)
         map("n", "<leader>ca", vim.lsp.buf.code_action, opts)
       end
+
+      vim.lsp.config("rust_analyzer", {
+        on_attach = on_attach,
+        capabilities = capabilities,
+      })
+      vim.lsp.enable("rust_analyzer")
 
       vim.lsp.config("pyright", {
         on_attach = on_attach,
