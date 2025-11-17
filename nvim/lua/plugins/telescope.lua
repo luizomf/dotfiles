@@ -13,6 +13,11 @@ return {
   },
   config = function()
     require("telescope").setup({
+      defaults = {
+        file_ignore_patterns = {
+          "node_modules",
+        },
+      },
       pickers = {
         buffers = {
           show_all_buffers = true,
