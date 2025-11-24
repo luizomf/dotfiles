@@ -18,6 +18,8 @@ brew "ffmpeg"
 brew "fzf"
 # Improved top (interactive process viewer)
 brew "htop"
+# Handy way to save and run project-specific commands
+brew "just"
 # Free (GNU) replacement for the Pico text editor
 brew "nano"
 # Ambitious Vim-fork focused on extensibility and agility
