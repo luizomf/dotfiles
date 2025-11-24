@@ -261,3 +261,8 @@ function updateall() {
   npm -g upgrade @google/gemini-cli npm prettier pyright
   sleep 1
 }
+
+function clear () {
+  tmux clear-history
+  printf '\e[H\e[2J\e[3J'
+}
