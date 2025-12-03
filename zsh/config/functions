@@ -37,6 +37,10 @@ logsuccess() {
   printf "🟢 ${GREEN}%s${RESET}\n" "$1"
 }
 
+logwarning() {
+  printf "🟡 ${YELLOW}%s${RESET}\n" "$1"
+}
+
 logerror() {
   printf "🔴 ${RED}%s${RESET}\n" "$1"
 }
@@ -205,16 +209,18 @@ sshc() {
 
   # Lógica de limpeza
   _cleanup() {
-    echo "Sessão SSH encerrada. Restaurando o estilo do tmux..."
     tmux set-option -g status-style "$original_ss"
     tmux set-option -g window-status-format "$original_wsf"
     tmux set-option -g window-status-current-format "$original_wscf"
     TERM=$original_term
+    log "SSH ended, restoring tmux style..."
+    log "TERM restored to ${TERM}."
   }
 
   trap _cleanup EXIT
 
-  TERM=$SSH_TERM
+  TERM=$SSH_TERM 
+  log "TERM changed to ${TERM}."
   tmux set -g status-style "fg=black,bg=red"
   tmux set -g window-status-format "#[fg=black,bg=red] #I:#W "
   tmux set -g window-status-current-format "#[fg=white,bg=black] #I:#W "
