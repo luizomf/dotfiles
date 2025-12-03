@@ -197,7 +197,10 @@ function cleanNeovimLogs() {
 sshc() {
   if [ -z "$TMUX" ]; then
     # Não estamos no tmux
+    original_term=$TERM
+    TERM=$SSH_TERM 
     command ssh "$@"
+    TERM=$original_term 
     return
   fi
 
