@@ -248,21 +248,47 @@ function ollama_stop_all() {
 }
 
 function updateall() {
+  log "Sleeping for 1 sec..."
   sleep 1
+
+  log "Writing history to file"
   fc -W 
+  log "Sourcing .zshrc"
   source ~/.zshrc
+
+  log "Sourcing .tmux.conf"
+  tmux source ~/.tmux.conf
+
+  log "Cleaning nvim logs..."
   cleanNeovimLogs
+
+  log "Synchronizing ZSH history to local computers..."
   pyenv exec $HOME/dotfiles/scripts/zsh_history_sync.py
   sleep 5
 
+  log "Running brew update"
   brew update 
+  log "Running brew upgrade"
   brew upgrade 
+  log "Running omz update"
   omz update 
+  log "Running brew cleanup"
   brew cleanup 
+  log "Regenerating brew bundle file"
   brew bundle dump --file=~/dotfiles/homebrew/Brewfile --describe --force
+
+  log "Running uv self update"
   uv self update
+  log "Running uv upgrade tools: pyright mupy ruff"
   uv tool upgrade pyright mypy ruff
+  log "Running uv python upgrade 3 and 3t"
+  uv python upgrade 3t
+  uv python upgrade 3
+
+  log "Running npm upgrade for global packages: gemini npm prettier pyright"
   npm -g upgrade @google/gemini-cli npm prettier pyright
+
+  log "Sleeping for 1 sec..."
   sleep 1
 }
 
