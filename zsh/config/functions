@@ -205,17 +205,14 @@ sshc() {
   fi
 
   # Pega o estilo atual do tmux
-  original_ss=$(tmux show-options -gqv status-style)
-  original_wsf=$(tmux show-options -gqv window-status-format)
-  original_wscf=$(tmux show-options -gqv window-status-current-format)
+  original_sl=$(tmux show-options -gqv status-left)
   original_term=$TERM
 
   # Lógica de limpeza
   _cleanup() {
-    tmux set-option -g status-style "$original_ss"
-    tmux set-option -g window-status-format "$original_wsf"
-    tmux set-option -g window-status-current-format "$original_wscf"
+    tmux set -g status-left $original_sl
     TERM=$original_term
+
     log "SSH ended, restoring tmux style..."
     log "TERM restored to ${TERM}."
   }
@@ -224,9 +221,7 @@ sshc() {
 
   TERM=$SSH_TERM 
   log "TERM changed to ${TERM}."
-  tmux set -g status-style "fg=black,bg=red"
-  tmux set -g window-status-format "#[fg=black,bg=red] #I:#W "
-  tmux set -g window-status-current-format "#[fg=white,bg=black] #I:#W "
+  tmux set -g status-left "#[fg=green bg=black] [SSH] #H #[fg=black,bg=green]#[default]"
 
   command ssh -q "$@"
 }
