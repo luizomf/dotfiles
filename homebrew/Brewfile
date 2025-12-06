@@ -58,6 +58,8 @@ cask "alt-tab"
 cask "capcut"
 # OpenAI's coding agent that runs in your terminal
 cask "codex"
+# App to build and share containerised applications and microservices
+cask "docker-desktop"
 cask "font-fira-code"
 cask "font-jetbrains-mono"
 # Terminal emulator that uses platform-native UI and GPU acceleration
