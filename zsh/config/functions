@@ -303,7 +303,7 @@ function dockerremoveall() {
   # REMOVE ALL CONTAINERS
   docker rm $(docker ps -a -q) 2>/dev/null || true
   # REMOVE ALL IMAGES
-  docker rm $(docker image ls -a -q) 2>/dev/null || true
+  docker rmi $(docker image ls -a -q) 2>/dev/null || true
   # REMOVE ALL VOLUMES
   docker volume rm $(docker volume ls -q) 2>/dev/null || true
   # REMOVE ALL BUILDER HISTORY
