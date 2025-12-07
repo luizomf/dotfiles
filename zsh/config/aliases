@@ -7,8 +7,8 @@
 alias gitlog='git log --graph --pretty=format:"%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset" --abbrev-commit'
 alias pipupgrade="pip freeze | sed -e 's/==.*//' | xargs pip install --upgrade"
 alias pipdeleteall='pip freeze | xargs pip uninstall -y'
-alias dockerstopall='docker stop $(docker ps -a -q) ; docker system prune -f ; docker rm -vf $(docker ps -aq) ;'
-alias dockerremoveall='docker stop $(docker ps -a -q) ; docker system prune -f ; docker volume prune ; docker rm -vf $(docker ps -aq) ; docker rmi -f $(docker images -aq)'
+# alias dockerstopall='docker stop $(docker ps -a -q) ; docker system prune -f ; docker rm -vf $(docker ps -aq) ;'
+# alias dockerremoveall='docker stop $(docker ps -a -q) ; docker system prune -f ; docker volume prune ; docker rm -vf $(docker ps -aq) ; docker rmi -f $(docker images -aq)'
 
 # Conjunto apagar tela
 alias idledelaydefault='gsettings set org.gnome.settings-daemon.plugins.power idle-dim true && gsettings set org.gnome.desktop.session idle-delay 300'

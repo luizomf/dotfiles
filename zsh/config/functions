@@ -296,3 +296,17 @@ function clear () {
   tmux clear-history
   printf '\e[H\e[2J\e[3J'
 }
+
+function dockerremoveall() {
+  # STOP ALL CONTAINERS 
+  docker stop $(docker ps -a -q) 2>/dev/null || true
+  # REMOVE ALL CONTAINERS
+  docker rm $(docker ps -a -q) 2>/dev/null || true
+  # REMOVE ALL IMAGES
+  docker rm $(docker image ls -a -q) 2>/dev/null || true
+  # REMOVE ALL VOLUMES
+  docker volume rm $(docker volume ls -q) 2>/dev/null || true
+  # REMOVE ALL BUILDER HISTORY
+  docker builder history ls | cut -f 1 -d ' ' | xargs -I {} docker builder history rm {} 2>/dev/null || true
+}
+
