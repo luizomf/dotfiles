@@ -6,7 +6,7 @@ HISTSIZE=1000000
 
 setopt BANG_HIST                 # Treat the '!' character specially during expansion.
 setopt EXTENDED_HISTORY          # Write the history file in the ":start:elapsed;command" format.
-setopt APPEND_HISTORY            # Append to the history
+setopt APPEND_HISTORY            # Append to the history.
 setopt INC_APPEND_HISTORY        # Write to the history file immediately, not when the shell exits.
 setopt SHARE_HISTORY             # Share history between all sessions.
 setopt HIST_EXPIRE_DUPS_FIRST    # Expire duplicate entries first when trimming history.
@@ -19,15 +19,22 @@ setopt HIST_REDUCE_BLANKS        # Remove superfluous blanks before recording en
 setopt HIST_VERIFY               # Don't execute immediately upon history expansion.
 setopt HIST_BEEP                 # Beep when accessing nonexistent history.
 
-setopt auto_cd                   # cd by typing directory name if it's not a command
-setopt correct_all               # autocorrect commands
-setopt auto_list                 # automatically list choices on ambiguous completion
-setopt auto_menu                 # automatically use menu completion
-setopt always_to_end             # move cursor to end if word had one match
+setopt AUTO_CD                   # cd by typing directory name if it's not a command.
+setopt AUTO_LIST                 # Automatically list choices on ambiguous completion.
+setopt AUTO_MENU                 # Automatically use menu completion.
+setopt ALWAYS_TO_END             # Move cursor to end if word had one match.
 
-setopt AUTO_PUSHD                # Make cd behave like pushd adding directories to the stack
-setopt PUSHD_IGNORE_DUPS         # Dont add duplicate directories to the stack dirstack
+setopt AUTO_PUSHD                # Make cd behave like pushd adding directories to the stack.
+setopt PUSHD_IGNORE_DUPS         # Don't add duplicate directories to the stack.
 setopt PUSHD_SILENT              # Suppress printing the directory stack when using pushd/popd.
+
+setopt NONOMATCH                 # Don't throw errors when a glob pattern doesn't match anything.
+setopt EXTENDED_GLOB             # Enable advanced glob operators.
+setopt GLOB_DOTS                 # Include dotfiles when globbing.
+
+# I HATE THESE
+# setopt CORRECT_ALL               # Autocorrect commands.
+# setopt CORRECT                   # Light command correction.
 
 # .zshrc
 export ZSH="$HOME/.oh-my-zsh"
