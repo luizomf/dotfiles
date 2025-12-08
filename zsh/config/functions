@@ -96,7 +96,7 @@ function iterm() {
 
 restart_terminal() {
   fc -W 
-  . ~/.zshrc
+  . $HOME/.zshrc
   tmux respawn-window -k
 }
 
@@ -155,14 +155,14 @@ function gitconfig() {
 function tmux_respawn_all() {
   echo "Iniciando a limpeza do Tmux Resurrect"
   fc -W 
-  . ~/.zshrc
+  . $HOME/.zshrc
   cleanNeovimLogs
   
   $HOME/dotfiles/scripts/zsh_history_sync.py
 
 
-  rm -Rf ~/.local/share/tmux/resurrect/*.*
-  rm -Rf ~/.local/share/tmux/resurrect/last
+  rm -Rf $HOME/.local/share/tmux/resurrect/*.*
+  rm -Rf $HOME/.local/share/tmux/resurrect/last
 
   echo "Salvando as sessões..."
   $HOME/.tmux/plugins/tmux-resurrect/scripts/save.sh
@@ -183,11 +183,11 @@ function tmux_respawn_all() {
 function cleanNeovimLogs() {
   echo "🧼 Iniciando limpeza de logs e cache do Neovim..."
 
-  [[ -d ~/.local/state/nvim ]] && rm ~/.local/state/nvim/*.log
-  [[ -d ~/.cache/nvim ]] && {
+  [[ -d $HOME/.local/state/nvim ]] && rm ~/.local/state/nvim/*.log
+  [[ -d $HOME/.cache/nvim ]] && {
       rm ~/.cache/nvim/*.log
-      rm -r ~/.cache/nvim/shada
-      rm -r ~/.cache/nvim/sessions
+      rm -r $HOME/.cache/nvim/shada
+      rm -r $HOME/.cache/nvim/sessions
   }
   echo "✅ Neovim limpo com sucesso!"
 }
@@ -254,10 +254,10 @@ function updateall() {
   log "Writing history to file"
   fc -W 
   log "Sourcing .zshrc"
-  source ~/.zshrc
+  source $HOME/.zshrc
 
   log "Sourcing .tmux.conf"
-  tmux source ~/.tmux.conf
+  tmux source $HOME/.tmux.conf
 
   log "Cleaning nvim logs..."
   cleanNeovimLogs
@@ -274,8 +274,9 @@ function updateall() {
   omz update 
   log "Running brew cleanup"
   brew cleanup 
+
   log "Regenerating brew bundle file"
-  brew bundle dump --file=~/dotfiles/homebrew/Brewfile --describe --force
+  brew bundle dump --file=$HOME/dotfiles/homebrew/Brewfile --describe --force
 
   log "Running uv self update"
   uv self update
