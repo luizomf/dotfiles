@@ -10,31 +10,7 @@ export OLLAMA_HOST="0.0.0.0:11434"
 
 # source $(brew --prefix nvm)/nvm.sh
 
-# export FZF_DEFAULT_OPTS="$FZF_DEFAULT_OPTS \
-#   --highlight-line \
-#   --info=inline-right \
-#   --ansi \
-#   --layout=reverse \
-#   --border=none \
-#   --color=bg+:#121212 \
-#   --color=bg:#000000 \
-#   --color=border:#121212 \
-#   --color=fg:#EEEEEE \
-#   --color=gutter:#121212 \
-#   --color=header:#FF0000 \
-#   --color=hl+:#00ff5f \
-#   --color=hl:#afffaf \
-#   --color=info:#FF0000 \
-#   --color=marker:#d7ffd7 \
-#   --color=pointer:#d7ffff \
-#   --color=prompt:#d7ffff \
-#   --color=query:#d7ffff:regular \
-#   --color=scrollbar:#d7ffff \
-#   --color=separator:#d7ffff \
-#   --color=spinner:#d7ffff \
-# "
-
-export FZF_DEFAULT_OPTS=$FZF_DEFAULT_OPTS'
+export FZF_DEFAULT_OPTS='
   --color=fg:#dadada,fg+:#ffffff,bg:#000000,bg+:#3a3a3a
   --color=hl:#afffaf,hl+:#00ff5f,info:#00ff87,marker:#00ff5f
   --color=prompt:#dadada,spinner:#00ff87,pointer:#00ff87,header:#00ff87
