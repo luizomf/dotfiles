@@ -4,10 +4,81 @@ return {
     lazy = false,
     priority = 1000,
     config = function()
+      local black = "#000000"
+      local black1 = "#080808"
+      local black2 = "#121212"
+      local black3 = "#1c1c1c"
+      local black4 = "#262626"
+      local black5 = "#303030"
+      local black6 = "#3a3a3a"
+      local black7 = "#444444"
+      local black8 = "#4e4e4e"
+      local black9 = "#585858"
+      local black10 = "#626262"
+
+      local white = "#FFFFFF"
+      local white1 = "#eeeeee"
+      local white2 = "#e4e4e4"
+      local white3 = "#dadada"
+      local white4 = "#d0d0d0"
+      local white5 = "#c6c6c6"
+      local white6 = "#bcbcbc"
+      local white7 = "#b2b2b2"
+      local white8 = "#a8a8a8"
+      local white9 = "#9e9e9e"
+      local white10 = "#949494"
+
+      local gray1 = "#6c6c6c"
+      local gray2 = "#808080"
+      local gray3 = "#949494"
+
+      local red = "#ff8787"
+      local red1 = "#ff5f5f"
+      local red2 = "#ff5f87"
+      local red3 = "#db4b4b"
+
+      local green_pale = "#afffaf"
+      local green_pale = "#afffaf"
+      local green_pale = "#afffaf"
+      local green_pale = "#afffaf"
+
+      local green = "#87ffaf"
+      local green1 = "#00ff87"
+      local green2 = "#00ff5f"
+      local green3 = "#00d787"
+
+      local yellow = "#ffffaf"
+      local yellow1 = "#ffff87"
+      local yellow2 = "#ffff5f"
+      local yellow3 = "#ffff00"
+
+      local blue = "#afd7ff"
+      local blue1 = "#87afff"
+      local blue2 = "#5fafff"
+      local blue3 = "#00afff"
+      local blue4 = "#005fd7"
+      local blue5 = "#005faf"
+      local blue6 = "#0000d7"
+
+      local purple = "#d7afff"
+      local purple1 = "#af87ff"
+      local purple2 = "#af5fff"
+      local purple4 = "#875fff"
+
+      local cyan = "#87ffff"
+      local cyan1 = "#5fffff"
+      local cyan2 = "#00ffff"
+      local cyan3 = "#00d7d7"
+
+      local orange = "#ffafaf"
+      local orange1 = "#ffaf87"
+      local orange2 = "#ffaf5f"
+      local orange3 = "#ffaf00"
+
       require("tokyonight").setup({
         style = "night", -- The theme comes in three styles, `storm`, a darker variant `night` and `day`
         light_style = "day", -- The theme is used when the background is set to light
-        transparent = true, -- Enable this to disable setting the background color
+        transparent = false, -- Enable this to disable setting the background color
         terminal_colors = false, -- Configure the colors used when opening a `:terminal` in Neovim
         styles = {
           -- Style to be applied to different syntax groups
@@ -28,52 +99,58 @@ return {
         --- function will be called with a ColorScheme table
         ---@param colors ColorScheme
         on_colors = function(colors)
-          colors.black = "#0c0e14"
+          colors.bg_sidebar = black
+          colors.bg_float = black
+          colors.bg_popup = black
+          colors.bg_statusline = black
 
-          colors.bg_sidebar = "#0c0e14"
-          colors.bg_float = "#0c0e14"
-          colors.bg_popup = "#0c0e14"
-          colors.bg_statusline = "#0c0e14"
-          colors.comment = "#43455e"
-          colors.bg_visual = "#232534"
+          colors.bg = black2
+          colors.bg_dark = black3
+          colors.bg_dark1 = black4
 
-          -- colors.red = "#f7768e"
-          -- colors.red1 = "#ff8787"
-          colors.green = "#5fffaf"
-          -- colors.yellow = "#ffffaf"
-          -- colors.teal = "#5fffd7"
-          -- colors.orange = "#ffaf00"
-          -- colors.blue0 = "#87ffff"
-          -- colors.blue1 = "#afd7ff"
-          -- colors.blue2 = "#5fd7ff"
-          -- colors.blue5 = "#00afff"
-          -- colors.blue6 = "#0087ff"
-          -- colors.blue7 = "#005fff"
-          -- colors.magenta = "#d7afff"
-          -- colors.magenta2 = "#af87ff"
-          -- colors.cyan = "#5fffff"
-          --
-          -- colors.bg = "#13141f"
-          -- colors.bg_dark = "#11131b"
-          -- colors.bg_dark1 = "#0c0e14"
-          --
-          -- colors.fg = "#ebeef5"
-          -- colors.fg_dark = "#bbc7e2"
-          -- colors.fg_gutter = "#343b52"
-          --
-          -- colors.dark3 = "#343b52"
-          -- colors.dark5 = "#00FF00"
+          colors.fg = white2
+          colors.fg_dark = white8
+          colors.fg_gutter = black6
 
-          colors.comment = "#52557c"
+          colors.dark3 = black8
+          colors.dark5 = black10
+
+          colors.comment = black8
+          -- colors.bg_visual = black9
+
+          colors.black = black
+
+          colors.red = red
+          colors.red1 = red1
+
+          colors.green = green
+          colors.green1 = green1
+          colors.green2 = green2
+
+          colors.blue = blue
+          colors.blue0 = blue1
+          colors.blue1 = blue2
+          colors.blue2 = blue3
+
+          colors.blue5 = cyan1
+          colors.blue6 = cyan2
+          colors.blue7 = blue6
+
+          colors.magenta = purple
+          colors.magenta2 = purple1
+          colors.purple = purple2
+
+          colors.yellow = yellow1
+          colors.teal = cyan3
+          colors.orange = orange1
+          colors.cyan = cyan
         end,
 
         --- You can override specific highlights to use other groups or a hex color
         --- function will be called with a Highlights and ColorScheme table
-        ---@param highlights tokyonight.Highlights
-        ---@param colors ColorScheme
         on_highlights = function(hl, c)
-          hl.CursorLine = { bg = "#232534" }
-          hl.Visual = { bg = "#232534" }
+          hl.CursorLine = { bg = black2 }
+          hl.Visual = { bg = black3 }
         end,
 
         cache = true, -- When set to true, the theme will be cached for better performance
