@@ -1,18 +1,18 @@
 palette = 0=#000000
 palette = 1=#ff8787
-palette = 2=#87ffaf
+palette = 2=#00ff87
 palette = 3=#ffff87
-palette = 4=#87afff
-palette = 5=#d7afff
+palette = 4=#afd7ff
+palette = 5=#ffafff
 palette = 6=#5fffff
-palette = 7=#a9b1d6
+palette = 7=#d0d0d0
 palette = 8=#808080
 palette = 9=#ff5f5f
 palette = 10=#00ff5f
 palette = 11=#ffff5f
 palette = 12=#5fafff
-palette = 13=#af5fff
-palette = 14=#5fffff
+palette = 13=#ff87ff
+palette = 14=#00ffff
 palette = 15=#FFFFFF
 
 background = #121212

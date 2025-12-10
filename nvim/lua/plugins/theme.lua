@@ -5,75 +5,50 @@ return {
     priority = 1000,
     config = function()
       local black = "#000000"
-      local black1 = "#080808"
-      local black2 = "#121212"
-      local black3 = "#1c1c1c"
-      local black4 = "#262626"
-      local black5 = "#303030"
-      local black6 = "#3a3a3a"
-      local black7 = "#444444"
-      local black8 = "#4e4e4e"
-      local black9 = "#585858"
-      local black10 = "#626262"
 
-      local white = "#FFFFFF"
-      local white1 = "#eeeeee"
-      local white2 = "#e4e4e4"
-      local white3 = "#dadada"
-      local white4 = "#d0d0d0"
-      local white5 = "#c6c6c6"
-      local white6 = "#bcbcbc"
-      local white7 = "#b2b2b2"
-      local white8 = "#a8a8a8"
-      local white9 = "#9e9e9e"
-      local white10 = "#949494"
+      local bg = "#121212"
+      local bg_dark = "#1c1c1c"
+      local bg_dark1 = "#080808"
+      local bg_highlight = "#262626"
+      local bg_sidebar = "#121212"
 
-      local gray1 = "#6c6c6c"
-      local gray2 = "#808080"
-      local gray3 = "#949494"
+      local blue = "#87afff"
+      local blue0 = "#005faf"
+      local blue1 = "#5fafff"
+      local blue2 = "#5fafd7"
+
+      local blue5 = "#87afff"
+      local blue6 = "#afffff"
+      local blue7 = "#5f5f87"
+
+      local terminal_black = "#585858"
+      local comment = "#585858"
+      local cyan = "#87ffff"
+
+      local dark3 = "#585858"
+      local dark5 = "#767676"
+
+      local fg = "#c6c6c6"
+      local fg_sidebar = "#d7d7d7"
+      local fg_dark = "#b2b2b2"
+      local fg_float = "#c6c6c6"
+
+      local fg_gutter = "#444444"
+
+      local green = "#00ff87"
+      local green1 = "#afffaf"
+      local green2 = "#00af5f"
+
+      local magenta = "#ffafff"
+      local magenta2 = "#ff87ff"
 
       local red = "#ff8787"
       local red1 = "#ff5f5f"
-      local red2 = "#ff5f87"
-      local red3 = "#db4b4b"
 
-      local green_pale = "#afffaf"
-      local green_pale = "#afffaf"
-      local green_pale = "#afffaf"
-      local green_pale = "#afffaf"
-
-      local green = "#87ffaf"
-      local green1 = "#00ff87"
-      local green2 = "#00ff5f"
-      local green3 = "#00d787"
-
-      local yellow = "#ffffaf"
-      local yellow1 = "#ffff87"
-      local yellow2 = "#ffff5f"
-      local yellow3 = "#ffff00"
-
-      local blue = "#afd7ff"
-      local blue1 = "#87afff"
-      local blue2 = "#5fafff"
-      local blue3 = "#00afff"
-      local blue4 = "#005fd7"
-      local blue5 = "#005faf"
-      local blue6 = "#0000d7"
-
-      local purple = "#d7afff"
-      local purple1 = "#af87ff"
-      local purple2 = "#af5fff"
-      local purple4 = "#875fff"
-
-      local cyan = "#87ffff"
-      local cyan1 = "#5fffff"
-      local cyan2 = "#00ffff"
-      local cyan3 = "#00d7d7"
-
-      local orange = "#ffafaf"
-      local orange1 = "#ffaf87"
-      local orange2 = "#ffaf5f"
-      local orange3 = "#ffaf00"
+      local purple = "#af87ff"
+      local orange = "#ffaf87"
+      local teal = "#87d7d7"
+      local yellow = "#ffff87"
 
       require("tokyonight").setup({
         style = "night", -- The theme comes in three styles, `storm`, a darker variant `night` and `day`
@@ -103,22 +78,36 @@ return {
           colors.bg_float = black
           colors.bg_popup = black
           colors.bg_statusline = black
+          colors.bg_highlight = bg_highlight
+          colors.bg_sidebar = bg_sidebar
 
-          colors.bg = black2
-          colors.bg_dark = black3
-          colors.bg_dark1 = black4
+          colors.bg = bg
+          colors.bg_dark = bg_dark
+          colors.bg_dark1 = bg_dark1
 
-          colors.fg = white2
-          colors.fg_dark = white8
-          colors.fg_gutter = black6
+          colors.dark3 = dark3
+          colors.dark5 = dark5
 
-          colors.dark3 = black8
-          colors.dark5 = black10
+          colors.fg = fg
+          colors.fg_dark = fg_dark
+          colors.fg_gutter = fg_gutter
+          colors.fg_sidebar = fg_sidebar
+          colors.fg_float = fg_float
 
-          colors.comment = black8
-          -- colors.bg_visual = black9
+          colors.dark3 = dark3
+          colors.dark5 = dark5
 
+          colors.comment = comment
           colors.black = black
+
+          colors.error = red
+          colors.warning = yellow
+          colors.info = blue6
+          colors.hint = blue5
+
+          -- colors.border = ""
+          -- colors.border_highlight = ""
+          -- colors.bg_visual = ""
 
           colors.red = red
           colors.red1 = red1
@@ -128,29 +117,31 @@ return {
           colors.green2 = green2
 
           colors.blue = blue
-          colors.blue0 = blue1
-          colors.blue1 = blue2
-          colors.blue2 = blue3
+          colors.blue0 = blue0
+          colors.blue1 = blue1
+          colors.blue2 = blue2
 
-          colors.blue5 = cyan1
-          colors.blue6 = cyan2
-          colors.blue7 = blue6
+          colors.blue5 = blue5
+          colors.blue6 = blue6
+          colors.blue7 = blue7
 
-          colors.magenta = purple
-          colors.magenta2 = purple1
-          colors.purple = purple2
+          colors.magenta = magenta
+          colors.magenta2 = magenta2
+          colors.purple = purple
 
-          colors.yellow = yellow1
-          colors.teal = cyan3
-          colors.orange = orange1
+          colors.yellow = yellow
+          colors.teal = teal
+          colors.orange = orange
           colors.cyan = cyan
         end,
 
         --- You can override specific highlights to use other groups or a hex color
         --- function will be called with a Highlights and ColorScheme table
         on_highlights = function(hl, c)
-          hl.CursorLine = { bg = black2 }
-          hl.Visual = { bg = black3 }
+          hl.CursorLine = { bg = bg_highlight }
+          hl.Visual = { bg = bg_highlight }
+          hl.ComplHint = { fg = comment }
+          hl.DiagnosticUnnecessary = { fg = comment }
         end,
 
         cache = true, -- When set to true, the theme will be cached for better performance
