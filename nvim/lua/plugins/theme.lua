@@ -4,6 +4,8 @@ return {
     lazy = false,
     priority = 1000,
     config = function()
+      local Util = require("tokyonight.util")
+
       local black = "#000000"
 
       local bg = "#121212"
@@ -136,11 +138,28 @@ return {
 
         --- You can override specific highlights to use other groups or a hex color
         --- function will be called with a Highlights and ColorScheme table
-        on_highlights = function(hl)
+        on_highlights = function(hl, c)
           hl.CursorLine = { bg = bg_highlight }
           hl.Visual = { bg = bg_highlight }
           hl.ComplHint = { fg = comment }
           hl.DiagnosticUnnecessary = { fg = comment }
+
+          hl.TelescopeBorder = { fg = comment, bg = black }
+          hl.TelescopeNormal = { fg = fg, bg = black }
+          hl.TelescopePromptBorder = { fg = comment, bg = black }
+          hl.TelescopePromptTitle = { fg = fg, bg = black }
+          hl.TelescopeResultsComment = { fg = comment }
+
+          hl.ColorColumn = { bg = Util.blend_fg(black, 0.92, fg) }
+          hl.CursorLine = { bg = Util.blend_fg(black, 0.92, fg) }
+
+          hl["@comment"] = { fg = comment, italic = true, bold = false }
+
+          for i, color in ipairs(c.rainbow) do
+            hl["@markup.heading." .. i .. ".markdown"] =
+              -- { fg = color, bold = true, bg = Util.blend_bg(color, 0.1) }
+              { fg = color, bold = true }
+          end
         end,
 
         cache = true, -- When set to true, the theme will be cached for better performance
