@@ -21,7 +21,6 @@ return {
       local blue6 = "#afffff"
       local blue7 = "#5f5f87"
 
-      local terminal_black = "#585858"
       local comment = "#585858"
       local cyan = "#87ffff"
 
@@ -137,7 +136,7 @@ return {
 
         --- You can override specific highlights to use other groups or a hex color
         --- function will be called with a Highlights and ColorScheme table
-        on_highlights = function(hl, c)
+        on_highlights = function(hl)
           hl.CursorLine = { bg = bg_highlight }
           hl.Visual = { bg = bg_highlight }
           hl.ComplHint = { fg = comment }
