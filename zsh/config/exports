@@ -12,8 +12,6 @@ ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=red,bold'
 
 export OLLAMA_HOST="0.0.0.0:11434"
 
-# source $(brew --prefix nvm)/nvm.sh
-
 export FZF_DEFAULT_OPTS='
   --color=fg:#dadada,fg+:#ffffff,bg:#000000,bg+:#3a3a3a
   --color=hl:#afffaf,hl+:#00ff5f,info:#00ff87,marker:#00ff5f
@@ -34,9 +32,6 @@ export NVM_DIR="$HOME/.nvm"
 # brew install openssl
 # brew install curl
 
-# To add new things to PATH
-# export PATH="/the/path/needed:$PATH"
-
 # PKG_CONFIG_PATH acumulado corretamente
 export PKG_CONFIG_PATH="/opt/homebrew/opt/curl/lib/pkgconfig:$PKG_CONFIG_PATH"
 export PKG_CONFIG_PATH="/opt/homebrew/opt/sqlite/lib/pkgconfig:$PKG_CONFIG_PATH"
@@ -46,7 +41,6 @@ export LDFLAGS="-L/opt/homebrew/lib -L/opt/homebrew/opt/openssl/lib -L/opt/homeb
 
 # CPPFLAGS (cabeçalhos de compilação)
 export CPPFLAGS="-I/opt/homebrew/include -I/opt/homebrew/opt/openssl/include -I/opt/homebrew/opt/openssl@3/include -I/opt/homebrew/opt/curl/include -I/opt/homebrew/opt/mysql-client/include -I/opt/homebrew/opt/libpq/include -I/opt/homebrew/opt/sqlite/include"
-
 export BAT_STYLE="header"
 
 export PYENV_ROOT="$HOME/.pyenv"
@@ -59,5 +53,4 @@ eval "$(pyenv init -)"
 
 export PATH="$(pyenv root)/shims:/opt/homebrew/opt/curl/bin:/opt/homebrew/opt/mysql-client/bin:/opt/homebrew/opt/libpq/bin:$PATH"
 export PATH="/opt/homebrew/opt/sqlite/bin:$PATH"
-
 
