@@ -8,7 +8,7 @@ call plug#end()
 
 " --- Atalhos para FZF ---
 " Ctrl+P para buscar arquivos (similar ao VSCode/Sublime)
-"nnoremap <C-p> :Files<CR>
+nnoremap <C-p> :Files<CR>
 
 set number
 set relativenumber
@@ -30,7 +30,7 @@ set fileencoding=utf-8
 set autoindent
 set smartindent
 
-set clipboard=unnamedplus
+set clipboard=unnamed
 set wrap
 set hlsearch
 set incsearch
@@ -43,7 +43,7 @@ set listchars=tab:>-,trail:-,lead:·,eol:¬
 set viminfo=
 autocmd BufReadPost * if line("'\"") > 0 && line("'\"") <= line("$") | exe "normal! g`\"" | endif
 
-inoremap jj <Esc>       " jj pra sair do modo insert
+inoremap jj <Esc>
 
 let mapleader=" "
 nnoremap <leader>w :w<CR>        " salvar com <space>w
