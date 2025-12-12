@@ -282,9 +282,8 @@ function updateall() {
   uv self update
   log "Running uv upgrade tools: pyright mupy ruff"
   uv tool upgrade pyright mypy ruff
-  log "Running uv python upgrade 3 and 3t"
-  uv python upgrade 3t
-  uv python upgrade 3
+  log "Running uv python upgrade"
+  uv python upgrade
 
   log "Running npm upgrade for global packages: gemini npm prettier pyright"
   npm -g upgrade @google/gemini-cli npm prettier pyright
