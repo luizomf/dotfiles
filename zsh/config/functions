@@ -81,6 +81,7 @@ function deletePythonCache() {
     echo "Limpando diretórios de cache e build..."
 
     deactivate
+
     find . -type d \( -name "__pycache__" -o -name ".pytest_cache" -o -name ".tox" -o -name "*.egg-info" -o -name "build" -o -name "dist" \) -exec rm -r {} \;
     find . -type f \( -name "*.pyc" -o -name "*.pyo" \) -delete
 
