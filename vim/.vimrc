@@ -45,11 +45,21 @@ let mapleader = " "
 " <C-s>: Control + s.
 " <leader>: Your defined leader key (e.g., space or \).
 
+" INSERT 
+inoremap jj <Esc> 
+
+" NORMAL (MISC) 
 nnoremap <leader>ff :Files<CR>
 nnoremap <leader>w :w<CR>
-inoremap jj <Esc> 
 nnoremap <leader>h :noh<CR>
-nnoremap <Tab> :bn<CR>
+
+" NORMAL (BUFFERS)
+nnoremap <leader><Tab> <C-^><CR>
+nnoremap <Tab> :bnext<CR>
+nnoremap <S-Tab> :bprevious<CR>
+nnoremap <leader>bd :bdelete<CR>
+nnoremap <leader>bu <C-^><CR>
+
 
 " ### CURSOR SHAPE
 let &t_SI = "\<Esc>[6 q" " SI = Start Insert mode -> cursor em linha
