@@ -21,6 +21,6 @@ else
   # Open the popup
   # -E: closes when command ends
   # attach: attach to the floating session
-  tmux popup -d "#{pane_current_path}" -xC -yC -w80% -h80% \
+  tmux popup -d "#{pane_current_path}" -xC -yC -w95% -h95% \
       -E "tmux attach -t $SESSION_NAME"
 fi
