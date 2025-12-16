@@ -14,6 +14,7 @@ return {
         "cpp",
         "go",
         "rust",
+        "just",
         "cmake",
         "bash",
         "lua",
