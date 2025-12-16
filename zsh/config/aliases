@@ -35,4 +35,5 @@ alias brewcheck='brew leaves | sort'
 
 # Tree ignorando .git, __pycache__, node_modules, .venv, dist, .DS_Store
 alias tre="tree --prune -a -C -I '__pycache__|node_modules|.git|.venv|dist|.DS_Store|*.egg*'"
+alias j="just"
 
