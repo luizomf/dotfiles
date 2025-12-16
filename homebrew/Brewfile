@@ -1,86 +1,45 @@
-# General-purpose data compression with high compression ratio
 brew "xz"
-# Cryptography and SSL/TLS Toolkit
 brew "openssl@3"
-# Clone of cat(1) with syntax highlighting and Git integration
 brew "bat"
-# Resource monitor. C++ version and continuation of bashtop and bpytop
 brew "btop"
-# Versatile and fast Unicode/ASCII/ANSI graphics renderer
 brew "chafa"
-# Cross-platform make
 brew "cmake"
-# Like neofetch, but much faster because written mostly in C
 brew "fastfetch"
-# Play, record, convert, and stream audio and video
 brew "ffmpeg"
-# Command-line fuzzy finder written in Go
 brew "fzf"
-# Improved top (interactive process viewer)
 brew "htop"
-# Handy way to save and run project-specific commands
 brew "just"
-# Free (GNU) replacement for the Pico text editor
 brew "nano"
-# Ambitious Vim-fork focused on extensibility and agility
 brew "neovim"
-# Create, run, and share large language models (LLMs)
-brew "ollama", restart_service: :changed
-# 7-Zip (high compression file archiver) implementation
+brew "ollama"
 brew "p7zip"
-# Package compiler and linker metadata toolkit
 brew "pkgconf"
-# Library for command-line editing
 brew "readline"
-# Python version management
 brew "pyenv"
-# Search tool like grep and The Silver Searcher
 brew "ripgrep"
-# Command-line interface for SQLite
 brew "sqlite"
-# Tool Command Language
 brew "tcl-tk"
-# Terminal multiplexer
 brew "tmux"
-# Display directories as trees (with optional color/HTML output)
 brew "tree"
-# Your CLI home video recorder
 brew "vhs"
-# Executes a program periodically, showing output fullscreen
 brew "watch"
-# Internet file retriever
 brew "wget"
-# General-purpose lossless data-compression library
 brew "zlib"
-# Menu bar tool to limit maximum charging percentage
 cask "aldente"
-# Enable Windows-like alt-tab
 cask "alt-tab"
-# Video editing and image design platform
 cask "capcut"
-# OpenAI's coding agent that runs in your terminal
 cask "codex"
-# App to build and share containerised applications and microservices
 cask "docker-desktop"
 cask "font-fira-code"
 cask "font-jetbrains-mono"
-# Terminal emulator that uses platform-native UI and GPU acceleration
 cask "ghostty"
-# Web browser
 cask "google-chrome"
-# Client for the Google Drive storage service
 cask "google-drive"
-# Open-source keystroke visualiser
 cask "keycastr"
-# Open-source software for live streaming and screen recording
 cask "obs"
-# Open-source code editor
 cask "visual-studio-code"
-# Multimedia player
 cask "vlc"
-# Native desktop client for WhatsApp
 cask "whatsapp"
-# Video communication and virtual meeting platform
 cask "zoom"
 vscode "bradlc.vscode-tailwindcss"
 vscode "britesnow.vscode-toggle-quotes"
