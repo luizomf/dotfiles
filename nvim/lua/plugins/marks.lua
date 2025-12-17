@@ -1,5 +1,7 @@
-return {
-  "chentoast/marks.nvim",
-  event = "VeryLazy",
-  opts = {},
-}
+-- return {
+--   "chentoast/marks.nvim",
+--   event = "VeryLazy",
+--   opts = {},
+-- }
+
+return {}
