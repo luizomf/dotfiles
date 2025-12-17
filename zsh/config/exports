@@ -1,6 +1,7 @@
 #!/bin/sh
 # vim: set filetype=sh :
 
+export KEYTIMEOUT=30
 export EDITOR="nvim"
 export VISUAL="nvim"
 export TABSIZE=2

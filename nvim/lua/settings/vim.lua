@@ -1,7 +1,11 @@
 vim.opt.number = true
 vim.opt.relativenumber = true
-vim.opt.cursorline = true
-vim.opt.colorcolumn = { 80 }
+
+vim.opt.timeoutlen = 300
+vim.opt.ttimeoutlen = 30
+--
+-- vim.opt.cursorline = true
+-- vim.opt.colorcolumn = { 80 }
 
 vim.opt.backupcopy = "yes" -- It fixed the bun error on --watch --hot
 
