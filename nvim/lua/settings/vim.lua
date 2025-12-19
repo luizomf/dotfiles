@@ -3,8 +3,8 @@ vim.opt.relativenumber = true
 
 vim.opt.timeoutlen = 300
 vim.opt.ttimeoutlen = 30
---
--- vim.opt.cursorline = true
+
+vim.opt.cursorline = true
 -- vim.opt.colorcolumn = { 80 }
 
 vim.opt.backupcopy = "yes" -- It fixed the bun error on --watch --hot
@@ -34,8 +34,8 @@ vim.opt.sessionoptions =
 vim.cmd("syntax on")
 
 -- Render tabs and white spaces
--- vim.opt.list = true
--- vim.opt.listchars = "tab:>-,trail:-,lead:·,eol:¬"
+vim.opt.list = true
+vim.opt.listchars = "tab:>-,trail:-,lead:·,eol:¬"
 
 -- restaura posição do cursor
 vim.cmd([[
