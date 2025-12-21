@@ -22,8 +22,16 @@ set mouse=a
 set clipboard=unnamed
 set nowrap
 packadd! hlyank
-colorscheme omtheme
+
+set termguicolors
+colorscheme sorbet
 set background=dark
+
+highlight Normal ctermbg=NONE guibg=NONE
+highlight NonText ctermbg=NONE guibg=NONE
+highlight EndOfBuffer ctermbg=NONE guibg=NONE
+highlight LineNr ctermbg=NONE guibg=NONE
+highlight SignColumn ctermbg=NONE guibg=NONE
 
 " ### Opens the file in the same position where I left it
 autocmd BufReadPost * if line("'\"") > 0 && line("'\"") <= line("$") | exe "normal! g`\"" | endif
