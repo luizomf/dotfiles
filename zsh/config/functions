@@ -299,20 +299,70 @@ function clear () {
 }
 
 function convert_for_youtube() {
-  local INPUT=$1
-  local OUTPUT=$2
+  local INPUT=""
+  local OUTPUT=""
+  local RED="\e[38;5;1m"
+  local RESET="\e[0m"
 
-  [[ -z $INPUT ]] && echo "MISSING INPUT" && return 1
+  help_msg() {
+    printf "Usage: %b <options>\n\n" "${0##*/}"
+    printf "Options:\n"
+    printf "  -i, --input   FILEPATH  Source video you wish to use.\n"
+    printf "  -o, --output  FILEPATH  Output video after conversion.\n"
+    printf "  -h, --help              Display this help information.\n"
+  }
 
-  [[ -z $OUTPUT ]] && echo "MISSING OUTPUT" && return 1
+  errormsg_then_help() {
+    help_msg
+    printf "\n%bError message:%b \n%b\n\n" "${RED-}" "${RESET-}" "${1:-Unknown error}"
+    printf "Please, use --help or -h for usage information.\n"
+  }
+
+  require_value() {
+    local opt="$1" val="$2"
+    if [[ -z "$val" || "$val" == -* ]]; then
+      errormsg_then_help "$opt must have a <value>. Use $opt <value>."
+      return 1
+    fi
+  }
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --input|-i)
+        require_value "$1" "${2-}"
+        INPUT="$2"
+        shift 2
+        ;;
+      --output|-o)
+        require_value "$1" "${2-}"
+        OUTPUT="$2"
+        shift 2
+        ;;
+      --help|-h)
+        help_msg
+        return 0
+        ;;
+      --) 
+        shift
+        break
+        ;;
+      *)
+        errormsg_then_help "Unknown argument: $1"
+        return 1
+        ;;
+    esac
+  done
+
+  if [[ -z "$INPUT" || -z "$OUTPUT" ]]; then
+    errormsg_then_help "Input or output file paths missing"
+    return 1
+  fi
 
   ffmpeg -fflags +genpts \
-    -i $INPUT \
+    -i "$INPUT" \
     -c:v libx264 -profile:v high -crf 13 -bf 2 -g 15 -coder 1 -pix_fmt yuv420p \
     -preset slow \
     -c:a aac -ar 48000 -b:a 384k -ac 2 \
     -movflags +faststart \
-    $OUTPUT
-
+    "$OUTPUT"
 }
-
