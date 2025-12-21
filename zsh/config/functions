@@ -298,20 +298,21 @@ function clear () {
   printf '\e[H\e[2J\e[3J'
 }
 
-function dockerremoveall() {
-  # ⚠️ WARNING -> Maybe you should read this function carefully
-  # STOP ALL CONTAINERS 
-  docker stop $(docker ps -a -q) 2>/dev/null || true
-  # REMOVE ALL CONTAINERS
-  docker rm $(docker ps -a -q) 2>/dev/null || true
-  # REMOVE ALL IMAGES
-  docker rmi $(docker image ls -a -q) 2>/dev/null || true
-  # REMOVE ALL VOLUMES
-  docker volume rm $(docker volume ls -q) 2>/dev/null || true
+function convert_for_youtube() {
+  local INPUT=$1
+  local OUTPUT=$2
 
-  # WAY TOO DANGEROUS 🚨
-  # REMOVE ALL BUILDER HISTORY 
-  # docker builder history ls | cut -f 1 -d ' ' | xargs -I {} docker builder history rm {} 2>/dev/null || true
-  # docker builder prune -a -f >/dev/null || true
+  [[ -z $INPUT ]] && echo "MISSING INPUT" && return 1
+
+  [[ -z $OUTPUT ]] && echo "MISSING OUTPUT" && return 1
+
+  ffmpeg -fflags +genpts \
+    -i $INPUT \
+    -c:v libx264 -profile:v high -crf 13 -bf 2 -g 15 -coder 1 -pix_fmt yuv420p \
+    -preset slow \
+    -c:a aac -ar 48000 -b:a 384k -ac 2 \
+    -movflags +faststart \
+    $OUTPUT
+
 }
 
