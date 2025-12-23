@@ -205,25 +205,22 @@ sshc() {
     return
   fi
 
+  tmux setenv -g SSH_ACTIVE 1
+
   # Pega o estilo atual do tmux
   original_sl=$(tmux show-options -gqv status-left)
   original_term=$TERM
 
   # Lógica de limpeza
   _cleanup() {
+    tmux setenv -g SSH_ACTIVE 0
     tmux set -g status-left $original_sl
     TERM=$original_term
-
-    log "SSH ended, restoring tmux style..."
-    log "TERM restored to ${TERM}."
   }
 
   trap _cleanup EXIT
 
   TERM=$SSH_TERM
-  log "TERM changed to ${TERM}."
-  tmux set -g status-left "#[fg=green bg=black] [SSH] #H #[fg=black,bg=green]#[default]"
-
   command ssh -q "$@"
 }
 
