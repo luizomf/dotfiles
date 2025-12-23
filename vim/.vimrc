@@ -3,16 +3,18 @@ call plug#begin('~/.vim/plugged')
 " Fuzzy finder para arquivos, buffers, etc.
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
-
 call plug#end()
 
+packadd! hlyank
+syntax on
+
+set nocompatible
 set number
 set relativenumber
 set nocursorline
-"set colorcolumn=80 
-set backupcopy=yes 
+"set colorcolumn=80
+set backupcopy=yes
 set expandtab
-syntax on
 set tabstop=2
 set shiftwidth=2
 set expandtab
@@ -21,9 +23,20 @@ set smartindent
 set mouse=a
 set clipboard=unnamed
 set nowrap
-packadd! hlyank
+set backspace=indent,eol,start
+set formatoptions-=t
+set nostartofline
+set ruler
+set showmatch
+set showmode
+set showcmd
+set textwidth=80
+set title
+set hlsearch
+set incsearch
 
-set termguicolors
+set notermguicolors
+set t_Co=256
 colorscheme sorbet
 set background=dark
 
@@ -32,13 +45,11 @@ highlight NonText ctermbg=NONE guibg=NONE
 highlight EndOfBuffer ctermbg=NONE guibg=NONE
 highlight LineNr ctermbg=NONE guibg=NONE
 highlight SignColumn ctermbg=NONE guibg=NONE
+highlight RedundantWhitespace ctermbg=blue guibg=blue
+match RedundantWhitespace /\s\+$\| \+\ze\t/
 
 " ### Opens the file in the same position where I left it
 autocmd BufReadPost * if line("'\"") > 0 && line("'\"") <= line("$") | exe "normal! g`\"" | endif
-
-" ### SEARCH
-set hlsearch
-set incsearch
 
 " ### KEYMAPS
 let mapleader = " "
@@ -53,10 +64,10 @@ let mapleader = " "
 " <C-s>: Control + s.
 " <leader>: Your defined leader key (e.g., space or \).
 
-" INSERT 
-inoremap jj <Esc> 
+" INSERT
+inoremap jj <Esc>
 
-" NORMAL (MISC) 
+" NORMAL (MISC)
 nnoremap <leader>ff :Files<CR>
 nnoremap <leader>w :w<CR>
 nnoremap <leader>h :noh<CR>

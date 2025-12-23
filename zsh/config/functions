@@ -96,13 +96,13 @@ function iterm() {
 }
 
 restart_terminal() {
-  fc -W 
+  fc -W
   . $HOME/.zshrc
   tmux respawn-window -k
 }
 
 function show_colors() {
-  for i in {0..255}; do 
+  for i in {0..255}; do
     print -P ">>>  $(printf '%03d' $i)  %F{$i}Dummy text%f  %F{232}%K{$i} dummy text %k%f  <<<"
   done
 }
@@ -155,10 +155,10 @@ function gitconfig() {
 
 function tmux_respawn_all() {
   echo "Iniciando a limpeza do Tmux Resurrect"
-  fc -W 
+  fc -W
   . $HOME/.zshrc
   cleanNeovimLogs
-  
+
   $HOME/dotfiles/scripts/zsh_history_sync.py
 
 
@@ -171,8 +171,8 @@ function tmux_respawn_all() {
   echo "Tmux resurrect limpo com sucesso!"
   sleep 2
 
-  for pane in $(tmux list-panes -a -F '#D'); do 
-    tmux respawn-pane -k -t $pane; 
+  for pane in $(tmux list-panes -a -F '#D'); do
+    tmux respawn-pane -k -t $pane;
   done
 
   sleep 2
@@ -199,9 +199,9 @@ sshc() {
   if [ -z "$TMUX" ]; then
     # Não estamos no tmux
     original_term=$TERM
-    TERM=$SSH_TERM 
+    TERM=$SSH_TERM
     command ssh "$@"
-    TERM=$original_term 
+    TERM=$original_term
     return
   fi
 
@@ -220,7 +220,7 @@ sshc() {
 
   trap _cleanup EXIT
 
-  TERM=$SSH_TERM 
+  TERM=$SSH_TERM
   log "TERM changed to ${TERM}."
   tmux set -g status-left "#[fg=green bg=black] [SSH] #H #[fg=black,bg=green]#[default]"
 
@@ -229,7 +229,7 @@ sshc() {
 
 tmuxns() {
   session_name="$1"
-  shift 
+  shift
 
   tmux new-session -d -s $session_name -c "$(pwd)"
 
@@ -239,7 +239,7 @@ tmuxns() {
 }
 
 function tmux_run_all_panes() {
-  for window in $(tmux list-panes -a -F "#D"); do 
+  for window in $(tmux list-panes -a -F "#D"); do
     tmux send-keys -t $window $@ C-m
   done
 }
@@ -253,7 +253,7 @@ function updateall() {
   sleep 1
 
   log "Writing history to file"
-  fc -W 
+  fc -W
   log "Sourcing .zshrc"
   source $HOME/.zshrc
 
@@ -268,13 +268,13 @@ function updateall() {
   sleep 5
 
   log "Running brew update"
-  brew update 
+  brew update
   log "Running brew upgrade"
-  brew upgrade 
+  brew upgrade
   log "Running omz update"
-  omz update 
+  omz update
   log "Running brew cleanup"
-  brew cleanup 
+  brew cleanup
 
   log "Regenerating brew bundle file"
   brew bundle dump --file=$HOME/dotfiles/homebrew/Brewfile --force --no-restart
@@ -342,7 +342,7 @@ function convert_for_youtube() {
         help_msg
         return 0
         ;;
-      --) 
+      --)
         shift
         break
         ;;
