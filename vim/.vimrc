@@ -85,3 +85,18 @@ let &t_SI = "\<Esc>[6 q" " SI = Start Insert mode -> cursor em linha
 let &t_EI = "\<Esc>[2 q" " EI = End Insert mode -> cursor em bloco (Normal mode)
 set guicursor=n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50
 
+let g:home = $HOME
+let g:sessions = g:home . "/.local/share/vim/sessions"
+let g:current_dir = getcwd(-1)
+let g:session_id = tolower(substitute(g:current_dir[1:], '[^a-zA-z0-9_\.\-]', '_', 'gi'))
+let g:cur_session_path = g:sessions . '/' . g:session_id . '.vim'
+
+
+call mkdir(g:sessions, "p")
+
+if filereadable(g:cur_session_path)
+  autocmd VimEnter * execute "source " . expand(g:cur_session_path) 
+endif
+
+autocmd VimLeavePre * execute "mksession! " . expand(g:cur_session_path) 
+
