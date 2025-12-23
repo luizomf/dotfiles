@@ -59,7 +59,7 @@ typeset -g VIRTUAL_ENV_DISABLE_PROMPT=1
 
 # Salvando esse ícone porque por ser útil depois 
 # Prompt principal
-PROMPT=''
+PROMPT=$([ -z $SSH_CONNECTION ] || echo "[ SSH ] ")
 PROMPT+='${FG_YELLOW}%1~${FG_RESET}'
 PROMPT+='$(git_prompt_info)'
 PROMPT+=' %(?:${FG_GREEN}[✔] :${FG_RED}[✖ %?] )${RESET_ALL}'
