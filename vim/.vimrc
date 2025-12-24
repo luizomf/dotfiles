@@ -41,7 +41,13 @@ set incsearch
 
 set notermguicolors
 set t_Co=256
-colorscheme sorbet
+" colorscheme habamax " Nice
+colorscheme sorbet " Nice
+" colorscheme lunaperche " Nice
+" colorscheme pablo " Nice
+" colorscheme slate " Nice
+" colorscheme wildcharm " Nice
+" colorscheme zaibatsu " Nice
 set background=dark
 
 highlight Normal ctermbg=NONE guibg=NONE
@@ -57,16 +63,6 @@ autocmd BufReadPost * if line("'\"") > 0 && line("'\"") <= line("$") | exe "norm
 
 " ### KEYMAPS
 let mapleader = " "
-
-" map: Maps in Normal, Visual, Select, and Operator-pending modes.
-" nmap: Normal mode only.
-" imap: Insert mode only.
-" vmap: Visual mode only.
-" noremap: Non-recursive (safer, prevents loops).
-" <CR>: Carriage Return (Enter key).
-" <Esc>: Escape key.
-" <C-s>: Control + s.
-" <leader>: Your defined leader key (e.g., space or \).
 
 " INSERT
 inoremap jj <Esc>
