@@ -1,6 +1,10 @@
+" Download plug.vim to ~/.vim/autoload
+"
+" curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
+"   https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+"
 call plug#begin('~/.vim/plugged')
-
-" Fuzzy finder para arquivos, buffers, etc.
+" fzf
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
 call plug#end()
@@ -79,24 +83,43 @@ nnoremap <S-Tab> :bprevious<CR>
 nnoremap <leader>bd :bdelete<CR>
 nnoremap <leader>bu <C-^><CR>
 
-
-" ### CURSOR SHAPE
+" CURSOR SHAPE
 let &t_SI = "\<Esc>[6 q" " SI = Start Insert mode -> cursor em linha
 let &t_EI = "\<Esc>[2 q" " EI = End Insert mode -> cursor em bloco (Normal mode)
 set guicursor=n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50
 
-let g:home = $HOME
-let g:sessions = g:home . "/.local/share/vim/sessions"
-let g:current_dir = getcwd(-1)
-let g:session_id = tolower(substitute(g:current_dir[1:], '[^a-zA-z0-9_\.\-]', '_', 'gi'))
-let g:cur_session_path = g:sessions . '/' . g:session_id . '.vim'
+" Really Simple Auto Session (KISS)
+let s:sessions_dir = split(&runtimepath, ',')[0] . '/sessions'
 
+function! s:session_id() abort
+  " usa cwd e sanitiza para nome de arquivo
+  let l:cwd = getcwd()
+  return tolower(substitute(l:cwd, '[^A-Za-z0-9_.-]', '_', 'g'))
+endfunction
 
-call mkdir(g:sessions, "p")
+function! s:session_path() abort
+  return s:sessions_dir . '/' . s:session_id() . '.vim'
+endfunction
 
-if filereadable(g:cur_session_path)
-  autocmd VimEnter * execute "source " . expand(g:cur_session_path) 
+if !isdirectory(s:sessions_dir)
+  call mkdir(s:sessions_dir, 'p')
 endif
 
-autocmd VimLeavePre * execute "mksession! " . expand(g:cur_session_path) 
+augroup SimpleAutoSession
+  autocmd!
+  autocmd VimEnter * call s:maybe_load()
+  autocmd VimLeavePre * call s:save()
+augroup END
+
+function! s:maybe_load() abort
+  let l:path = s:session_path()
+  if filereadable(l:path)
+    execute 'source' fnameescape(l:path)
+  endif
+endfunction
+
+function! s:save() abort
+  let l:path = s:session_path()
+  execute 'mksession!' fnameescape(l:path)
+endfunction
 
