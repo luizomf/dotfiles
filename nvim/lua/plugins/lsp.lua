@@ -30,6 +30,7 @@ return {
           "pyright",
           "tailwindcss",
           "rust_analyzer",
+          "bashls",
         },
       })
 
@@ -44,6 +45,12 @@ return {
         map("n", "<leader>rn", vim.lsp.buf.rename, opts)
         map("n", "<leader>ca", vim.lsp.buf.code_action, opts)
       end
+
+      vim.lsp.config("bashls", {
+        on_attach = on_attach,
+        capabilities = capabilities,
+      })
+      vim.lsp.enable("bashls")
 
       vim.lsp.config("rust_analyzer", {
         on_attach = on_attach,
