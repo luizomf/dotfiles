@@ -1,7 +1,14 @@
+# shellcheck disable=all
+theme = tokyonightlocal
+
+# Font 
 font-family = JetBrains Mono
 font-size = 28
-font-feature = -calt # disable ligatures
-theme = tokyonightlocal
+# Disable Ligatures completely
+font-feature = -calt
+font-feature = -dlig
+font-feature = -liga
+
 
 # Mouse
 mouse-hide-while-typing = true
@@ -17,7 +24,11 @@ window-decoration = true
 # macos-titlebar-style = hidden
 window-theme = ghostty
 background-opacity = 1
+background-blur = false
 
 # Other
 # copy-on-select = clipboard
 # shell-integration-features = cursor,sudo,no-title
+cursor-style = block
+cursor-style-blink = true
+
