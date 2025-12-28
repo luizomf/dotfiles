@@ -220,14 +220,6 @@ sshc() {
 
   trap _cleanup EXIT
 
-  local tsl=''
-  tsl="${tsl}#[fg=green bold bg=black] [SSH]"
-  tsl="${tsl}#{?client_prefix,"
-  tsl="${tsl}#[fg=green bold bg=black] ✼ ,"
-  tsl="${tsl}#[fg=white dim bold bg=black] - #[default]}"
-  tsl="${tsl}#[fg=black,bg=green]#[default]"
-  tmux set -g status-left $tsl
-
   TERM=$SSH_TERM
   command ssh -q "$@"
 }
