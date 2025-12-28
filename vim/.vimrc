@@ -104,17 +104,25 @@ endif
 augroup SimpleAutoSession
   autocmd!
   autocmd VimEnter * call s:maybe_load()
-  autocmd VimLeavePre * call s:save()
+  autocmd VimLeavePre * call s:maybe_save()
 augroup END
 
 function! s:maybe_load() abort
+  if argc() > 0
+    return
+  endif
+
   let l:path = s:session_path()
   if filereadable(l:path)
     execute 'source' fnameescape(l:path)
   endif
 endfunction
 
-function! s:save() abort
+function! s:maybe_save() abort
+  if argc() > 0
+    return
+  endif
+
   let l:path = s:session_path()
   execute 'mksession!' fnameescape(l:path)
 endfunction
