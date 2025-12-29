@@ -48,6 +48,7 @@ map("n", "<leader>ff", builtin.find_files, { desc = "Find files" })
 map("n", "<leader>fg", function()
   builtin.live_grep({
     grep_open_files = true,
+    -- search_dirs = { "." },
   })
 end, { desc = "Live grep (arquivos abertos)" })
 map("n", "<leader>fb", builtin.buffers, { desc = "List open buffers" })
