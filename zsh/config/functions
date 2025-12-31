@@ -1,28 +1,14 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # vim: set filetype=sh :
 
 # Reset
 RESET='\033[0m'
 
 # Cores normais
-BLACK='\033[0;30m'
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
 CYAN='\033[0;36m'
-WHITE='\033[0;37m'
-
-# Cores em negrito (bold ou bright)
-BRIGHT_BLACK='\033[1;30m'
-BRIGHT_RED='\033[1;31m'
-BRIGHT_GREEN='\033[1;32m'
-BRIGHT_YELLOW='\033[1;33m'
-BRIGHT_BLUE='\033[1;34m'
-BRIGHT_MAGENTA='\033[1;35m'
-BRIGHT_CYAN='\033[1;36m'
-BRIGHT_WHITE='\033[1;37m'
 
 # Funções para printar mensagens coloridas de forma legível
 log() {
@@ -46,12 +32,12 @@ logerror() {
 }
 
 
-function dtouch() {
+dtouch() {
   mkdir -p "$(dirname "$1")"
   touch "$1"
 }
 
-function componentTs() {
+componentTs() {
   # code -r src/components/"$1"/index.tsx src/components/"$1"/"$1".tsx src/components/"$1"/"$1".module.css
   mkdir -p src/components/"$1"
   zed -a src/components/"$1"/index.tsx
@@ -61,11 +47,11 @@ function componentTs() {
   zed -a src/components/"$1"/"$1".module.css
 }
 
-function componentJs() {
+componentJs() {
   code -r src/components/"$1"/styles.js src/components/"$1"/index.jsx src/components/"$1"/stories.jsx src/components/"$1"/"$1".spec.jsx
 }
 
-function aula_c() {
+aula_c() {
   [ -z "$1" ] && echo "Empty Param, send a class name" && return
   ffmpeg -i \
     "${HOME}/Desktop/$1.mp4" -vf "scale=1920:1080" -sws_flags lanczos \
@@ -73,11 +59,12 @@ function aula_c() {
     "${HOME}/Desktop/$1-c.mp4"
 }
 
-function memoryUsage() {
+memoryUsage() {
+  # shellcheck disable=SC2009
   ps -A -o rss,comm | grep -E "$1" | grep -v grep | awk '{ sum += $1 } END { printf "%.2f MB\n", sum / 1024 }'
 }
 
-function deletePythonCache() {
+deletePythonCache() {
     echo "Limpando diretórios de cache e build..."
 
     deactivate
@@ -90,31 +77,32 @@ function deletePythonCache() {
 
 
 
-function iterm() {
+iterm() {
     cwd=$(pwd)
-    open -a iterm $cwd
+    open -a iterm "$cwd"
 }
 
 restart_terminal() {
   fc -W
-  . $HOME/.zshrc
+  # shellcheck source=../.zshrc
+  . "${HOME}/.zshrc"
   tmux respawn-window -k
 }
 
-function show_colors() {
+show_colors() {
   for i in {0..255}; do
-    print -P ">>>  $(printf '%03d' $i)  %F{$i}Dummy text%f  %F{232}%K{$i} dummy text %k%f  <<<"
+    print -P ">>>  $(printf '%03d' "$i")  %F{$i}Dummy text%f  %F{232}%K{$i} dummy text %k%f  <<<"
   done
 }
 
-function gitconfig() {
+gitconfig() {
   set -e
 
   log "Your name:"
-  read NAME
+  read -r NAME
 
   log "Your e-mail:"
-  read EMAIL
+  read -r EMAIL
 
   log
 
@@ -153,42 +141,42 @@ function gitconfig() {
   # log "git push origin main -u  "
 }
 
-function tmux_respawn_all() {
+tmux_respawn_all() {
   echo "Iniciando a limpeza do Tmux Resurrect"
   fc -W
-  . $HOME/.zshrc
+  . "${HOME}/.zshrc"
   cleanNeovimLogs
 
-  $HOME/dotfiles/scripts/zsh_history_sync.py
+  "${HOME}/dotfiles/scripts/zsh_history_sync.py"
 
 
-  rm -Rf $HOME/.local/share/tmux/resurrect/*.*
-  rm -Rf $HOME/.local/share/tmux/resurrect/last
+  rm -Rf "${HOME}/.local/share/tmux/resurrect/*.*"
+  rm -Rf "${HOME}/.local/share/tmux/resurrect/last"
 
   echo "Salvando as sessões..."
-  $HOME/.tmux/plugins/tmux-resurrect/scripts/save.sh
+  "${HOME}/.tmux/plugins/tmux-resurrect/scripts/save.sh"
 
   echo "Tmux resurrect limpo com sucesso!"
   sleep 2
 
   for pane in $(tmux list-panes -a -F '#D'); do
-    tmux respawn-pane -k -t $pane;
+    tmux respawn-pane -k -t "$pane";
   done
 
   sleep 2
 
   echo "Salvando as sessões novamente..."
-  $HOME/.tmux/plugins/tmux-resurrect/scripts/save.sh
+  "${HOME}/.tmux/plugins/tmux-resurrect/scripts/save.sh"
 }
 
-function cleanNeovimLogs() {
+cleanNeovimLogs() {
   echo "🧼 Iniciando limpeza de logs e cache do Neovim..."
 
-  [[ -d $HOME/.local/state/nvim ]] && rm ~/.local/state/nvim/*.log
-  [[ -d $HOME/.cache/nvim ]] && {
+  [[ -d ${HOME}/.local/state/nvim ]] && rm ~/.local/state/nvim/*.log
+  [[ -d ${HOME}/.cache/nvim ]] && {
       rm ~/.cache/nvim/*.log
-      rm -r $HOME/.cache/nvim/shada
-      rm -r $HOME/.cache/nvim/sessions
+      "rm -r ${HOME}/.cache/nvim/shada"
+      "rm -r ${HOME}/.cache/nvim/sessions"
   }
   echo "✅ Neovim limpo com sucesso!"
 }
@@ -212,10 +200,11 @@ sshc() {
   original_term=$TERM
 
   # Lógica de limpeza
+  # shellcheck disable=SC2329
   _cleanup() {
     tmux setenv -g SSH_ACTIVE 0
-    tmux set -g status-left $original_sl
-    TERM=$original_term
+    tmux set -g status-left "$original_sl"
+    TERM="$original_term"
   }
 
   trap _cleanup EXIT
@@ -228,40 +217,42 @@ tmuxns() {
   session_name="$1"
   shift
 
-  tmux new-session -d -s $session_name -c "$(pwd)"
+  tmux new-session -d -s "$session_name" -c "$(pwd)"
 
   for arg in "$@"; do
-    tmux new-window -t $session_name -n $arg -c "$(pwd)"
+    tmux new-window -t "$session_name" -n $arg -c "$(pwd)"
   done
 }
 
-function tmux_run_all_panes() {
+tmux_run_all_panes() {
   for window in $(tmux list-panes -a -F "#D"); do
-    tmux send-keys -t $window $@ C-m
+    tmux send-keys -t "$window" "$@" C-m
   done
 }
 
-function ollama_stop_all() {
+ollama_stop_all() {
   ollama ps | awk 'NR>1 {print $1}' | xargs -L 1 ollama stop
 }
 
-function updateall() {
+updateall() {
   log "Sleeping for 1 sec..."
   sleep 1
 
   log "Writing history to file"
   fc -W
   log "Sourcing .zshrc"
-  source $HOME/.zshrc
+  # shellcheck source=../.zshrc
+  source "${HOME}/.zshrc"
 
   log "Sourcing .tmux.conf"
-  tmux source $HOME/.tmux.conf
+  # shellcheck source=../tmux/.tmux.conf
+  tmux source "${HOME}/.tmux.conf"
 
   log "Cleaning nvim logs..."
   cleanNeovimLogs
 
   log "Synchronizing ZSH history to local computers..."
-  pyenv exec $HOME/dotfiles/scripts/zsh_history_sync.py
+  pyenv exec "${HOME}/dotfiles/scripts/zsh_history_sync.py"
   sleep 5
 
   log "Running brew update"
@@ -274,7 +265,7 @@ function updateall() {
   brew cleanup
 
   log "Regenerating brew bundle file"
-  brew bundle dump --file=$HOME/dotfiles/homebrew/Brewfile --force --no-restart
+  brew bundle dump --file="${HOME}/dotfiles/homebrew/Brewfile" --force --no-restart
 
   log "Running uv self update"
   uv self update
@@ -290,12 +281,12 @@ function updateall() {
   sleep 1
 }
 
-function clear () {
+clear () {
   tmux clear-history
   printf '\e[H\e[2J\e[3J'
 }
 
-function convert_for_youtube() {
+convert_for_youtube() {
   local INPUT=""
   local OUTPUT=""
   local RED="\e[38;5;1m"
