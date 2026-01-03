@@ -1,5 +1,6 @@
 return {
   "nvim-treesitter/nvim-treesitter",
+  branch = "master", -- On Ubuntu, only worked after adding this
   build = ":TSUpdate",
   event = { "BufReadPre", "BufNewFile" },
   dependencies = {
