@@ -77,7 +77,7 @@ elif [[ "$OP_SYSTEM" == "ubuntu" ]]; then
   loginfo "Your system is Ubuntu, updating packages..."
   sudo apt update -y
   sudo apt upgrade -y
-  
+
   loginfo "Installing apps..."
   sudo apt-get install git build-essential libssl-dev zlib1g-dev \
     libbz2-dev libreadline-dev libsqlite3-dev wget curl \
@@ -93,8 +93,10 @@ elif [[ "$OP_SYSTEM" == "ubuntu" ]]; then
     p7zip pkgconf sqlite3 tcl tk tcl-dev tk-dev tmux \
     tree watch wget fonts-firacode fonts-jetbrains-mono vim \
     -y
+
   sudo apt install lua5.4 liblua5.4-dev unzip make build-essential luarocks ripgrep tree-sitter-cli
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  /home/linuxbrew/.linuxbrew/bin/brew install gcc
 
   # Infelizmente vamos ter que buildar o neovim do zero
   # não achei uma versão recente para Ubuntu
