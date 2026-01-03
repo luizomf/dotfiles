@@ -57,8 +57,8 @@ PATH="$(pyenv root)/shims:/opt/homebrew/opt/curl/bin:/opt/homebrew/opt/mysql-cli
 export PATH
 
 if [ "$(uname -s)" = "Linux" ]; then
-  export PATH="/opt/homebrew/opt/sqlite/bin:$PATH"
-elif [ "$(uname -s)" = "Darwin" ]; then 
+  export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+elif [ "$(uname -s)" = "Darwin" ]; then
   export PATH="/opt/homebrew/opt/sqlite/bin:$PATH"
 fi
 
