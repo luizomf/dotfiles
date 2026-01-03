@@ -346,7 +346,7 @@ convert_for_youtube() {
     return 1
   fi
 
-  ffmpeg -fflags +genpts \
+  ffmpeg -fflags +genpts -fflags +igndts \
     -i "$INPUT" \
     -c:v libx264 -profile:v high -crf 13 -bf 2 -g 15 -coder 1 -pix_fmt yuv420p \
     -preset slow \
