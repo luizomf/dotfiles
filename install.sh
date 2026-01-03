@@ -30,6 +30,7 @@ OP_SYSTEM=""
 if [ "$(uname -s)" == "Linux" ]; then
     echo "This system is Linux."
     if [ -f /etc/os-release ]; then
+        # shellcheck disable=SC1091
         . /etc/os-release
         if [ "$ID" == "ubuntu" ]; then
             OP_SYSTEM="ubuntu" # aqui é ubuntu
@@ -92,6 +93,8 @@ elif [[ "$OP_SYSTEM" == "ubuntu" ]]; then
     p7zip pkgconf sqlite3 tcl tk tcl-dev tk-dev tmux \
     tree watch wget fonts-firacode fonts-jetbrains-mono vim \
     -y
+  sudo apt install lua5.4 liblua5.4-dev unzip make build-essential luarocks ripgrep tree-sitter-cli
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
   # Infelizmente vamos ter que buildar o neovim do zero
   # não achei uma versão recente para Ubuntu
