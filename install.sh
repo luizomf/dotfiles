@@ -59,7 +59,6 @@ if [[ "$OP_SYSTEM" == "darwin" ]]; then
   if ! command -v brew &> /dev/null; then
     loginfo "Homebrew não encontrado. Instalando..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    (echo; echo 'eval "$(/opt/homebrew/bin/brew shellenv)"') >> "$HOME/.zprofile"
     eval "$(/opt/homebrew/bin/brew shellenv)"
   else
     loginfo "Homebrew já está instalado. Atualizando..."
@@ -70,7 +69,7 @@ if [[ "$OP_SYSTEM" == "darwin" ]]; then
   # brew bundle dump --file=~/dotfiles/homebrew/Brewfile --describe --force
   loginfo "Instalando pacotes e aplicações do Brewfile..."
   brew bundle --file="$HOME/dotfiles/homebrew/Brewfile"
-  
+
 elif [[ "$OP_SYSTEM" == "ubuntu" ]]; then
 
   # Aqui é Ubuntu, então apt nos pacotes
@@ -96,7 +95,8 @@ elif [[ "$OP_SYSTEM" == "ubuntu" ]]; then
 
   sudo apt install lua5.4 liblua5.4-dev unzip make build-essential luarocks ripgrep tree-sitter-cli
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  /home/linuxbrew/.linuxbrew/bin/brew install gcc
+  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+  brew install gcc
 
   # Infelizmente vamos ter que buildar o neovim do zero
   # não achei uma versão recente para Ubuntu

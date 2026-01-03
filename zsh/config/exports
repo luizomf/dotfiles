@@ -61,6 +61,7 @@ if [ "$(uname -s)" = "Linux" ]; then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 elif [ "$(uname -s)" = "Darwin" ]; then
   export PATH="/opt/homebrew/opt/sqlite/bin:$PATH"
+  eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
 
