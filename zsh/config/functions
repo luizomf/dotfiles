@@ -287,46 +287,47 @@ clear () {
 }
 
 convert_for_youtube() {
-  local INPUT=""
-  local OUTPUT=""
-  local RED="\e[38;5;1m"
-  local RESET="\e[0m"
+  INPUT=
+  OUTPUT=
+  SONG=
 
   help_msg() {
-    printf "Usage: %b <options>\n\n" "${0##*/}"
+    printf "Usage: %s -i <input> -o <output> [-s <song>]\n\n" "${0##*/}"
     printf "Options:\n"
     printf "  -i, --input   FILEPATH  Source video you wish to use.\n"
     printf "  -o, --output  FILEPATH  Output video after conversion.\n"
+    printf "  -s, --song    1 or 0    1=add song, 0=don't add song.\n"
     printf "  -h, --help              Display this help information.\n"
   }
 
-  errormsg_then_help() {
+  error_then_help() {
     help_msg
-    printf "\n%bError message:%b \n%b\n\n" "${RED-}" "${RESET-}" "${1:-Unknown error}"
-    printf "Please, use --help or -h for usage information.\n"
+    printf "\nError: %s\n" "$1"
+    return 1
   }
 
   require_value() {
-    local opt="$1" val="$2"
-    if [[ -z "$val" || "$val" == -* ]]; then
-      errormsg_then_help "$opt must have a <value>. Use $opt <value>."
-      return 1
-    fi
+    [[ -n "${2:-}" ]] || error_then_help "$1 requires a value"
   }
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --input|-i)
-        require_value "$1" "${2-}"
-        INPUT="$2"
+      -i|--input)
+        require_value "$1" "${2:-}" || return 1
+        INPUT=$2
         shift 2
         ;;
-      --output|-o)
-        require_value "$1" "${2-}"
-        OUTPUT="$2"
+      -o|--output)
+        require_value "$1" "${2:-}" || return 1
+        OUTPUT=$2
         shift 2
         ;;
-      --help|-h)
+      -s|--song)
+        require_value "$1" "${2:-}" || return 1
+        SONG=TRUE
+        shift 2
+        ;;
+      -h|--help)
         help_msg
         return 0
         ;;
@@ -335,22 +336,64 @@ convert_for_youtube() {
         break
         ;;
       *)
-        errormsg_then_help "Unknown argument: $1"
+        error_then_help "Unknown argument: $1"
         return 1
         ;;
     esac
   done
 
-  if [[ -z "$INPUT" || -z "$OUTPUT" ]]; then
-    errormsg_then_help "Input or output file paths missing"
-    return 1
+  [[ -z "$INPUT" ]] && logerror "Missing input" && return 1
+  [[ -z "$OUTPUT" ]] && logerror "Missing output" && return 1
+  [[ "${INPUT}" == "$OUTPUT" ]] && logerror "Input file is identical to output file." && return 1
+
+  if [[ -z $SONG ]]; then 
+    ffmpeg_yt -i "${INPUT}" -o "${OUTPUT}"
+  else
+    SONG="/Users/luizotavio/Library/CloudStorage/GoogleDrive-todoespacoonline@gmail.com/Meu Drive/BKP_EXTERNO_2/Edicao/youtube_library_music/lofi/todas-30db.mp3"
+    ffmpeg_yt_music \
+      -i "${INPUT}" \
+      -o "${OUTPUT}" \
+      -s "${SONG}"
   fi
+}
+
+ffmpeg_yt() {
+  echo ffmpeg -fflags +genpts -fflags +igndts \
+    -i "${INPUT}" \
+    -c:v libx264 -profile:v high -crf 13 -bf 2 -g 15 -coder 1 -pix_fmt yuv420p -preset slow \
+    -c:a aac -ar 48000 -b:a 384k \
+    -shortest \
+    -movflags +faststart \
+    "${OUTPUT}"
 
   ffmpeg -fflags +genpts -fflags +igndts \
-    -i "$INPUT" \
-    -c:v libx264 -profile:v high -crf 13 -bf 2 -g 15 -coder 1 -pix_fmt yuv420p \
-    -preset slow \
-    -c:a aac -ar 48000 -b:a 384k -ac 2 \
+    -i "${INPUT}" \
+    -c:v libx264 -profile:v high -crf 13 -bf 2 -g 15 -coder 1 -pix_fmt yuv420p -preset slow \
+    -c:a aac -ar 48000 -b:a 384k \
+    -shortest \
     -movflags +faststart \
-    "$OUTPUT"
+    "${OUTPUT}"
 }
+
+ffmpeg_yt_music() {
+  echo ffmpeg -fflags +genpts -fflags +igndts \
+    -i "${INPUT}" -i "${SONG}" \
+    -filter_complex "[0:a][1:a]amix=inputs=2:duration=first:normalize=0[a]" \
+    -map 0:v -map "[a]" \
+    -c:v libx264 -profile:v high -crf 13 -bf 2 -g 15 -coder 1 -pix_fmt yuv420p -preset slow \
+    -c:a aac -ar 48000 -b:a 384k \
+    -shortest \
+    -movflags +faststart \
+    "${OUTPUT}"
+
+  ffmpeg -fflags +genpts -fflags +igndts \
+    -i "${INPUT}" -i "${SONG}" \
+    -filter_complex "[0:a][1:a]amix=inputs=2:duration=first:normalize=0[a]" \
+    -map 0:v -map "[a]" \
+    -c:v libx264 -profile:v high -crf 13 -bf 2 -g 15 -coder 1 -pix_fmt yuv420p -preset slow \
+    -c:a aac -ar 48000 -b:a 384k \
+    -shortest \
+    -movflags +faststart \
+    "${OUTPUT}"
+}
+
