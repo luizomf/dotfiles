@@ -22,10 +22,11 @@ set expandtab
 set tabstop=2
 set shiftwidth=2
 set expandtab
-set autoindent
-set smartindent
-set mouse=a
-" set clipboard=unnamedplus
+"set autoindent
+"set smartindent
+set noautoindent
+set nosmartindent
+set mouse=""
 set clipboard=unnamed
 set nowrap
 set backspace=indent,eol,start
@@ -36,7 +37,7 @@ set showmatch
 set showmode
 set showcmd
 set textwidth=80
-set title
+" set title
 set hlsearch
 set incsearch
 
@@ -127,4 +128,3 @@ function! s:maybe_save() abort
   let l:path = s:session_path()
   execute 'mksession!' fnameescape(l:path)
 endfunction
-
