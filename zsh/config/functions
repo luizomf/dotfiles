@@ -142,43 +142,66 @@ gitconfig() {
 }
 
 tmux_respawn_all() {
-  echo "Iniciando a limpeza do Tmux Resurrect"
+  loginfo "Starting  Clean & Respawn Tmux Panes"
+
+  loginfo "Saving history: fc -W"
   fc -W
+
+  loginfo "Sourcing .zshrc"
+  # shellcheck source=../.zshrc
   . "${HOME}/.zshrc"
+
+  loginfo "Cleaning nvim logs"
   cleanNeovimLogs
 
+  loginfo "Synchronizing zsh history"
   "${HOME}/dotfiles/scripts/zsh_history_sync.py"
 
+  logwarning "Removing old tmux sessions..."
+  rm -Rfv "${HOME}/.local/share/tmux/resurrect"/*.*
+  rm -Rfv "${HOME}/.local/share/tmux/resurrect/last"
 
-  rm -Rf "${HOME}/.local/share/tmux/resurrect/*.*"
-  rm -Rf "${HOME}/.local/share/tmux/resurrect/last"
+  loginfo "Nap a bit..."
+  sleep 1
 
-  echo "Salvando as sessões..."
+  loginfo "Saving current session"
   "${HOME}/.tmux/plugins/tmux-resurrect/scripts/save.sh"
 
-  echo "Tmux resurrect limpo com sucesso!"
-  sleep 2
+  loginfo "Nap a bit again..."
+  sleep 1
 
+  logsuccess "Tmux resurrect cleaned!"
+  loginfo "Restoring sessions now"
+
+  "${HOME}/.tmux/plugins/tmux-resurrect/scripts/restore.sh"
+
+  loginfo "Nap again, last time..."
+  sleep 1
+
+  loginfo "Respawning all panes"
   for pane in $(tmux list-panes -a -F '#D'); do
     tmux respawn-pane -k -t "$pane";
   done
 
-  sleep 2
+  sleep 1
 
-  echo "Salvando as sessões novamente..."
+  loginfo "Saving sessions after respawn..."
   "${HOME}/.tmux/plugins/tmux-resurrect/scripts/save.sh"
+
+  logsuccess "All done. I hope it helps."
 }
 
 cleanNeovimLogs() {
-  echo "🧼 Iniciando limpeza de logs e cache do Neovim..."
+  loginfo "Starting nvim cleanup"
 
-  [[ -d ${HOME}/.local/state/nvim ]] && rm ~/.local/state/nvim/*.log
+  [[ -d ${HOME}/.local/state/nvim ]] && rm -Rfv ~/.local/state/nvim/*.log
   [[ -d ${HOME}/.cache/nvim ]] && {
-      rm ~/.cache/nvim/*.log
-      "rm -r ${HOME}/.cache/nvim/shada"
-      "rm -r ${HOME}/.cache/nvim/sessions"
+      rm -Rfv ~/.cache/nvim/*.log
+      "rm -Rfv ${HOME}/.cache/nvim/shada"
+      "rm -Rfv ${HOME}/.cache/nvim/sessions"
   }
-  echo "✅ Neovim limpo com sucesso!"
+
+  logsuccess "NeoVim cleaned..."
 }
 
 # Wrapper para resolver um problema chato de SSH:
@@ -188,7 +211,7 @@ sshc() {
     # Não estamos no tmux
     original_term=$TERM
     TERM=$SSH_TERM
-    command ssh "$@"
+    command ssh "${@}"
     TERM=$original_term
     return
   fi
@@ -200,7 +223,7 @@ sshc() {
   original_term=$TERM
 
   # Lógica de limpeza
-  # shellcheck disable=SC2329
+  # shellcheck disable=SC2329,SC2317
   _cleanup() {
     tmux setenv -g SSH_ACTIVE 0
     tmux set -g status-left "$original_sl"
@@ -220,7 +243,7 @@ tmuxns() {
   tmux new-session -d -s "$session_name" -c "$(pwd)"
 
   for arg in "$@"; do
-    tmux new-window -t "$session_name" -n $arg -c "$(pwd)"
+    tmux new-window -t "$session_name" -n "${arg}" -c "$(pwd)"
   done
 }
 
