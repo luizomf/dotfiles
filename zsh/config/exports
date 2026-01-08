@@ -55,7 +55,8 @@ elif [ "$(uname -s)" = "Darwin" ]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
-PATH="$(pyenv root)/shims:${PATH}"
+export PYENV_ROOT="${HOME}/.pyenv"
+PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:${PATH}"
 eval "$(pyenv init -)"
 
 . "$HOME/.local/bin/env"
