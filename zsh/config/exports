@@ -67,4 +67,9 @@ if [[ "$(uname -s)" == "Linux" ]]; then
     && . "/home/linuxbrew/.linuxbrew/etc/profile.d/bash_completion.sh"
 fi
 
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  [[ -r "/opt/homebrew/etc/profile.d/bash_completion.sh" ]] \
+    && . "/opt/homebrew/etc/profile.d/bash_completion.sh"
+fi
+
 export PATH
