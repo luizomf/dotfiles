@@ -62,4 +62,9 @@ eval "$(pyenv init -)"
 . "$HOME/.local/bin/env"
 [ -f ~/.fzf.zsh ] && . "${HOME}/.fzf.zsh"
 
+if [[ "$(uname -s)" == "Linux" ]]; then
+  [[ -r "/home/linuxbrew/.linuxbrew/etc/profile.d/bash_completion.sh" ]] \
+    && . "/home/linuxbrew/.linuxbrew/etc/profile.d/bash_completion.sh"
+fi
+
 export PATH
