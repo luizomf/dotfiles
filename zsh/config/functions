@@ -247,9 +247,67 @@ tmuxns() {
   done
 }
 
-make_tmux_sessions() {
-  # WIP
-  echo "WIP"
+# zsh has no decent interactive help for builtins, so yes, this calls Bash.
+# If this offends you, feel free to read 200 pages of `man zshbuiltins` instead.
+help() {
+  [[ -o interactive ]] || return
+
+  if [[ $# -eq 0 ]]; then
+    bash -c help
+  else
+    bash -c "help $*"
+  fi
+}
+
+tmux_make_sessions() {
+  projects_dir=${1:-${HOME}/Desktop/tutoriais_e_cursos}
+
+  [[ -d "${projects_dir}" ]] || logerror "'${projects_dir}' is not a directory"
+
+  tmux kill-server
+
+  rm -Rf ~/.local/share/tmux/resurrect/*.*
+
+  tmux start-server
+
+  for pane in $(tmux list-panes -a -F "#D"); do
+    logwarning "Removing pane ${pane}"
+    tmux kill-pane -t "${pane}"
+  done
+
+  for window in $(tmux list-windows -a -F "#S:#W"); do
+    logwarning "Removing window ${window}"
+    tmux kill-window -t "${window}"
+  done
+
+  for session in $(tmux list-sessions -a -F "#S"); do
+    logwarning "Removing session ${session}"
+    tmux kill-session -t "${session}"
+  done
+
+  tmux new -s "HOME" -d -n code -c "${HOME}"
+  tmux neww -t "HOME" -d -n term -c "${HOME}"
+
+  tmux new -s "dotfiles" -d -n code -c "${HOME}/dotfiles"
+  tmux neww -t "dotfiles" -d -n term -c "${HOME}/dotfiles"
+
+  find "${projects_dir}" -mindepth 1 -maxdepth 1 -type d -print0 | while IFS= read -r -d '' dir; do
+    dirname=$(basename "${dir}")
+
+    session_name="${dirname}"
+    first_window_name="code"
+    second_window_name="term"
+
+    tmux kill-session -t "${session_name}"
+    tmux kill-window -t "${session_name}:${first_window_name}"
+    tmux kill-window -t "${session_name}:${second_window_name}"
+
+    tmux new -s "${session_name}" -d -n "${first_window_name}" -c "${dir}"
+    tmux neww -t "${session_name}" -d -n "${second_window_name}" -c "${dir}"
+  done
+
+  ~/.tmux/plugins/tmux-resurrect/scripts/save.sh
+  tmux
 }
 
 tmux_run_all_panes() {
@@ -264,7 +322,7 @@ ollama_stop_all() {
 
 ollama_update_models() {
   for model in $(ollama ls | tail +2 | cut -d ' ' -f 1); do
-    echo "Pulling: ${model}"
+    loginfo "Pulling: ${model}"
     ollama pull "${model}"
   done
 }
