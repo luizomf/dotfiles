@@ -221,6 +221,9 @@ ln -sf "$HOME/dotfiles/zsh/.zshrc" "$HOME/.zshrc"
 rm -Rf "$HOME/.zprofile"
 ln -sf "$HOME/dotfiles/zsh/.zprofile" "$HOME/.zprofile"
 
+rm -Rf "$HOME/.zshenv"
+ln -sf "$HOME/dotfiles/zsh/.zshenv" "$HOME/.zshenv"
+
 rm -Rf "$ZSH_CUSTOM/themes/omtheme.zsh-theme"
 ln -sf "$HOME/dotfiles/zsh/config/omtheme.zsh-theme" "$ZSH_CUSTOM/themes/omtheme.zsh-theme"
 
