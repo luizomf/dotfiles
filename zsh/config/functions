@@ -489,3 +489,51 @@ ffmpeg_yt_music() {
     -movflags +faststart \
     "${OUTPUT}"
 }
+
+backup_ssh() {
+  if [[ -z "${HOST:-}" ]]; then
+    HOST="$(hostname)"
+  fi
+
+  (
+    ssh_dir="${HOME}/.ssh"
+    output_dir="${HOME}/Desktop"
+    output_file="${output_dir}/$(date "+%Y-%m-%d-%H-%M-%S-${HOST}").7z"
+
+    [[ -z "${HOST:-}" ]] && logerror "No hostname found" && return 1
+    [[ ! -d "${ssh_dir}" ]] && logerror "No .ssh directory found" && return 1
+
+    if ! command -v 7z >/dev/null; then
+      logerror "No 7zip not found"
+      return 1
+    fi
+
+    echo
+    cd "${HOME}"
+
+    if 7z a -t7z -m0=lzma2 -mx=9 -mhe=on "${output_file}" "${ssh_dir}" -p; then
+
+      loginfo "File saved to: ${output_file}"
+      echo
+      loginfo "Let's make sure the file and password is valid:"
+      loginfo 7z x "${output_file}"
+      echo
+
+      loginfo "Use this command to extract: "
+
+      if ! 7z t "${output_file}"; then
+        rm -Rf "${output_file}"
+        logerror "Try again."
+        return 1
+      fi
+
+      echo
+
+    else
+      logerror "Command failed."
+      rm -Rf "${output_file}"
+    fi
+
+    echo
+  )
+}
