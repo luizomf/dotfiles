@@ -35,23 +35,9 @@ M.gray_27 = "#eeeeee" -- Lightest gray
 
 M.white = "#FFFFFF"
 
-M.bg = M.gray_01
-M.bg_dark = M.gray_02
-M.bg_dark1 = M.gray_00
-M.bg_highlight = M.gray_03
-M.bg_sidebar = M.gray_01
-
+M.bg_gutter = M.gray_01
 M.comment = M.gray_08
-
-M.dark3 = M.gray_08
-M.dark5 = M.gray_11
-
 M.fg = "#d7d7ff"
-M.fg_sidebar = M.gray_24
-M.fg_dark = M.gray_17
-M.fg_float = M.gray_19
-
-M.fg_gutter = M.gray_06
 
 M.red = "#ff8787"
 M.red1 = "#ff5f5f"
