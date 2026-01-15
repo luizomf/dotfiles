@@ -280,13 +280,13 @@ M.set_groups = function()
     { undercurl = true, sp = p.red }
   ) -- cterm=undercurl gui=undercurl guisp=p.red
 
-  vim.api.nvim_set_hl(0, "CmpItemAbbrp.tch", { fg = p.blu1 }) -- guifg=p.blue1
+  vim.api.nvim_set_hl(0, "CmpItemAbbrp.tch", { fg = p.blue1 }) -- guifg=p.blue1
   vim.api.nvim_set_hl(0, "LazyProgressDone", { bold = true, fg = p.magenta2 }) -- cterm=bold gui=bold guifg=p.magenta2
   vim.api.nvim_set_hl(0, "@variable.member", { fg = p.blue6 }) -- guifg=p.blue6
   vim.api.nvim_set_hl(
     0,
     "@markup.heading.7.markdown",
-    { bold = true, fg = p.oragen }
+    { bold = true, fg = p.orange }
   ) -- cterm=bold gui=bold guifg=p.orange
 
   vim.api.nvim_set_hl(0, "@punctuation.special.markdown", { fg = p.orange }) -- guifg=p.orange

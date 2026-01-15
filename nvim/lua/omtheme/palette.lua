@@ -80,9 +80,9 @@ M.blue7 = "#87d7ff"
 
 M.cyan = "#00d7ff"
 
-M.green = "#00ff87"
-M.green1 = "#5fff87"
-M.green2 = "#87ffaf"
+M.green = "#00ff87" -- "#00ff87"
+M.green1 = "#5fff87" -- "#5fff87"
+M.green2 = "#87ffaf" -- "#87ffaf"
 
 M.teal = "#00d7d7"
 M.teal0 = "#00ffff"
