@@ -13,8 +13,8 @@ packadd! hlyank
 syntax on
 
 set nocompatible
-set number
-set relativenumber
+"set number
+"set relativenumber
 set nocursorline
 "set colorcolumn=80
 set backupcopy=yes
