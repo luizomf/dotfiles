@@ -537,3 +537,17 @@ backup_ssh() {
     echo
   )
 }
+
+killgui() {
+  echo ">> Stopping graphical interface (sddm + wayland)..."
+  sudo systemctl stop sddm
+  sudo systemctl stop graphical.target
+  echo ">> GUI stopped. SSH-only mode active."
+}
+
+startgui() {
+  echo ">> Starting graphical interface..."
+  sudo systemctl start graphical.target
+  sudo systemctl start sddm
+}
+
