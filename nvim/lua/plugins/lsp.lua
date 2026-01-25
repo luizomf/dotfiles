@@ -31,6 +31,8 @@ return {
           "tailwindcss",
           "rust_analyzer",
           "bashls",
+          "html",
+          "emmet_ls",
         },
       })
 
@@ -45,6 +47,25 @@ return {
         map("n", "<leader>rn", vim.lsp.buf.rename, opts)
         map("n", "<leader>ca", vim.lsp.buf.code_action, opts)
       end
+
+      vim.lsp.config("html", {
+        on_attach = on_attach,
+        capabilities = capabilities,
+      })
+      vim.lsp.enable("html")
+
+      vim.lsp.config("emmet_ls", {
+        on_attach = on_attach,
+        capabilities = capabilities,
+        filetypes = {
+          "html",
+          "css",
+          "scss",
+          "javascriptreact",
+          "typescriptreact",
+        },
+      })
+      vim.lsp.enable("emmet_ls")
 
       vim.lsp.config("bashls", {
         on_attach = on_attach,
