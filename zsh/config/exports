@@ -7,6 +7,7 @@ export EDITOR="nvim"
 export VISUAL="nvim"
 export TABSIZE=2
 export SSH_TERM="xterm-256color"
+export PROJECTS_DIR="${HOME}/Desktop/tutoriais_e_cursos"
 
 ZSH_HIGHLIGHT_STYLES[comment]='fg=240'
 ZSH_HIGHLIGHT_STYLES[default]='fg=251'
@@ -75,5 +76,12 @@ fi
 if [[ "$(command -v just)" && -f "Justfile" ]]; then
   eval "$(just --completions zsh)"
 fi
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
+# bun completions
+[ -s "/Users/luizotavio/.bun/_bun" ] && source "/Users/luizotavio/.bun/_bun"
 
 export PATH
