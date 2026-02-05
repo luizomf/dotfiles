@@ -553,6 +553,7 @@ startgui() {
 
 commit_dotfiles() {
   MSG="${1:-}"
+  CURDIR="$(pwd)"
 
   if [[ -z $MSG ]]; then
     echo "Action Cancelled"
@@ -570,4 +571,6 @@ commit_dotfiles() {
   #
   source ~/.zshrc
   tmux source ~/.tmux.conf ; fc -W
+
+  cd "${CURDIR}" || return 1
 }
