@@ -551,3 +551,23 @@ startgui() {
   sudo systemctl start sddm
 }
 
+commit_dotfiles() {
+  MSG="${1:-}"
+
+  if [[ -z $MSG ]]; then
+    echo "Action Cancelled"
+    return 0
+  fi
+
+  cd "${HOME}/dotfiles" || return 1
+
+  git add .
+  git commit -m "${MSG}"
+  git push
+  ssh m4128 'cd ~/dotfiles ; git pull'
+  ssh fedoraair 'cd ~/dotfiles ; git pull'
+  # shellcheck disable=SC1090
+  #
+  source ~/.zshrc
+  tmux source ~/.tmux.conf ; fc -W
+}
