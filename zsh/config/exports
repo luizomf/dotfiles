@@ -77,6 +77,10 @@ if [[ "$(command -v just)" && -f "Justfile" ]]; then
   eval "$(just --completions zsh)"
 fi
 
+if [[ "$(command -v codex)" ]]; then
+  eval "$(codex completion zsh)"
+fi
+
 # bun
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
