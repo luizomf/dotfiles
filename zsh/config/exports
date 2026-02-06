@@ -28,7 +28,6 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
-
 # BE SURE TO FIX THE ENV VARIABLES
 # brew install libpq --build-from-source
 # brew install mysql-client
@@ -81,8 +80,12 @@ if [[ "$(command -v codex)" ]]; then
   eval "$(codex completion zsh)"
 fi
 
+if [[ "$(command -v docker)" && -f "${HOME}/.docker/completions/_docker" ]]; then
+  eval "$(docker completion zsh)"
+fi
+
 # bun
-export BUN_INSTALL="$HOME/.bun"
+
 export PATH="$BUN_INSTALL/bin:$PATH"
 
 # bun completions
