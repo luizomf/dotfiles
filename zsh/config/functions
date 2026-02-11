@@ -565,7 +565,7 @@ commit_dotfiles() {
   git add .
   git commit -m "${MSG}"
   git push
-  ssh m4128 'cd ~/dotfiles ; git pull'
+  ssh maclo 'cd ~/dotfiles ; git pull'
   ssh fedoraair 'cd ~/dotfiles ; git pull'
   # shellcheck disable=SC1090
   #
