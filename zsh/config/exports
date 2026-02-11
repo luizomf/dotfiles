@@ -84,11 +84,11 @@ if [[ "$(command -v docker)" && -f "${HOME}/.docker/completions/_docker" ]]; the
   eval "$(docker completion zsh)"
 fi
 
-# bun
-
-export PATH="$BUN_INSTALL/bin:$PATH"
-
 # bun completions
-[ -s "/Users/luizotavio/.bun/_bun" ] && source "/Users/luizotavio/.bun/_bun"
+[ -s "/Users/luizotavio/.oh-my-zsh/completions/_bun" ] && source "/Users/luizotavio/.oh-my-zsh/completions/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+PATH="$BUN_INSTALL/bin:$PATH"
 
 export PATH
