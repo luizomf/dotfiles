@@ -91,4 +91,7 @@ fi
 export BUN_INSTALL="$HOME/.bun"
 PATH="$BUN_INSTALL/bin:$PATH"
 
+# Added by Antigravity
+PATH="$HOME/.antigravity/antigravity/bin:$PATH"
+
 export PATH
