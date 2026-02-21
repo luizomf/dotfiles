@@ -31,8 +31,9 @@ return {
           "tailwindcss",
           "rust_analyzer",
           "bashls",
-          "html",
           "emmet_ls",
+          "html",
+          "cssls",
         },
       })
 
@@ -53,6 +54,12 @@ return {
         capabilities = capabilities,
       })
       vim.lsp.enable("html")
+
+      vim.lsp.config("cssls", {
+        on_attach = on_attach,
+        capabilities = capabilities,
+      })
+      vim.lsp.enable("cssls")
 
       vim.lsp.config("emmet_ls", {
         on_attach = on_attach,
