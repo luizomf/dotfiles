@@ -32,8 +32,10 @@ return {
           "rust_analyzer",
           "bashls",
           "emmet_ls",
+          "eslint",
           "html",
           "cssls",
+          "astro",
         },
       })
 
@@ -48,6 +50,18 @@ return {
         map("n", "<leader>rn", vim.lsp.buf.rename, opts)
         map("n", "<leader>ca", vim.lsp.buf.code_action, opts)
       end
+
+      vim.lsp.config("eslint", {
+        on_attach = on_attach,
+        capabilities = capabilities,
+      })
+      vim.lsp.enable("eslint")
+
+      vim.lsp.config("astro", {
+        on_attach = on_attach,
+        capabilities = capabilities,
+      })
+      vim.lsp.enable("astro")
 
       vim.lsp.config("html", {
         on_attach = on_attach,

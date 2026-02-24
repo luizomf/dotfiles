@@ -16,14 +16,8 @@
   "tabWidth": 2,
   "trailingComma": "all",
   "useTabs": false,
-
   "overrides": [
-    {
-      "files": "*.md",
-      "options": {
-        "printWidth": 80,
-        "proseWrap": "always"
-      }
-    }
+    { "files": "*.md", "options": { "printWidth": 80, "proseWrap": "always" } },
+    { "files": "*.astro", "options": { "parser": "astro" } }
   ]
 }

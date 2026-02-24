@@ -17,7 +17,7 @@ return {
             "-",
           },
         },
-        custom_prettier = {
+        global_prettier = {
           command = "prettier",
           args = {
             "--stdin-filepath",
@@ -28,43 +28,56 @@ return {
             "silent",
           },
         },
+        local_prettier = {
+          command = "prettier",
+          args = {
+            "--stdin-filepath",
+            "$FILENAME",
+            "--config",
+            ".prettierrc.json",
+            "--log-level",
+            "silent",
+          },
+        },
       },
       formatters_by_ft = {
         javascript = {
-          "custom_prettier",
+          "global_prettier",
         },
         typescript = {
-          "custom_prettier",
+          "global_prettier",
         },
         javascriptreact = {
-          "custom_prettier",
+          "global_prettier",
         },
         typescriptreact = {
-          "custom_prettier",
+          "global_prettier",
         },
-        vue = { "custom_prettier" },
-        css = { "custom_prettier" },
+        vue = { "global_prettier" },
+        css = { "global_prettier" },
         scss = {
-          "custom_prettier",
+          "global_prettier",
         },
         less = {
-          "custom_prettier",
+          "global_prettier",
         },
         html = {
-          "custom_prettier",
+          "global_prettier",
         },
         json = {
-          "custom_prettier",
+          "global_prettier",
         },
         yaml = {
-          "custom_prettier",
+          "global_prettier",
         },
         markdown = {
-          "custom_prettier",
+          "global_prettier",
         },
         graphql = {
-          "custom_prettier",
+          "global_prettier",
         },
+        astro = { "local_prettier" },
+
         lua = {
           "custom_stylua",
         },
