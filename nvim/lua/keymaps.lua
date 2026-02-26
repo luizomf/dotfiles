@@ -137,6 +137,61 @@ map(
   { desc = "Wrap HTML - < and >" }
 )
 
+-- Markdown
+map(
+  "v",
+  "<leader>mb",
+  "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('**')<CR>",
+  { desc = "Wrap Markdown Bold - ** and **" }
+)
+map(
+  "v",
+  "<leader>mi",
+  "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('_')<CR>",
+  { desc = "Wrap Markdown Italic - _ and _" }
+)
+map(
+  "v",
+  "<leader>mc",
+  "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('`')<CR>",
+  { desc = "Wrap Markdown Inline Code - ` and `" }
+)
+
+vim.keymap.set("n", "<leader>mcc", function()
+  local lines = {
+    "```",
+    "",
+    "```",
+  }
+  -- insere abaixo da linha atual
+  vim.api.nvim_put(lines, "l", true, true)
+
+  -- move o cursor para a linha vazia do meio
+  vim.cmd("normal! kk")
+end, { desc = "Insert markdown code block" })
+
+vim.keymap.set("n", "<leader>ml", function()
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+
+  vim.api.nvim_buf_set_text(0, row - 1, col, row - 1, col, {
+    "[Text](Link)",
+  })
+
+  -- coloca cursor dentro de Text
+  vim.api.nvim_win_set_cursor(0, { row, col + 1 })
+end, { desc = "Insert markdown link" })
+
+vim.keymap.set("n", "<leader>mim", function()
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+
+  vim.api.nvim_buf_set_text(0, row - 1, col, row - 1, col, {
+    "![Alt](Image)",
+  })
+
+  -- cursor dentro de Alt
+  vim.api.nvim_win_set_cursor(0, { row, col + 2 })
+end, { desc = "Insert markdown image" })
+
 vim.keymap.set("n", "<leader>cfp", function()
   vim.fn.setreg("+", vim.fn.expand("%:p"))
   print("Full path copied to clipboard")
