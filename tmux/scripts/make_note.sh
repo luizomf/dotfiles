@@ -43,6 +43,7 @@ PROMPT+="Current date:\n"
 PROMPT+="$(date "+%Y-%m-%dT%H:%M:%S")\n"
 
 gemini -y -p "$PROMPT"
+# claude -p "$PROMPT" --dangerously-skip-permissions
 
 cd "${CURDIR}" || exit 1
 
