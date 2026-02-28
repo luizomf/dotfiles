@@ -1,0 +1,1 @@
+Bom dia! Espero que você tenha um excelente dia. Este é apenas um arquivo de teste conforme solicitado.
