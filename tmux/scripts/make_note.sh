@@ -21,11 +21,11 @@ PROMPT+="\n"
 PROMPT+="Execute completely: write the file, commit, and push.\n"
 
 # codex exec "$PROMPT" --yolo
-# gemini -y -p "$PROMPT"
-nohup gemini -p "$PROMPT" -y > /dev/null 2>&1 < /dev/null &
+gemini -y -p "$PROMPT"
 # claude --model claude-sonnet-4-6 -p "$PROMPT" --dangerously-skip-permissions
 
-sleep 5
-echo "Sleeping for 5 seconds..."
+# This does not work in tmux popups
+# nohup gemini -p "$PROMPT" -y > /dev/null 2>&1 < /dev/null &
+
 cd "${CURDIR}" || exit 1
 

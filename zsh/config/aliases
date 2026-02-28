@@ -37,3 +37,6 @@ alias brewcheck='brew leaves | sort'
 alias tre="tree --prune -a -C -I '__pycache__|node_modules|.git|.venv|dist|.DS_Store|*.egg*'"
 alias j="just"
 
+# Tmux
+alias makenote="tmux new-window \"~/dotfiles/tmux/scripts/make_note.sh\""
+
