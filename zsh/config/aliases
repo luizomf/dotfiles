@@ -39,4 +39,3 @@ alias j="just"
 
 # Tmux
 alias makenote="tmux new-window \"~/dotfiles/tmux/scripts/make_note.sh\""
-
