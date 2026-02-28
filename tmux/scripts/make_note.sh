@@ -20,8 +20,12 @@ PROMPT+="Current date: $(date "+%Y-%m-%dT%H:%M:%S")\n"
 PROMPT+="\n"
 PROMPT+="Execute completely: write the file, commit, and push.\n"
 
-gemini -y -p "$PROMPT"
+# codex exec "$PROMPT" --yolo
+# gemini -y -p "$PROMPT"
+nohup gemini -p "$PROMPT" -y > /dev/null 2>&1 < /dev/null &
 # claude --model claude-sonnet-4-6 -p "$PROMPT" --dangerously-skip-permissions
 
+sleep 5
+echo "Sleeping for 5 seconds..."
 cd "${CURDIR}" || exit 1
 
