@@ -84,6 +84,10 @@ if [[ "$(command -v docker)" && -f "${HOME}/.docker/completions/_docker" ]]; the
   eval "$(docker completion zsh)"
 fi
 
+if [[ "$(command -v gh)" ]]; then
+  eval "$(gh completion -s zsh)"
+fi
+
 # bun completions
 [ -s "/Users/luizotavio/.oh-my-zsh/completions/_bun" ] && source "/Users/luizotavio/.oh-my-zsh/completions/_bun"
 
