@@ -21,8 +21,8 @@ PROMPT+="\n"
 PROMPT+="Execute completely: write the file, commit, and push.\n"
 
 # codex exec "$PROMPT" --yolo
-gemini -y -p "$PROMPT"
-# claude --model claude-sonnet-4-6 -p "$PROMPT" --dangerously-skip-permissions
+# gemini -y -p "$PROMPT"
+claude --model claude-opus-4-6 -p "$PROMPT" --dangerously-skip-permissions
 
 # This does not work in tmux popups
 # nohup gemini -p "$PROMPT" -y > /dev/null 2>&1 < /dev/null &
