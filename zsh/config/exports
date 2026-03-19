@@ -98,4 +98,12 @@ PATH="$BUN_INSTALL/bin:$PATH"
 # Added by Antigravity
 PATH="$HOME/.antigravity/antigravity/bin:$PATH"
 
+# pnpm
+export PNPM_HOME="/Users/luizotavio/Library/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+# pnpm end
+
 export PATH
