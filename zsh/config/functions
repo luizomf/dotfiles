@@ -392,114 +392,47 @@ clear () {
 }
 
 convert_for_youtube() {
-  INPUT=
-  OUTPUT=
-  SONG=
-
-  help_msg() {
-    printf "Usage: %s -i <input> -o <output> [-s <song>]\n\n" "${0##*/}"
-    printf "Options:\n"
-    printf "  -i, --input   FILEPATH  Source video you wish to use.\n"
-    printf "  -o, --output  FILEPATH  Output video after conversion.\n"
-    printf "  -s, --song    1 or 0    1=add song, 0=don't add song.\n"
-    printf "  -h, --help              Display this help information.\n"
-  }
-
-  error_then_help() {
-    help_msg
-    printf "\nError: %s\n" "$1"
-    return 1
-  }
-
-  require_value() {
-    [[ -n "${2:-}" ]] || error_then_help "$1 requires a value"
-  }
+  local input="" output="" with_song=false
+  local song="/Users/luizotavio/Library/CloudStorage/GoogleDrive-todoespacoonline@gmail.com/Meu Drive/BKP_EXTERNO_2/Edicao/youtube_library_music/lofi/todas-30db.mp3"
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      -i|--input)
-        require_value "$1" "${2:-}" || return 1
-        INPUT=$2
-        shift 2
-        ;;
-      -o|--output)
-        require_value "$1" "${2:-}" || return 1
-        OUTPUT=$2
-        shift 2
-        ;;
-      -s|--song)
-        require_value "$1" "${2:-}" || return 1
-        SONG=TRUE
-        shift 2
-        ;;
+      -i|--input)  input="${2:?"$1 requires a value"}"; shift 2 ;;
+      -o|--output) output="${2:?"$1 requires a value"}"; shift 2 ;;
+      -s|--song)   with_song=true; shift ;;
       -h|--help)
-        help_msg
-        return 0
-        ;;
-      --)
-        shift
-        break
-        ;;
-      *)
-        error_then_help "Unknown argument: $1"
-        return 1
-        ;;
+        echo "Usage: convert_for_youtube -i <input> -o <output> [-s]"
+        return 0 ;;
+      *) echo "Unknown: $1" >&2; return 1 ;;
     esac
   done
 
-  [[ -z "$INPUT" ]] && logerror "Missing input" && return 1
-  [[ -z "$OUTPUT" ]] && logerror "Missing output" && return 1
-  [[ "${INPUT}" == "$OUTPUT" ]] && logerror "Input file is identical to output file." && return 1
+  [[ -z "$input" ]]  && echo "Missing -i <input>" >&2  && return 1
+  [[ -z "$output" ]] && echo "Missing -o <output>" >&2 && return 1
+  [[ "$input" == "$output" ]] && echo "Input = output" >&2 && return 1
 
-  if [[ -z $SONG ]]; then 
-    ffmpeg_yt -i "${INPUT}" -o "${OUTPUT}"
-  else
-    SONG="/Users/luizotavio/Library/CloudStorage/GoogleDrive-todoespacoonline@gmail.com/Meu Drive/BKP_EXTERNO_2/Edicao/youtube_library_music/lofi/todas-30db.mp3"
-    ffmpeg_yt_music \
-      -i "${INPUT}" \
-      -o "${OUTPUT}" \
-      -s "${SONG}"
+  local -a cmd=(
+    ffmpeg -fflags +genpts+igndts
+    -i "$input"
+  )
+
+  if $with_song; then
+    cmd+=( -i "$song"
+      -filter_complex "[0:a][1:a]amix=inputs=2:duration=first:normalize=0[a]"
+      -map 0:v -map "[a]"
+    )
   fi
-}
 
-ffmpeg_yt() {
-  echo ffmpeg -fflags +genpts -fflags +igndts \
-    -i "${INPUT}" \
-    -c:v h264_videotoolbox -profile:v high -crf 13 -bf 2 -g 15 -coder 1 -pix_fmt yuv420p -preset slow \
-    -c:a aac -ar 48000 -b:a 384k \
-    -shortest \
-    -movflags +faststart \
-    "${OUTPUT}"
+  cmd+=(
+    -c:v h264_videotoolbox -profile:v high -q:v 30
+    -pix_fmt yuv420p
+    -c:a aac -ar 48000 -b:a 192k
+    -shortest -movflags +faststart
+    "$output"
+  )
 
-  ffmpeg -fflags +genpts -fflags +igndts \
-    -i "${INPUT}" \
-    -c:v libx264 -profile:v high -crf 13 -bf 2 -g 15 -coder 1 -pix_fmt yuv420p -preset slow \
-    -c:a aac -ar 48000 -b:a 384k \
-    -shortest \
-    -movflags +faststart \
-    "${OUTPUT}"
-}
-
-ffmpeg_yt_music() {
-  echo ffmpeg -fflags +genpts -fflags +igndts \
-    -i "${INPUT}" -i "${SONG}" \
-    -filter_complex "[0:a][1:a]amix=inputs=2:duration=first:normalize=0[a]" \
-    -map 0:v -map "[a]" \
-    -c:v h264_videotoolbox -profile:v high -crf 13 -bf 2 -g 15 -coder 1 -pix_fmt yuv420p -preset slow \
-    -c:a aac -ar 48000 -b:a 384k \
-    -shortest \
-    -movflags +faststart \
-    "${OUTPUT}"
-
-  ffmpeg -fflags +genpts -fflags +igndts \
-    -i "${INPUT}" -i "${SONG}" \
-    -filter_complex "[0:a][1:a]amix=inputs=2:duration=first:normalize=0[a]" \
-    -map 0:v -map "[a]" \
-    -c:v h264_videotoolbox -profile:v high -crf 13 -bf 2 -g 15 -coder 1 -pix_fmt yuv420p -preset slow \
-    -c:a aac -ar 48000 -b:a 384k \
-    -shortest \
-    -movflags +faststart \
-    "${OUTPUT}"
+  echo "${cmd[@]}"
+  "${cmd[@]}"
 }
 
 backup_ssh() {
