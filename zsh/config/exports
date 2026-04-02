@@ -16,11 +16,11 @@ ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=red,bold'
 export OLLAMA_HOST="0.0.0.0:11434"
 
 export FZF_DEFAULT_OPTS='
-  --color=fg:#dadada,fg+:#ffffff,bg:#000000,bg+:#3a3a3a
-  --color=hl:#afffaf,hl+:#00ff5f,info:#00ff87,marker:#00ff5f
-  --color=prompt:#dadada,spinner:#00ff87,pointer:#00ff87,header:#00ff87
-  --color=gutter:#121212,border:#121212,separator:#808080,scrollbar:#808080
-  --color=label:#dadada,query:#dadada
+  --color=fg:#c0c0da,fg+:#f0efff,bg:#0a0a14,bg+:#242436
+  --color=hl:#37feb7,hl+:#72ffcd,info:#30f4f2,marker:#30f4f2
+  --color=prompt:#c0c0da,spinner:#30f4f2,pointer:#30f4f2,header:#30f4f2
+  --color=gutter:#0a0a14,border:#0a0a14,separator:#6a6a8a,scrollbar:#6a6a8a
+  --color=label:#c0c0da,query:#c0c0da
   --preview-window="border-rounded" --prompt="> " --marker=">" --pointer="◆"
   --separator="─" --scrollbar="│" --layout="reverse"'
 
