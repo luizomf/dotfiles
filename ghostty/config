@@ -1,5 +1,5 @@
 # shellcheck disable=all
-theme = tokyonightlocal
+theme = omtheme
 
 # Font 
 font-family = JetBrains Mono
