@@ -13,7 +13,10 @@ ZSH_HIGHLIGHT_STYLES[comment]='fg=240'
 ZSH_HIGHLIGHT_STYLES[default]='fg=251'
 ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=red,bold'
 
-export OLLAMA_HOST="0.0.0.0:11434"
+export OLLAMA_HOST=192.168.0.109:11434
+export OLLAMA_TIMEOUT_MS=10000
+export OLLAMA_LOAD_TIMEOUT='10m'
+export OLLAMA_KEEP_ALIVE='10m'
 
 export FZF_DEFAULT_OPTS='
   --color=fg:#c0c0da,fg+:#f0efff,bg:#0a0a14,bg+:#242436
