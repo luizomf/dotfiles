@@ -544,6 +544,12 @@ llm_clean() {
     haiku)
       echo "$prompt" | claude --model haiku -p
       ;;
+    sonnet)
+      echo "$prompt" | claude --model sonnet -p
+      ;;
+    opus)
+      echo "$prompt" | claude --model opus -p
+      ;;
     codex)
       codex exec "$prompt"
       ;;
@@ -560,6 +566,72 @@ llm_clean() {
   if [[ $exit_code -eq 0 ]]; then
     echo "Pronto. Agora é só falar bonito." >&2
   else
+    echo "Algo deu errado. O modelo engasgou." >&2
+  fi
+
+  return $exit_code
+}
+
+ask() {
+  local model="sonnet" prompt="" tts=0
+  local tts_lang="a" tts_voice="af_heart"
+  local claude_cmd=(claude --tools ""
+    --no-session-persistence
+    --disable-slash-commands
+    --effort low
+  )
+  local gemini_cmd=(gemini -s -m auto -e "")
+  local codex_cmd=(codex -m gpt-5.4 -c 'model_reasoning_effort = "none"' exec)
+  local ollama_cmd=(ollama run --nowordwrap --think=false --hidethinking)
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -m|--model)  model="${2:?"$1 requires a value"}"; shift 2 ;;
+      -p|--prompt) prompt="${2:?"$1 requires a value"}"; shift 2 ;;
+      -t|--tts)    tts=1; shift ;;
+      -l|--lang)   tts_lang="${2:?"$1 requires a value"}"; shift 2 ;;
+      -v|--voice)  tts_voice="${2:?"$1 requires a value"}"; shift 2 ;;
+      -h|--help)
+        echo "Usage: ask [-m <model>] -p <prompt> [-t] [-l <lang>] [-v <voice>]"
+        echo "Models: haiku, sonnet (default), opus, codex, gemini, or any ollama model"
+        echo "TTS:    -t enable, -l language (default: a), -v voice (default: af_heart)"
+        return 0 ;;
+      *) echo "Unknown: $1" >&2; return 1 ;;
+    esac
+  done
+  [[ -z "$prompt" ]] && { echo "Missing -p <prompt>" >&2; return 1; }
+  local cmd=()
+  case "$model" in
+    haiku)   cmd=("${claude_cmd[@]}" --model haiku -p -)       ;;
+    sonnet)  cmd=("${claude_cmd[@]}" --model sonnet -p -)      ;;
+    opus)    cmd=("${claude_cmd[@]}" --model opus -p -)        ;;
+    codex)   cmd=("${codex_cmd[@]}")                           ;;
+    gemini)  cmd=("${gemini_cmd[@]}")                          ;;
+    *)       cmd=("${ollama_cmd[@]}" "$model")                 ;;
+  esac
+
+  local exit_code=0
+
+  if [[ $tts -eq 1 ]]; then
+    echo "MODO TTS"
+    local sys_prompt
+
+    sys_prompt="$(cat ~/dotfiles/prompts/clean_answer.md)"
+
+    local full_prompt="${sys_prompt}"$'\n\n'"${prompt}"
+    local answer
+
+    answer="$(echo "$full_prompt" | "${cmd[@]}")"
+    exit_code=$?
+
+    echo "$answer"
+    echo "$answer" | pbcopy
+    echo "$answer" | cliplay -l "$tts_lang" -v "$tts_voice" -i -
+  else
+    echo "$prompt" | "${cmd[@]}"
+    exit_code=$?
+  fi
+
+  if [[ $exit_code -ne 0 ]]; then
     echo "Algo deu errado. O modelo engasgou." >&2
   fi
 
