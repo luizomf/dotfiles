@@ -551,7 +551,7 @@ llm_clean() {
       echo "$prompt" | claude --model opus -p
       ;;
     codex)
-      codex exec "$prompt"
+      echo "$prompt" | codex -m gpt-5.4 -c model_reasoning_effort=medium exec -
       ;;
     gemini)
       echo "$prompt" | gemini -p -
@@ -573,6 +573,9 @@ llm_clean() {
 }
 
 ask() {
+  # shellcheck disable=SC1090
+  source ~/.zshrc
+
   local model="sonnet" prompt="" tts=0
   local tts_lang="a" tts_voice="af_heart"
   local claude_cmd=(claude --tools ""
@@ -580,9 +583,11 @@ ask() {
     --disable-slash-commands
     --effort low
   )
+
   local gemini_cmd=(gemini -s -m auto -e "")
-  local codex_cmd=(codex -m gpt-5.4 -c 'model_reasoning_effort = "none"' exec)
-  local ollama_cmd=(ollama run --nowordwrap --think=false --hidethinking)
+  local codex_cmd=(codex -m gpt-5.4 -c model_reasoning_effort=none exec)
+  local ollama_cmd=(ollama run --nowordwrap --think=low --hidethinking)
+
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -m|--model)  model="${2:?"$1 requires a value"}"; shift 2 ;;
@@ -598,8 +603,11 @@ ask() {
       *) echo "Unknown: $1" >&2; return 1 ;;
     esac
   done
+
   [[ -z "$prompt" ]] && { echo "Missing -p <prompt>" >&2; return 1; }
+
   local cmd=()
+
   case "$model" in
     haiku)   cmd=("${claude_cmd[@]}" --model haiku -p -)       ;;
     sonnet)  cmd=("${claude_cmd[@]}" --model sonnet -p -)      ;;
