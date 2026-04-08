@@ -536,7 +536,7 @@ llm_clean() {
   fi
 
   echo "Limpando ${chars} caracteres com ${model}..." >&2
-  echo "Markdown entra, fala sai." >&2
+  echo "" >&2
 
   local prompt="$(cat ~/dotfiles/prompts/clean_tts_text.md)\n\n${clipboard}"
 
@@ -557,15 +557,13 @@ llm_clean() {
       echo "$prompt" | gemini -p -
       ;;
     *)
-      echo "$prompt" | ollama run "$model" --nowordwrap
+      echo "$prompt" | ollama run "$model" --nowordwrap --think="high"
       ;;
   esac
 
   local exit_code=$?
 
-  if [[ $exit_code -eq 0 ]]; then
-    echo "Pronto. Agora é só falar bonito." >&2
-  else
+  if [[ $exit_code -gt 0 ]]; then
     echo "Algo deu errado. O modelo engasgou." >&2
   fi
 

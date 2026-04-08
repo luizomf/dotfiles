@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# shellcheck disable=SC1091
+. "${HOME}/dotfiles/zsh/config/functions"
+# shellcheck disable=SC1091
+. "${HOME}/dotfiles/zsh/config/aliases"
+
+FILE_PATH="${1:-}"
+MODEL="${OMNEWS_TRANSLATE_MODEL:-gpt-oss:120b}"
+
+"${HOME}"/dotfiles/scripts/translate_ptbr "$FILE_PATH" | pbcopy
+
+llm_clean "$MODEL"

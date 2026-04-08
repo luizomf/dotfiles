@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+MODEL="${OMNEWS_TRANSLATE_MODEL:-gpt-oss:120b}"
+
+usage() {
+  echo "Usage: $0 <briefing-file>" >&2
+}
+
+if [[ $# -ne 1 ]]; then
+  usage
+  exit 1
+fi
+
+INPUT_PATH="$1"
+
+if [[ ! -e "$INPUT_PATH" ]]; then
+  echo "Error: file not found: $INPUT_PATH" >&2
+  exit 1
+fi
+
+if [[ ! -f "$INPUT_PATH" ]]; then
+  echo "Error: expected a regular file: $INPUT_PATH" >&2
+  exit 1
+fi
+
+if [[ ! -r "$INPUT_PATH" ]]; then
+  echo "Error: file is not readable: $INPUT_PATH" >&2
+  exit 1
+fi
+
+if command -v realpath >/dev/null 2>&1; then
+  FILE_PATH="$(realpath "$INPUT_PATH")"
+else
+  FILE_PATH="$INPUT_PATH"
+fi
+
+PROMPT="$(cat "${HOME}/dotfiles/prompts/translate_to_pt_br.md")"
+
+CONTENT="$(cat "$FILE_PATH")"
+FINAL_PROMPT="${PROMPT}\n\n${CONTENT}"
+
+printf '%s' "$FINAL_PROMPT" | ollama run "$MODEL" --nowordwrap --think="high" --hidethinking
+

@@ -109,4 +109,6 @@ case ":$PATH:" in
 esac
 # pnpm end
 
+PATH="${HOME}/dotfiles/scripts:${PATH}"
+
 export PATH
