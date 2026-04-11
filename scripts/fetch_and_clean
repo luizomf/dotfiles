@@ -32,6 +32,7 @@ PROMPT+=$"Return only the text that matters — title, headings, body text, desc
 PROMPT+=$"No HTML tags, no CSS, no JavaScript, no navigation menus, no footers. "
 PROMPT+=$"No commentary, no explanations. Just the content, plain text, in the original language. "
 PROMPT+=$"We are working on behalf of the user. If the URL is blocked for AI, use lynx (recommended) or curl. "
+PROMPT+=$"When done, immediately output the result to stdout before doing anything else. "
 PROMPT+=$"Here's the URL: ${URL}"
 
 
