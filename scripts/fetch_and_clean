@@ -28,8 +28,8 @@ fi
 # PROMPT
 PROMPT=""
 PROMPT+=$"Fetch this URL and extract the readable content from this HTML page. "
-PROMPT+=$"Return only the text that matters — title, headings, body text, descriptions. "
-PROMPT+=$"No HTML tags, no CSS, no JavaScript, no URLs, no navigation menus, no footers. "
+PROMPT+=$"Return only the text that matters — title, headings, body text, descriptions, and relevant links. "
+PROMPT+=$"No HTML tags, no CSS, no JavaScript, no navigation menus, no footers. "
 PROMPT+=$"No commentary, no explanations. Just the content, plain text, in the original language. "
 PROMPT+=$"We are working on behalf of the user. If the URL is blocked for AI, use lynx (recommended) or curl. "
 PROMPT+=$"Here's the URL: ${URL}"
