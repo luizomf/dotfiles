@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-MODEL="${OMNEWS_TRANSLATE_MODEL:-gpt-oss:120b}"
+MODEL="${OMNEWS_TRANSLATE_MODEL:-gemma4:26b}"
 
 usage() {
   echo "Usage: $0 <briefing-file>" >&2
@@ -41,5 +41,5 @@ PROMPT="$(cat "${HOME}/dotfiles/prompts/translate_to_pt_br.md")"
 CONTENT="$(cat "$FILE_PATH")"
 FINAL_PROMPT="${PROMPT}\n\n${CONTENT}"
 
-printf '%s' "$FINAL_PROMPT" | ollama run "$MODEL" --nowordwrap --think="high" --hidethinking
+printf '%s' "$FINAL_PROMPT" | ollama run "$MODEL" --nowordwrap --think="high"
 
