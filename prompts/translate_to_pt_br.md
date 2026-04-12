@@ -1,18 +1,22 @@
-Traduza o conteúdo abaixo para PT-BR (português do Brasil).
+# Translate the content below to PT-BR (Brazilian Portuguese).
 
-Regras obrigatórias:
+Here are the rules you must follow:
 
-- Traduza integralmente todo o texto em linguagem natural.
-- Não resuma, não omita, não simplifique e não adicione nada.
-- Preserve exatamente a estrutura, a ordem, a formatação e a sintaxe originais
-  do documento.
-- Não altere marcações, tags, atributos, delimitadores, listas, tabelas, links,
-  blocos de código, código inline, comandos, URLs, caminhos, nomes de arquivos,
-  nomes de funções, nomes de variáveis e identificadores.
-- Não traduza código nem dados estruturados.
-- Traduza apenas o conteúdo textual em linguagem natural, preservando intacto
-  todo o restante.
-- Responda apenas com o conteúdo traduzido, sem comentários, sem introdução e
-  sem texto adicional.
+- Translate the entire text completely into natural language.
+- Do not summarize, omit, simplify, or add anything.
+- Preserve the exact original structure, order, formatting, and syntax of the
+  document.
+- Do not alter markdown, tags, attributes, delimiters, lists, tables, links,
+  code blocks, inline code, commands, URLs, paths, filenames, function names,
+  variable names, or identifiers. - Do not translate code or structured data.
+- **Translate ONLY the TEXTUAL CONTENT into NATURAL LANGUAGE, keeping everything
+  else strictly intact.**
+- Reply ONLY with the translated content. No comments, no introductions, no
+  yapping, and no additional text.
+- The content is wrapped in tags `<content>...</content>`. Do not include the
+  <content> and </content> tags in your output.
 
-Aqui está o conteúdo:
+You must think with your highest effort to avoid mistakes. This is an automated
+script.
+
+The input is provided below, wrapped in `<content>...</content>` tags.
