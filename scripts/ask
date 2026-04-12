@@ -1,0 +1,182 @@
+#!/usr/bin/env zsh
+
+usage() {
+  cat <<EOF
+Usage:
+  ${0##*/} [-m <model>] -p <prompt> [-t] [-l <lang>] [-v <voice>] [-- <extra args...>]
+
+Models:
+  haiku, sonnet, opus, codex, gemini, or any Ollama model
+
+Default model:
+  \${MODEL:-gpt-oss:120b}
+
+TTS:
+  -t, --tts            Enable TTS
+  -l, --lang <lang>    TTS language (default: a)
+  -v, --voice <voice>  TTS voice (default: af_heart)
+
+Passthrough:
+  Everything after -- is forwarded to the selected command.
+
+Examples:
+  ${0##*/} -p "Explain closures in Python"
+  ${0##*/} -m codex -p "Refactor this" -- -a never -s workspace-write
+  ${0##*/} -m gemini -p "Summarize this text" -- --help
+  ${0##*/} -m llama3.3:70b -p "Write a haiku"
+  ${0##*/} -p "Clean this answer" -t -l pt -v af_heart
+EOF
+}
+
+main() {
+  emulate -L zsh
+  setopt nounset pipefail
+
+  # shellcheck disable=SC1091
+  . "${HOME}/dotfiles/zsh/config/functions"
+  # shellcheck disable=SC1091
+  . "${HOME}/dotfiles/zsh/config/aliases"
+
+  local model="${MODEL:-gpt-oss:120b}"
+  local prompt=""
+  local tts_lang="a"
+  local tts_voice="af_heart"
+  local sys_prompt=""
+  local full_prompt=""
+  local answer=""
+
+  integer tts=0
+
+  local -a extra_args=()
+  local -a cmd=()
+  local -a claude_cmd=(
+    claude
+    --no-session-persistence
+    --disable-slash-commands
+    --effort low
+  )
+  local -a gemini_cmd=(
+    gemini
+    -s
+    -m auto
+  )
+  local -a codex_cmd=(
+    codex
+    -m gpt-5.4
+    -c model_reasoning_effort=none
+    exec
+  )
+  local -a ollama_cmd=(
+    ollama
+    run
+    --nowordwrap
+    --think=high
+  )
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -m|--model)
+        model="${2:?"$1 requires a value"}"
+        shift 2
+        ;;
+      -p|--prompt)
+        prompt="${2:?"$1 requires a value"}"
+        shift 2
+        ;;
+      -t|--tts)
+        tts=1
+        shift
+        ;;
+      -l|--lang)
+        tts_lang="${2:?"$1 requires a value"}"
+        shift 2
+        ;;
+      -v|--voice)
+        tts_voice="${2:?"$1 requires a value"}"
+        shift 2
+        ;;
+      -h|--help)
+        usage
+        return 0
+        ;;
+      --)
+        shift
+        extra_args=("$@")
+        break
+        ;;
+      *)
+        print -u2 -- "Unknown argument: $1"
+        print -u2 -- "Use -- to forward extra args to the selected command."
+        return 1
+        ;;
+    esac
+  done
+
+  if [[ -z "$prompt" ]]; then
+    print -u2 -- "Missing -p <prompt>"
+    return 1
+  fi
+
+  case "$model" in
+    haiku)
+      cmd=("${claude_cmd[@]}" --model haiku -p - "${extra_args[@]}")
+      ;;
+    sonnet)
+      cmd=("${claude_cmd[@]}" --model sonnet -p - "${extra_args[@]}")
+      ;;
+    opus)
+      cmd=("${claude_cmd[@]}" --model opus -p - "${extra_args[@]}")
+      ;;
+    codex)
+      cmd=("${codex_cmd[@]}" "${extra_args[@]}")
+      ;;
+    gemini)
+      cmd=("${gemini_cmd[@]}" "${extra_args[@]}")
+      ;;
+    *)
+      cmd=("${ollama_cmd[@]}" "$model" "${extra_args[@]}")
+      ;;
+  esac
+
+  if (( tts )); then
+    [[ -r "${HOME}/dotfiles/prompts/clean_answer.md" ]] || {
+      print -u2 -- "Prompt file not found: ${HOME}/dotfiles/prompts/clean_answer.md"
+      return 1
+    }
+
+    command -v pbcopy >/dev/null 2>&1 || {
+      print -u2 -- "pbcopy not found."
+      return 1
+    }
+
+    command -v cliplay >/dev/null 2>&1 || {
+      print -u2 -- "cliplay not found."
+      return 1
+    }
+
+    print -- "MODO TTS"
+
+    sys_prompt="$(< "${HOME}/dotfiles/prompts/clean_answer.md")"
+    full_prompt="${sys_prompt}"$'\n\n'"${prompt}"
+
+    if ! answer="$(print -r -- "$full_prompt" | "${cmd[@]}")"; then
+      print -u2 -- "Algo deu errado. O modelo engasgou."
+      return 1
+    fi
+
+    print -r -- "$answer"
+    print -r -- "$answer" | pbcopy
+    print -r -- "$answer" | cliplay -l "$tts_lang" -v "$tts_voice" -i -
+    return $?
+  fi
+
+  if ! print -r -- "$prompt" | "${cmd[@]}"; then
+    print -u2 -- "Algo deu errado. O modelo engasgou."
+    return 1
+  fi
+}
+
+main "$@"
+
+# agent: do not remove the next line
+# vim: set filetype=sh :

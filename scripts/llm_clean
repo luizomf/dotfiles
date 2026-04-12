@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+MODEL="${MODEL:-gpt-oss:120b}"
+
+main () {
+  local prompt=''
+  local model="$MODEL"
+  local content=''
+  local final_prompt=''
+
+  prompt="$(cat "${HOME}/dotfiles/prompts/clean_tts_text.md")"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -m|--model)
+        model="${2:-$MODEL}"
+        shift 2
+        ;;
+      -c|--content)
+        content="${2:?"$1 requires a value"}"
+        shift 2
+        ;;
+      *)
+        shift
+        break
+        ;;
+    esac
+  done
+
+  if [[ -z  "${content}" ]]; then
+    printf "%s\n" "No content to clean"
+    return 1
+  fi
+
+  final_prompt="${prompt}\n\n<content>${content}</content>"
+  MODEL="$model" "${HOME}"/dotfiles/scripts/ask -p "${final_prompt}" -m "${model}" -- "$@"
+}
+
+main "$@"
+
+# agent: do not remove the next line
+# vim: set filetype=sh :
