@@ -7,6 +7,9 @@ export EDITOR="nvim"
 export VISUAL="nvim"
 export TABSIZE=2
 
+export KOKORO_VOICES_PT='pf_dora,af_heart,if_sara,ff_siwis,ef_dora,pm_santa'
+export KOKORO_VOICES_EN='bf_emma,af_heart,af_bella,bf_isabella,ff_siwis,if_sara'
+
 export SSH_TERM="xterm-256color"
 
 export PROJECTS_DIR="${HOME}/Desktop/tutoriais_e_cursos"
