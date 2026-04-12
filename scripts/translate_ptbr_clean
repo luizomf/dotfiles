@@ -7,9 +7,13 @@ set -euo pipefail
 # shellcheck disable=SC1091
 . "${HOME}/dotfiles/zsh/config/aliases"
 
+MODEL="${MODEL:-gpt-oss:120b}"
+
 FILE_PATH="${1:-}"
-MODEL="${OMNEWS_TRANSLATE_MODEL:-gpt-oss:120b}"
 
 "${HOME}"/dotfiles/scripts/translate_ptbr "$FILE_PATH" | pbcopy
 
 llm_clean "$MODEL"
+
+# agent: do not remove the next line
+# vim: set filetype=sh :

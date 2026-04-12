@@ -2,44 +2,44 @@
 
 set -euo pipefail
 
-MODEL="${OMNEWS_TRANSLATE_MODEL:-gemma4:26b}"
+MODEL="${MODEL:-gpt-oss:120b}"
 
-usage() {
-  echo "Usage: $0 <briefing-file>" >&2
+main () {
+  local prompt=''
+  local model="$MODEL"
+  local content=''
+  local final_prompt=''
+
+  prompt="$(cat "${HOME}/dotfiles/prompts/translate_to_pt_br.md")"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -m|--model)
+        model="${2:-$MODEL}"
+        shift 2
+        ;;
+      -c|--content)
+        content="${2:?"$1 requires a value"}"
+        shift 2
+        ;;
+      *)
+        shift
+        break
+        ;;
+    esac
+  done
+
+  if [[ -z  "${content}" ]]; then
+    printf "%s\n" "No content to clean"
+    return 1
+  fi
+
+  final_prompt="${prompt}\n\n<content>${content}</content>"
+  MODEL="$model" "${HOME}"/dotfiles/scripts/ask -p "${final_prompt}" -m "${model}" -- "$@"
 }
 
-if [[ $# -ne 1 ]]; then
-  usage
-  exit 1
-fi
+main "$@"
 
-INPUT_PATH="$1"
-
-if [[ ! -e "$INPUT_PATH" ]]; then
-  echo "Error: file not found: $INPUT_PATH" >&2
-  exit 1
-fi
-
-if [[ ! -f "$INPUT_PATH" ]]; then
-  echo "Error: expected a regular file: $INPUT_PATH" >&2
-  exit 1
-fi
-
-if [[ ! -r "$INPUT_PATH" ]]; then
-  echo "Error: file is not readable: $INPUT_PATH" >&2
-  exit 1
-fi
-
-if command -v realpath >/dev/null 2>&1; then
-  FILE_PATH="$(realpath "$INPUT_PATH")"
-else
-  FILE_PATH="$INPUT_PATH"
-fi
-
-PROMPT="$(cat "${HOME}/dotfiles/prompts/translate_to_pt_br.md")"
-
-CONTENT="$(cat "$FILE_PATH")"
-FINAL_PROMPT="${PROMPT}\n\n${CONTENT}"
-
-printf '%s' "$FINAL_PROMPT" | ollama run "$MODEL" --nowordwrap --think="high"
+# agent: do not remove the next line
+# vim: set filetype=sh :
 
