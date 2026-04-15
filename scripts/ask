@@ -7,6 +7,8 @@ Usage:
 
 Models:
   haiku, sonnet, opus, codex, gemini, or any Ollama model
+  Use provider/model to pick a specific model, e.g.:
+    codex/gpt-5.4-codex-spark, gemini/gemini-3.1-pro-preview, claude/sonnet
 
 Default model:
   \${MODEL:-gpt-oss:120b}
@@ -62,9 +64,6 @@ main() {
   )
   local -a codex_cmd=(
     codex
-    -m gpt-5.4
-    -c model_reasoning_effort=none
-    exec
   )
   local -a ollama_cmd=(
     ollama
@@ -117,7 +116,15 @@ main() {
     return 1
   fi
 
-  case "$model" in
+  local provider=""
+  local model_name=""
+
+  if [[ "$model" == */* ]]; then
+    provider="${model%%/*}"
+    model_name="${model#*/}"
+  fi
+
+  case "${provider:-$model}" in
     haiku)
       cmd=("${claude_cmd[@]}" --model haiku -p - "${extra_args[@]}")
       ;;
@@ -127,11 +134,19 @@ main() {
     opus)
       cmd=("${claude_cmd[@]}" --model opus -p - "${extra_args[@]}")
       ;;
+    claude)
+      cmd=("${claude_cmd[@]}" --model "$model_name" -p - "${extra_args[@]}")
+      ;;
     codex)
-      cmd=("${codex_cmd[@]}" "${extra_args[@]}")
+      [[ -n "$model_name" ]] && codex_cmd[2]="$model_name"
+      cmd=("${codex_cmd[@]}" -m "${model_name}" "${extra_args[@]}" "exec")
       ;;
     gemini)
+      [[ -n "$model_name" ]] && gemini_cmd[4]="$model_name"
       cmd=("${gemini_cmd[@]}" "${extra_args[@]}")
+      ;;
+    ollama)
+      cmd=("${ollama_cmd[@]}" "$model_name" "${extra_args[@]}")
       ;;
     *)
       cmd=("${ollama_cmd[@]}" "$model" "${extra_args[@]}")
