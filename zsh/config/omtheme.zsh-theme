@@ -1,5 +1,5 @@
-#!/bin/sh
-# vim: set filetype=sh :
+#!/usr/bin/env zsh
+# vim: set filetype=zsh :
 
 # Cores compatíveis com todos os terminais (ANSI 0–15)
 # Foreground - padrão (0–7)
@@ -57,13 +57,13 @@ ZSH_THEME_GIT_PROMPT_CLEAN="${FG_GREEN} ⭑${RESET_ALL}"
 # Sem isso, o tema duplicaria o nome do venv
 typeset -g VIRTUAL_ENV_DISABLE_PROMPT=1
 
-# Salvando esse ícone porque por ser útil depois 
 # Prompt principal
 PROMPT=$([ -z $SSH_CONNECTION ] || echo "[SSH] ")
-PROMPT+='${FG_YELLOW}%1~${FG_RESET}'
+PROMPT+='${FG_YELLOW}%1~${RESET_ALL}'
 PROMPT+='$(git_prompt_info)'
 PROMPT+=' %(?:${FG_GREEN}[✔] :${FG_RED}[✖ %?] )${RESET_ALL}'
 PROMPT+='${VIRTUAL_ENV:+[${FG_BRIGHT_CYAN}${VIRTUAL_ENV:t}${RESET_ALL}] }'
 PROMPT+='{%F{13}%m%f%k}'
+PROMPT+='${RESET_ALL}'
 PROMPT+=$'\n'
 PROMPT+='${VIM_PROMPT_FG_COLOR}${VIM_PROMPT_BG_COLOR}${VIM_PROMPT_SYMBOL}${RESET_ALL} '
