@@ -41,5 +41,5 @@ alias j="just"
 alias makenote="tmux new-window \"~/dotfiles/tmux/scripts/make_note.sh\""
 
 # Loudterm
-alias cliplay="~/Desktop/tutoriais_e_cursos/loudterm/.venv/bin/python ~/Desktop/tutoriais_e_cursos/loudterm/src/loudterm/backend/kokoro82m/cliplay.py"
+# alias cliplay="~/Desktop/tutoriais_e_cursos/loudterm/.venv/bin/python ~/Desktop/tutoriais_e_cursos/loudterm/src/loudterm/backend/kokoro82m/cliplay.py"
 

@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+"${HOME}"/Desktop/tutoriais_e_cursos/loudterm/.venv/bin/python \
+"${HOME}"/Desktop/tutoriais_e_cursos/loudterm/src/loudterm/backend/kokoro82m/cliplay.py \
+"${@}"
