@@ -39,7 +39,7 @@ main() {
   # shellcheck disable=SC1091
   . "${HOME}/dotfiles/zsh/config/aliases"
 
-  local model="${MODEL:-gpt-oss:120b}"
+  local model="${MODEL:-qwen3.6:35b-a3b-mxfp8}"
   local prompt=""
   local tts_lang="a"
   local tts_voice="af_heart"
