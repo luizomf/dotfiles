@@ -45,6 +45,10 @@ TTS OPTIMIZATION (NATURAL FLOW):
 
 - The TTS engine uses punctuation for intonation. Use commas and periods
   strategically to create natural breathing pauses.
+- Do not let phrases or paragraphs end without punctuation. Everything must end
+  with appropriate punctuation, depending on the context. Even titles must have
+  ending punctuation to preserve pauses. Without it, TTS systems may merge one
+  line into the next.
 - Break overly long sentences into shorter, digestible ones.
 - Add natural connective words if a transition feels too abrupt.
 - Preserve the original tone and paragraph breaks. Do not merge everything into
