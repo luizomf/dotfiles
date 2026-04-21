@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+codex --search --model gpt-5.4-mini -c model_reasoning_effort=none exec --ephemeral --ignore-user-config --ignore-rules 2>/dev/null
+

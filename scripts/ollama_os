@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+ollama launch claude --model qwen3.6:35b-a3b-mxfp8 -- \
+  --strict-mcp-config --setting-sources user \
+  --permission-mode acceptEdits \
+  --allowedTools "WebSearch" "Bash" \
+  --tools "WebSearch" "Bash" \
+  --verbose --no-session-persistence -p -
+
