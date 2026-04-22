@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+"${PROJECTS_DIR}"/aivideocut/.venv/bin/whisper \
+  --device cpu --fp16 False --task transcribe \
+  --word_timestamps True --max_line_width 42 --max_line_count 2 \
+  --verbose True --model large-v2 \
+ "${@}"
