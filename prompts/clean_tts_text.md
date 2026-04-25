@@ -54,6 +54,45 @@ TTS OPTIMIZATION (NATURAL FLOW):
 - Preserve the original tone and paragraph breaks. Do not merge everything into
   a single wall of text.
 
+PT-BR / OMNIVOICE-SPECIFIC RULES:
+
+- Think of the output as a speakable script, not a prettier written article.
+  Prefer the form a Brazilian narrator would actually say out loud.
+- Preserve and correct PT-BR accents. Accents are phonetic data for this TTS,
+  not decoration. Never normalize words like "não", "informação",
+  "automação", "conteúdo", "tendências", or "segurança" into unaccented forms.
+- Keep ordinary numbers as digits by default. This TTS usually speaks digits
+  more naturally than long numbers written in words. Use "24 de abril de 2026",
+  not "24/04/2026" and not "vinte e quatro de abril de dois mil e vinte e
+  seis". Use "2026", not "dois mil e vinte e seis".
+- Only expand symbols when the raw form is consistently hard to pronounce.
+  Simple percentages can stay as "26,7%". Money should become speakable, such
+  as "R$ 5,50" -> "5 reais e 50 centavos". Times, ratings, units, and rates
+  should become natural speech, such as "09:30" -> "9 horas e 30 minutos",
+  "8/10" -> "8 de 10", "250ms" -> "250 milissegundos", and "120MB/s" -> "120
+  megabytes por segundo".
+- Keep versions and model names raw when they sound stable, such as "Ubuntu
+  26.04 LTS", "DeepSeek V4 Pro", and "v2.4.1". Expand only forms that are
+  known to sound bad, such as "Node.js 24" -> "Node ponto JS vinte e quatro",
+  "Python 3.14" -> "Python três ponto quatorze", or "GPT-5.5" -> "GPT cinco
+  ponto cinco".
+- Break up technical tokens that the TTS may read as fake words. Prefer spaces,
+  not quotes. Examples: "OpenSSH" -> "Open S S H"; "MCP" -> "M C P"; "LLM" ->
+  "L L M"; "BFCL" -> "B F C L"; "OMG Ubuntu" -> "O M G Ubuntu"; "BadStyle" ->
+  "Bad Style"; "systemd" -> "system D"; "timesyncd" -> "time synced".
+- Remove brittle punctuation when exact spelling is not important for audio.
+  Hyphens, slashes, underscores, file extensions, and API paths should become
+  readable phrases: "Cross-Session" -> "Cross Session", "/api/articles" -> "api
+  articles", "source_urls" -> "source URLs", "text.md" -> "text ponto M D",
+  and "tts.txt" -> "T T S ponto T X T".
+- Avoid very short lines packed with English or technical tokens. They can make
+  the voice switch, speed up, or sound unnatural. Source credits should be full
+  PT-BR sentences. Bad: "Fonte. Arxiv, no paper BadStyle." Good: "A fonte do
+  artigo é arxiv, no artigo chamado Bad Style."
+- Do not overfit random TTS glitches. If two forms are both plausible, prefer
+  the clearer human sentence over clever spelling, quotes, or excessive symbol
+  expansion.
+
 OUTPUT FORMAT:
 
 - Plain text paragraphs ONLY. No markdown, no markers, no headers, no code.
