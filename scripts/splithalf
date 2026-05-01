@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+file="$1"
+outdir="${2:-$HOME/Desktop}"
+prefix="${3:-metade}"
+
+[[ -f "$file" ]] || {
+  echo "Arquivo não encontrado: $file" >&2
+  return 1
+}
+
+mkdir -p "$outdir"
+
+declare lines half
+lines=$(wc -l < "$file")
+half=$(( (lines + 1) / 2 ))
+
+head -n "$half" "$file" > "$outdir/${prefix}-1.txt"
+tail -n +"$((half + 1))" "$file" > "$outdir/${prefix}-2.txt"
+
+echo "Criado:"
+echo "$outdir/${prefix}-1.txt"
+echo "$outdir/${prefix}-2.txt"
