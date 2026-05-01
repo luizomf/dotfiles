@@ -2,7 +2,8 @@
 
 set -euo pipefail
 
-MODEL=${MODEL:-qwen3.6:35b-a3b-bf16}
+# MODEL=${MODEL:-qwen3.6:35b-a3b-bf16}
+MODEL=${MODEL:-qwen3.6:35b-a3b-mxfp8}
 
 # ollama launch claude --model "${MODEL}" -- \
 #   --strict-mcp-config --setting-sources user \
@@ -12,6 +13,6 @@ MODEL=${MODEL:-qwen3.6:35b-a3b-bf16}
 #   --verbose --no-session-persistence --effort high -p -
 
 ollama launch codex --model "${MODEL}" -- \
-  --yolo -c model_reasoning_effort=high \
+  --search --yolo -c model_reasoning_effort=high \
   exec --ephemeral
 
