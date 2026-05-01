@@ -2,10 +2,16 @@
 
 set -euo pipefail
 
-ollama launch claude --model qwen3.6:35b-a3b-mxfp8 -- \
-  --strict-mcp-config --setting-sources user \
-  --permission-mode acceptEdits \
-  --allowedTools "WebSearch" "Bash" \
-  --tools "WebSearch" "Bash" \
-  --verbose --no-session-persistence -p -
+MODEL=${MODEL:-qwen3.6:35b-a3b-bf16}
+
+# ollama launch claude --model "${MODEL}" -- \
+#   --strict-mcp-config --setting-sources user \
+#   --permission-mode acceptEdits \
+#   --allowedTools "WebSearch" "Bash" \
+#   --tools "WebSearch" "Bash" \
+#   --verbose --no-session-persistence --effort high -p -
+
+ollama launch codex --model "${MODEL}" -- \
+  --yolo -c model_reasoning_effort=high \
+  exec --ephemeral
 
