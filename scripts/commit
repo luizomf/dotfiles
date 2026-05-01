@@ -2,7 +2,8 @@
 
 set -euo pipefail
 
-MODEL="qwen3.6:35b-a3b-bf16"
+# MODEL="qwen3.6:35b-a3b-bf16"
+MODEL=${MODEL:-qwen3.6:35b-a3b-mxfp8}
 
 printf "Current Directory: %b\n" "$(pwd)"
 printf "Model: %b\n" "${MODEL}"
