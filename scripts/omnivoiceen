@@ -8,6 +8,5 @@ cd "${HOME}/Desktop/tutoriais_e_cursos/omnivoicetts" || exit 1
 pkill -9 -f ".*omnivoice.*python.*" || true
 cat | ./scripts/female-en --player auto --num-step 16 --class-temperature 0.1 \
   --guidance-scale 1 --speed 1.0 --sliding-window-chunks 3 --prebuffer-chunks 3 \
-  --chunk-len 80 --model-fade-ms 50 --model-pad-ms 100 > /dev/null 2>&1 &
-
+  --chunk-len 80 --model-fade-ms 50 --model-pad-ms 100 "${@}"  > /dev/null 2>&1 &
 )
