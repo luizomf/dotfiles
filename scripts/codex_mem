@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Commits changes in ~/.codex/memories/ as the Codex baseline author,
+# with UTC dates so the entry blends with auto-generated commits.
+
+MEM_DIR="${HOME}/.codex/memories"
+AUTHOR_NAME="Codex"
+AUTHOR_EMAIL="noreply@openai.com"
+
+if [[ ! -d "${MEM_DIR}/.git" ]]; then
+  printf "error: %s is not a git repo\n" "${MEM_DIR}" >&2
+  exit 1
+fi
+
+cd "${MEM_DIR}"
+
+if [[ -z "$(git status --porcelain)" ]]; then
+  printf "nothing to commit (working tree clean)\n"
+  exit 0
+fi
+
+usage() {
+  cat <<EOF
+usage: codex_mem [-m "message"] [-a]
+
+  -m  commit message (single line; omit to open \$EDITOR)
+  -a  add a "Co-authored-by: Codex" trailer (default: on)
+  -A  skip the trailer
+  -h  show this help
+
+examples:
+  codex_mem -m "Tweak TTS rules"
+  codex_mem                 # opens editor for full message
+EOF
+}
+
+MSG=""
+ADD_TRAILER=1
+
+while getopts ":m:aAh" opt; do
+  case "${opt}" in
+    m) MSG="${OPTARG}" ;;
+    a) ADD_TRAILER=1 ;;
+    A) ADD_TRAILER=0 ;;
+    h) usage; exit 0 ;;
+    \?) printf "unknown flag: -%s\n" "${OPTARG}" >&2; usage; exit 2 ;;
+    :) printf "flag -%s needs a value\n" "${OPTARG}" >&2; exit 2 ;;
+  esac
+done
+
+NOW_UTC="$(date -u '+%Y-%m-%dT%H:%M:%S+0000')"
+
+GIT_OPTS=(-c "user.name=${AUTHOR_NAME}" -c "user.email=${AUTHOR_EMAIL}")
+
+git add -A
+
+if [[ -n "${MSG}" ]]; then
+  FULL_MSG="${MSG}"
+  if [[ "${ADD_TRAILER}" -eq 1 ]]; then
+    FULL_MSG+="
+
+Co-authored-by: ${AUTHOR_NAME} <${AUTHOR_EMAIL}>"
+  fi
+  GIT_COMMITTER_DATE="${NOW_UTC}" \
+    git "${GIT_OPTS[@]}" commit \
+      --date="${NOW_UTC}" \
+      -m "${FULL_MSG}"
+else
+  TEMPLATE_FILE="$(mktemp -t codex_mem.XXXXXX)"
+  trap 'rm -f "${TEMPLATE_FILE}"' EXIT
+  if [[ "${ADD_TRAILER}" -eq 1 ]]; then
+    cat >"${TEMPLATE_FILE}" <<EOF
+
+
+Co-authored-by: ${AUTHOR_NAME} <${AUTHOR_EMAIL}>
+EOF
+  fi
+  GIT_COMMITTER_DATE="${NOW_UTC}" \
+    git "${GIT_OPTS[@]}" commit \
+      --date="${NOW_UTC}" \
+      --template="${TEMPLATE_FILE}"
+fi
+
+git log -1 --pretty=fuller
