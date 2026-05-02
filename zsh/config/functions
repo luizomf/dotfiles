@@ -236,28 +236,6 @@ sshc() {
   command ssh -q "$@"
 }
 
-tmuxns() {
-  if [[ -z "${1:-}" ]]; then
-    echo "Please, inform the name for the session."
-    return 1
-  fi
-
-  session_name="$1"
-  shift
-
-  if [[ -z "${PROJECTS_DIR}" ]]; then
-    echo "Could not find PROJECTS_DIR env variable"
-    return 1
-  fi
-
-  session_dir="${PROJECTS_DIR}/${session_name}"
-  mkdir -p "${session_dir}"
-  tmux new-session -d -s "${session_name}" -c "${session_dir}"
-
-  for arg in "$@"; do
-    tmux new-window -t "${session_name}" -n "${arg}" -c "${session_dir}"
-  done
-}
 
 # zsh has no decent interactive help for builtins, so yes, this calls Bash.
 # If this offends you, feel free to read 200 pages of `man zshbuiltins` instead.
