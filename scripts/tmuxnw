@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+WINDOW_NAME=${1:?"Window name required"}
+shift
+
+tmux neww -c "$(pwd)" -n "${WINDOW_NAME}" -a "${@}"
+
