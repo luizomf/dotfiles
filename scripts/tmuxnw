@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-WINDOW_NAME=${1:?"Window name required"}
+WINDOW_NAME=${1:-tmp}
 shift
 
 tmux neww -c "$(pwd)" -n "${WINDOW_NAME}" -a "${@}"
