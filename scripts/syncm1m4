@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+"$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh 
+rm -rf "$HOME"/.local/share/tmux/resurrect/{*.*,.*,**} 
+"$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh 
+
+ls -lah "$HOME"/.local/share/tmux/resurrect
+
+rsync -havz --progress --stats "$HOME"/.local/share/tmux/resurrect/ \
+  m4128:~/.local/share/tmux/resurrect/ --delete
+
+rsync -havz --progress --stats "$HOME"/Desktop/tutoriais_e_cursos/ \
+  m4128:~/Desktop/tutoriais_e_cursos --delete
