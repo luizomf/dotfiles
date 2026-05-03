@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+readonly FILE="${1:?Use: ./extract_html_links arquivo.html}"
+
+[[ -f "$FILE" ]] || {
+  printf 'File not found: %s\n' "$FILE" >&2
+  exit 2
+}
+
+rg --no-heading --only-matching --replace '$1' \
+  '["'\'']((?:https?://)?[a-zA-Z0-9][a-zA-Z0-9./?=_#&%:+-]*)["'\'']' \
+  "$FILE" \
+  | sort -u
