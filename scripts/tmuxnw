@@ -2,8 +2,12 @@
 
 set -euo pipefail
 
-WINDOW_NAME=${1:-tmp}
-shift
+WINDOW_NAME="tmp"
 
-tmux neww -c "$(pwd)" -n "${WINDOW_NAME}" -a "${@}"
+# Shameful fix 😅
+if (($# > 0)); then
+  WINDOW_NAME="$1"
+  shift
+fi
 
+tmux neww -c "$(pwd)" -n "$WINDOW_NAME" -a "$@"
