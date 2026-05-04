@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if [[ $# -lt 1 ]]; then
+  echo "Uso: srt_to_tts arquivo.srt [saida.txt]" >&2
+  exit 1
+fi
+
+input="$1"
+output="${2:-${input%.srt}.txt}"
+
+[[ -f "$input" ]] || {
+  echo "Arquivo não encontrado: $input" >&2
+  exit 1
+}
+
+python3 - "$input" "$output" <<'PY'
+from __future__ import annotations
+
+import re
+import sys
+from pathlib import Path
+
+
+BLOCK_RE = re.compile(
+    r"^\s*(?P<index>\d+)\s*\n"
+    r"\s*(?P<start>\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*"
+    r"(?P<end>\d{2}:\d{2}:\d{2},\d{3})\s*\n"
+    r"(?P<text>.*?)(?=\n\s*\d+\s*\n|\Z)",
+    re.DOTALL | re.MULTILINE,
+)
+
+SENTENCE_END_RE = re.compile(r"([.!?…]+)(?=\s|$)")
+
+
+def normalize_text(text: str) -> str:
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\s+\n", "\n", text)
+    text = re.sub(r"\n+", " ", text)
+    text = re.sub(r"\s+([,.;:!?])", r"\1", text)
+    text = re.sub(r"([(\[{])\s+", r"\1", text)
+    text = re.sub(r"\s+([)\]}])", r"\1", text)
+    return text.strip()
+
+
+def split_sentences(text: str) -> list[str]:
+    sentences: list[str] = []
+    start = 0
+
+    for match in SENTENCE_END_RE.finditer(text):
+        end = match.end(1)
+        sentence = text[start:end].strip()
+        if sentence:
+            sentences.append(sentence)
+        start = match.end()
+
+    tail = text[start:].strip()
+    if tail:
+        sentences.append(tail)
+
+    return sentences
+
+
+def convert_srt_to_tts(input_path: Path) -> str:
+    srt_text = input_path.read_text(encoding="utf-8")
+    pieces: list[str] = []
+    buffer = ""
+
+    for match in BLOCK_RE.finditer(srt_text):
+        cleaned = normalize_text(match.group("text"))
+        if not cleaned:
+            continue
+
+        buffer = f"{buffer} {cleaned}".strip() if buffer else cleaned
+        sentences = split_sentences(buffer)
+
+        if sentences and buffer.endswith((".", "!", "?", "…")):
+            pieces.extend(sentences)
+            buffer = ""
+        elif len(sentences) > 1:
+            pieces.extend(sentences[:-1])
+            buffer = sentences[-1]
+
+    if buffer:
+        pieces.extend(split_sentences(buffer))
+
+    return "\n".join(pieces).strip() + "\n"
+
+
+input_path = Path(sys.argv[1])
+output_path = Path(sys.argv[2])
+output_path.write_text(convert_srt_to_tts(input_path), encoding="utf-8")
+PY
+
