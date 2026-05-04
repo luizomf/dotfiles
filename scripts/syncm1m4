@@ -1,9 +1,17 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 
 set -euo pipefail
 
+fc -W
+
+"$HOME"/dotfiles/scripts/zsh_history_sync.py
+
 "$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh 
-rm -rf "$HOME"/.local/share/tmux/resurrect/{*.*,.*,**} 
+
+(
+  rm -rf "$HOME"/.local/share/tmux/resurrect/{*.*,.*,**} 
+) > /dev/null 2>&1 || true
+
 "$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh 
 
 ls -lah "$HOME"/.local/share/tmux/resurrect
