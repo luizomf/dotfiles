@@ -10,4 +10,5 @@ if (($# > 0)); then
   shift
 fi
 
-tmux neww -c "$(pwd)" -n "$WINDOW_NAME" -a "$@"
+SESSION_NAME="$(tmux display-message -p "#{session_name}")"
+tmux neww -t "$SESSION_NAME" -c "$(pwd)" -n "$WINDOW_NAME" -a "$@"
