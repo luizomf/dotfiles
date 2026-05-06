@@ -9,10 +9,12 @@ fc -W
 "$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh 
 
 (
-  rm -rf "$HOME"/.local/share/tmux/resurrect/{*.*,.*,**} 
+  rm -rf "$HOME"/.local/share/tmux/resurrect/*.*
+  rm -rf "$HOME"/.local/share/tmux/resurrect/**
+  rm -rf "$HOME"/.local/share/tmux/resurrect/.*
 ) > /dev/null 2>&1 || true
 
-"$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh 
+"$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh
 
 ls -lah "$HOME"/.local/share/tmux/resurrect
 
