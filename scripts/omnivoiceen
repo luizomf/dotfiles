@@ -6,7 +6,9 @@ set -euo pipefail
 cd "${HOME}/Desktop/tutoriais_e_cursos/omnivoicetts" || exit 1
 ./scripts/clear_cache 
 pkill -9 -f ".*omnivoice.*python.*" || true
-cat | ./scripts/female-en --player auto --num-step 16 --class-temperature 0.1 \
-  --guidance-scale 1 --speed 1.0 --sliding-window-chunks 3 --prebuffer-chunks 3 \
-  --chunk-len 80 --model-fade-ms 50 --model-pad-ms 100 "${@}"  > /dev/null 2>&1 &
+cat | ./scripts/female-en --offline --player auto --num-step 16 --class-temperature 0 \
+  --chunking kokoro --split-on-newlines True --ensure-terminal-punctuation True \
+  --denoise False --preprocess-prompt True --postprocess-output False \
+  --guidance-scale 2 --speed 1.0 --sliding-window-chunks 2 --prebuffer-chunks 2 \
+  --chunk-len 80 --model-fade-ms 100 --model-pad-ms 100 "${@}"  > /dev/null 2>&1 &
 )
