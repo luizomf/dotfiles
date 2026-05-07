@@ -249,7 +249,7 @@ ln -sf "$HOME/dotfiles/ghostty" "$HOME/.config/ghostty"
 
 # Google Drive
 rm -Rf "$HOME/gdrive"
-ln -sf "$HOME/Library/CloudStorage/GoogleDrive-todoespacoonline@gmail.com" "$HOME/gdrive"
+ln -sf "$HOME/Google Drive" "$HOME/gdrive"
 
 # Google Drive (Shorter)
 GDRIVE_PATH=$(find "$HOME/Library/CloudStorage" -maxdepth 1 -name "GoogleDrive-*" -type d | head -n 1)
