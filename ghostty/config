@@ -32,3 +32,5 @@ background-blur = false
 cursor-style = block
 cursor-style-blink = true
 
+# Binds Command + ` to toggle the Quick Terminal globally
+keybind = global:cmd+grave_accent=toggle_quick_terminal
