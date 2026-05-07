@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+readonly DEFAULT_RICH_VERSION="14.1.0"
+
+usage() {
+  cat <<EOF
+Usage:
+  ${0##*/} [file.md ...]
+  command-producing-markdown | ${0##*/}
+
+Render Markdown in the terminal with Rich, through uv, without adding Rich to
+the current project.
+
+Options:
+  -h, --help  Show this help
+
+Examples:
+  ${0##*/} README.md
+  ${0##*/} docs/one.md docs/two.md
+  printf '# Hello\n' | ${0##*/}
+EOF
+}
+
+die() {
+  printf 'mdrich: %s\n' "$*" >&2
+  exit 1
+}
+
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1 || die "missing required command: $1"
+}
+
+main() {
+  local -a files=()
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h|--help)
+        usage
+        return 0
+        ;;
+      --)
+        shift
+        files+=("$@")
+        break
+        ;;
+      -*)
+        die "unknown option: $1"
+        ;;
+      *)
+        files+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  require_cmd uv
+
+  if ((${#files[@]} == 0)); then
+    if [[ -t 0 ]]; then
+      usage
+      return 2
+    fi
+
+    uv run --with "rich==${DEFAULT_RICH_VERSION}" -m rich.markdown -
+    return 0
+  fi
+
+  local file
+  for file in "${files[@]}"; do
+    [[ -f "$file" ]] || die "file not found: $file"
+  done
+
+  uv run --with "rich==${DEFAULT_RICH_VERSION}" -m rich.markdown "${files[@]}"
+}
+
+main "$@"
