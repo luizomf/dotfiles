@@ -11,8 +11,8 @@ main () {
   local persona='' 
   local final_prompt=''
 
-  prompt="$(cat "${HOME}/Google Drive/Meu Drive/BKP_EXTERNO_2/prompts/apply_persona.md")"
-  persona="$(cat "${HOME}/Google Drive/Meu Drive/BKP_EXTERNO_2/prompts/persona.md")"
+  prompt="$(cat "${HOME}/gdrive/BKP_EXTERNO_2/prompts/apply_persona.md")"
+  persona="$(cat "${HOME}/gdrive/BKP_EXTERNO_2/prompts/persona.md")"
 
   while [[ $# -gt 0 ]]; do
     case "$1" in

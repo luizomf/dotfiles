@@ -371,7 +371,7 @@ clear () {
 
 convert_for_youtube() {
   local input="" output="" with_song=false
-  local song="/Users/luizotavio/Library/CloudStorage/GoogleDrive-todoespacoonline@gmail.com/Meu Drive/BKP_EXTERNO_2/Edicao/youtube_library_music/lofi/todas-30db.mp3"
+  local song="${HOME}/gdrive/BKP_EXTERNO_2/Edicao/youtube_library_music/lofi/todas-30db.mp3"
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
