@@ -9,9 +9,9 @@ pkill -9 -f '[o]mnivoicetts' || true
 cat | ./scripts/female-en --offline --player auto --guidance-scale 2 \
   --num-step 16 --t-shift 0.1 --position-temperature 5.0 \
   --class-temperature 0.0 --layer-penalty-factor 5.0 \
-  --chunk-len 80 --prebuffer-chunks 1 \
+  --chunk-len 60 --prebuffer-chunks 1 \
   --sliding-window-chunks 2 --inter-chunk-silence-ms 250 --chunking kokoro \
-  --split-on-newlines True --ensure-terminal-punctuation True \
+  --split-on-newlines False --ensure-terminal-punctuation False \
    --speed 1.0 --model-fade-ms 100 --model-pad-ms 100 \
   --denoise False --preprocess-prompt True --postprocess-output True \
   --chunk-cache-dir .cache/omnivoice-play/female-en \
