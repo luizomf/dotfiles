@@ -4,7 +4,7 @@ set -euo pipefail
 
 (
 cd "${HOME}/Desktop/tutoriais_e_cursos/omnivoicetts" || exit 1
-./scripts/clear_cache
+# ./scripts/clear_cache
 pkill -9 -f '[o]mnivoicetts' || true
 cat | ./scripts/female-en --offline --player auto --guidance-scale 2 \
   --num-step 16 --t-shift 0.1 --position-temperature 5.0 \
