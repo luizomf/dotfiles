@@ -17,6 +17,7 @@ CLEANING RULES (STRICTLY ENFORCED):
 - Remove ALL formatting: Markdown, HTML, XML, headers (`#`), bold, italics,
   bullet points, and numbered lists (for links, use the link text, title or site
   name only).
+- Only add links if the link itself if a part of the text.
 - If a URL needs is a part of the phrase, convert it to text using the same
   language as the text. For example: `hostinger.com/otaviomiranda` becomes
   `hostinger dot com slash otaviomiranda` in English and
@@ -65,11 +66,11 @@ but it is "ponto" in Portuguese. This apply for all characters.
 
 JARGON & NAMING RULES:
 
-- NEVER translate technical jargon, even if the surrounding text is in another
-  language. Keep terms like "PR", "Pull Request", "commit", "runner", "secrets",
-  "workflow", "SHA", "GitHub Actions" exactly as they are. (That applies to all
-  other known terms)
-- NEVER translate company names, brands, tools, package names, or variables.
+- **NEVER** translate technical jargon, even if the surrounding text is in
+  another language. Keep terms like "PR", "Pull Request", "commit", "runner",
+  "secrets", "workflow", "SHA", "GitHub Actions" exactly as they are. (That
+  applies to all other known terms)
+- **NEVER** translate company names, brands, tools, package names, or variables.
 - You may adapt the spelling to force correct pronunciation (e.g., spelling out
   punctuation), but NEVER translate the core tech term itself.
 
@@ -81,6 +82,13 @@ SEPARATED BY SPACE. For Example:
 - API -> A P I
 - SSH -> S S H
 - OpenSSH -> Open S S H
+
+**IMPORTANT:** do not change names for companies, people, animals and other
+known names for the language. Only when the letters should be spoken separately
+(eg. A W S, Go Daddy, Otávio Miranda).
+
+Names with just one word should stay the same: Hostinger, Hetzner, Google,
+Netflix, Nestle, Disney...
 
 TTS OPTIMIZATION (NATURAL FLOW):
 
@@ -132,9 +140,9 @@ PT-BR / OMNIVOICE-SPECIFIC RULES:
   Style"; "systemd" -> "system D"; "timesyncd" -> "time synced".
 - When single letters must be spoken, capitalize them. For example: `ssh`
   becomes `S S H`.
-- **VERY IMPORTANT**: Remove brittle punctuation when exact spelling is not
-  important for audio. Hyphens, slashes, underscores, file extensions, and API
-  paths should become readable phrases: "Cross-Session" -> "Cross Session",
+- **IMPORTANT**: Remove brittle punctuation when exact spelling is not important
+  for audio. Hyphens, slashes, underscores, file extensions, and API paths
+  should become readable phrases: "Cross-Session" -> "Cross Session",
   "/api/articles" -> "api articles", "source_urls" -> "source URLs", "text.md"
   -> "text ponto M D", and "tts.txt" -> "T T S ponto T X T". The TTS definitely
   can't speak "tts.txt" (it becomes just noise).
@@ -151,6 +159,16 @@ PT-BR / OMNIVOICE-SPECIFIC RULES:
 OUTPUT FORMAT:
 
 - Plain text paragraphs ONLY. No markdown, no markers, no headers, no code.
+
+EXPECTED:
+
+**IMPORTANT:** When in doubt, just think: "How would a human say it naturally?"
+
+For instance: if there is a URL in the text, would the human speak the URL out
+loud? Or would they just say the text, the name of the site, and so on...
+
+**IMPORTANT:** Your text must sound pleasing, human and easy for the TTS to
+parse.
 
 Use your max reasoning effort for this task as it is not as simple as it seams.
 If thinking helps you do a better job, do it so we avoid having to redo all the
