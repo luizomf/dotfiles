@@ -6,13 +6,14 @@ set -euo pipefail
 cd "${HOME}/Desktop/tutoriais_e_cursos/omnivoicetts" || exit 1
 # ./scripts/clear_cache
 pkill -9 -f '[o]mnivoicetts' || true
-cat | ./scripts/male-pt --offline --player auto --guidance-scale 2 \
-  --num-step 16 --t-shift 0.1 --position-temperature 5.0 \
-  --class-temperature 0.0 --layer-penalty-factor 5.0 \
-  --chunk-len 60 --prebuffer-chunks 1 \
-  --sliding-window-chunks 2 --inter-chunk-silence-ms 250 --chunking kokoro \
-  --split-on-newlines False --ensure-terminal-punctuation False \
-   --speed 1.0 --model-fade-ms 50 --model-pad-ms 250 \
+cat | ./scripts/male-pt \
+  --offline --player auto \
+  --num-step 24 --guidance-scale 1 --t-shift 0.1 \
+  --class-temperature 0.0 --position-temperature 4.0 --layer-penalty-factor 5.0 \
+  --chunk-len 80 --prebuffer-chunks 2 --sliding-window-chunks 2 \
+  --inter-chunk-silence-ms 100 --chunking kokoro \
+  --split-on-newlines True --ensure-terminal-punctuation True \
+  --speed 1.0 --model-fade-ms 100 --model-pad-ms 250 \
   --denoise False --preprocess-prompt True --postprocess-output False \
   --chunk-cache-dir .cache/omnivoice-play/male-pt-br \
   --ref-audio samples/male-pt-br.wav --language pt \
