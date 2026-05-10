@@ -9,8 +9,8 @@ pkill -9 -f '[o]mnivoicetts' || true
 cat | ./scripts/female-en \
   --offline --player auto \
   --num-step 16 --guidance-scale 1 --t-shift 0.1 \
-  --class-temperature 0.0 --position-temperature 5.0 --layer-penalty-factor 5.0 \
-  --chunk-len 80 --prebuffer-chunks 1 --sliding-window-chunks 2 \
+  --class-temperature 0.1 --position-temperature 5.0 --layer-penalty-factor 5.0 \
+  --chunk-len 80 --prebuffer-chunks 2 --sliding-window-chunks 2 \
   --inter-chunk-silence-ms 250 --chunking kokoro \
   --split-on-newlines True --ensure-terminal-punctuation True \
   --speed 1.0 --model-fade-ms 100 --model-pad-ms 100 \
