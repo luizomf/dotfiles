@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+export PROJECTS_DIR="${PROJECTS_DIR:-/Users/luizotavio/Desktop/tutoriais_e_cursos}"
+
+(
+cd "${HOME}/Desktop/tutoriais_e_cursos/omnivoicetts" || exit 1
+# ./scripts/clear_cache
+# pkill -9 -f '[o]mnivoicetts' || true
+cat | ./scripts/female-en \
+  --offline --player auto \
+  --num-step 16 --guidance-scale 1 --t-shift 0.1 \
+  --class-temperature 0.1 --position-temperature 5.0 --layer-penalty-factor 5.0 \
+  --chunk-len 80 --prebuffer-chunks 1 --sliding-window-chunks 1 \
+  --inter-chunk-silence-ms 250 --chunking kokoro \
+  --split-on-newlines True --ensure-terminal-punctuation True \
+  --speed 1.0 --model-fade-ms 100 --model-pad-ms 100 \
+  --denoise False --preprocess-prompt True --postprocess-output True \
+  --chunk-cache-dir .cache/omnivoice-play/female-en \
+  --ref-audio samples/female.wav --language en \
+  --instruct "female, middle-aged, moderate pitch, american accent" \
+  "${@}" > /tmp/voiceen.log 2>&1
+)
+
