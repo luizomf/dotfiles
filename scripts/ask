@@ -41,6 +41,7 @@ main() {
 
   local model="${MODEL:-qwen3.6:35b-a3b-mxfp8}"
   local prompt=""
+  local editor=0
   local tts_lang="a"
   local tts_voice="af_heart"
   local sys_prompt=""
@@ -79,7 +80,7 @@ main() {
         shift 2
         ;;
       -p|--prompt)
-        prompt="${2:?"$1 requires a value"}"
+        prompt="${2:-}"
         shift 2
         ;;
       -t|--tts)
@@ -93,6 +94,10 @@ main() {
       -v|--voice)
         tts_voice="${2:?"$1 requires a value"}"
         shift 2
+        ;;
+      --editor)
+        editor=1
+        shift 1
         ;;
       -h|--help)
         usage
@@ -111,8 +116,20 @@ main() {
     esac
   done
 
+  if [[ $editor -eq 1 ]]; then
+    nvim -c 'startinsert' /tmp/ask_dotfiles_script_question.tmp
+
+    if [[ ! -f "/tmp/ask_dotfiles_script_question.tmp" ]]; then
+      print -u2 -- "Empty editor output. Either use --editor or -p <prompt>."
+      return 1
+    fi
+
+    prompt="$(cat /tmp/ask_dotfiles_script_question.tmp)"
+    rm /tmp/ask_dotfiles_script_question.tmp
+  fi
+
   if [[ -z "$prompt" ]]; then
-    print -u2 -- "Missing -p <prompt>"
+    print -u2 -- "Missing prompt. Either use --editor or -p <prompt>."
     return 1
   fi
 
