@@ -21,14 +21,10 @@ window-padding-x = 16,8
 window-padding-y = 0,0
 window-padding-balance = true
 window-decoration = true
-# macos-titlebar-style = hidden
+macos-titlebar-style = native
 window-theme = ghostty
 background-opacity = 1
 background-blur = false
-
-# Garante que o processo do Ghostty sempre exponha suas janelas para a API de Acessibilidade
-# fullscreen = true
-macos-non-native-fullscreen = true
 
 # Novo atalho: Minimiza a janela em vez de usar o toggle_quick_terminal
 # O AltTab detecta perfeitamente janelas minimizadas
