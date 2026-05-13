@@ -1,32 +1,43 @@
 #!/usr/bin/env zsh
 
+ASK_SCRIPT_NAME="${0:t}"
+
 usage() {
   cat <<EOF
 Usage:
-  ${0##*/} [-m <model>] -p <prompt> [-t] [-l <lang>] [-v <voice>] [-- <extra args...>]
+  ${ASK_SCRIPT_NAME} [options] [-- <backend args...>]
+
+Prompt input:
+  -p, --prompt <text>   Use <text> as the prompt
+  --editor              Write the prompt in nvim
+  stdin                 Read the prompt from a pipe or heredoc
+
+Options:
+  -m, --model <model>   Model alias/name (default: \${MODEL:-qwen3.6:35b-a3b-mxfp8})
+  -t, --tts             Enable TTS
+  -l, --lang <lang>     TTS language: a/en -> voiceen, p/pt -> voicept (default: a)
+  -v, --voice <value>   Legacy option; a/p/en/pt also select the TTS language
+  -h, --help            Show this help
 
 Models:
   haiku, sonnet, opus, codex, gemini, or any Ollama model
   Use provider/model to pick a specific model, e.g.:
     codex/gpt-5.4-codex-spark, gemini/gemini-3.1-pro-preview, claude/sonnet
 
-Default model:
-  \${MODEL:-gpt-oss:120b}
-
-TTS:
-  -t, --tts            Enable TTS
-  -l, --lang <lang>    TTS language (default: a)
-  -v, --voice <voice>  TTS voice (default: af_heart)
-
 Passthrough:
   Everything after -- is forwarded to the selected command.
 
 Examples:
-  ${0##*/} -p "Explain closures in Python"
-  ${0##*/} -m codex -p "Refactor this" -- -a never -s workspace-write
-  ${0##*/} -m gemini -p "Summarize this text" -- --help
-  ${0##*/} -m llama3.3:70b -p "Write a haiku"
-  ${0##*/} -p "Clean this answer" -t -l pt -v af_heart
+  ${ASK_SCRIPT_NAME} -p "Explain closures in Python"
+  ${ASK_SCRIPT_NAME} --editor
+  echo "Explain closures in Python" | ${ASK_SCRIPT_NAME}
+  ${ASK_SCRIPT_NAME} --model gpt-oss:20b -- --verbose --think=high <<'PROMPT'
+Explain closures in Python
+PROMPT
+  ${ASK_SCRIPT_NAME} -m codex -p "Refactor this" -- -a never -s workspace-write
+  ${ASK_SCRIPT_NAME} -m gemini -p "Summarize this text" -- --help
+  ${ASK_SCRIPT_NAME} -m llama3.3:70b -p "Write a haiku"
+  ${ASK_SCRIPT_NAME} -p "Clean this answer" -t -v p
 EOF
 }
 
@@ -47,8 +58,10 @@ main() {
   local sys_prompt=""
   local full_prompt=""
   local answer=""
+  local tts_cmd=""
 
   integer tts=0
+  integer tts_lang_set=0
 
   local -a extra_args=()
   local -a cmd=()
@@ -89,6 +102,7 @@ main() {
         ;;
       -l|--lang)
         tts_lang="${2:?"$1 requires a value"}"
+        tts_lang_set=1
         shift 2
         ;;
       -v|--voice)
@@ -116,6 +130,14 @@ main() {
     esac
   done
 
+  if (( ! tts_lang_set )); then
+    case "${tts_voice:l}" in
+      a|am|american|en|en-us|english|us|p|br|brazilian|pt|pt-br|portuguese)
+        tts_lang="$tts_voice"
+        ;;
+    esac
+  fi
+
   if [[ $editor -eq 1 ]]; then
     nvim -c 'startinsert' /tmp/ask_dotfiles_script_question.tmp
 
@@ -128,8 +150,10 @@ main() {
     rm /tmp/ask_dotfiles_script_question.tmp
   fi
 
+  [[ -z "$prompt" && ! -t 0 ]] && prompt="$(cat)"
+
   if [[ -z "$prompt" ]]; then
-    print -u2 -- "Missing prompt. Either use --editor or -p <prompt>."
+    print -u2 -- "Missing prompt. Use -p <prompt>, --editor, or pipe text into stdin."
     return 1
   fi
 
@@ -181,8 +205,21 @@ main() {
       return 1
     }
 
-    command -v cliplay >/dev/null 2>&1 || {
-      print -u2 -- "cliplay not found."
+    case "${tts_lang:l}" in
+      a|am|american|en|en-us|english|us)
+        tts_cmd="voiceen"
+        ;;
+      p|br|brazilian|pt|pt-br|portuguese)
+        tts_cmd="voicept"
+        ;;
+      *)
+        print -u2 -- "Unknown TTS language: ${tts_lang}. Use a/en or p/pt."
+        return 1
+        ;;
+    esac
+
+    command -v "$tts_cmd" >/dev/null 2>&1 || {
+      print -u2 -- "$tts_cmd not found."
       return 1
     }
 
@@ -198,7 +235,7 @@ main() {
 
     print -r -- "$answer"
     print -r -- "$answer" | pbcopy
-    print -r -- "$answer" | cliplay -l "$tts_lang" -v "$tts_voice" -i -
+    print -r -- "$answer" | "$tts_cmd"
     return $?
   fi
 
