@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+  cat <<EOF
+Usage:
+  ${0##*/} [path] [output.opus]
+
+Concatenates chunk*.wav files with ffmpeg and writes an Opus file.
+
+Arguments:
+  path         Directory containing chunk*.wav files (default: current directory)
+  output.opus Output file (default: ~/Desktop/<timestamp>.opus)
+
+Environment:
+  AUDIO_BITRATE  Opus bitrate (default: 96k)
+  AUDIO_SPEED    ffmpeg atempo value (default: 1.1)
+
+Examples:
+  ${0##*/} ./
+  ${0##*/} ~/.cache/omnivoice-play/female-pt-br
+  AUDIO_SPEED=1.0 ${0##*/} ./chunks ~/Desktop/audio.opus
+EOF
+}
+
+die() {
+  printf 'concat_audio: %s\n' "$*" >&2
+  exit 1
+}
+
+concat_escape_path() {
+  printf '%s' "$1" | sed "s/'/'\\\\''/g"
+}
+
+write_concat_list() {
+  local file escaped
+
+  for file in "$@"; do
+    escaped="$(concat_escape_path "$(realpath "$file")")"
+    printf "file '%s'\n" "$escaped"
+  done
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+command -v ffmpeg >/dev/null 2>&1 || die "ffmpeg not found."
+command -v realpath >/dev/null 2>&1 || die "realpath not found."
+
+working_dir="${1:-.}"
+output_file="${2:-"${HOME}/Desktop/$(date +"%Y-%m-%d-%H-%M-%S").opus"}"
+audio_bitrate="${AUDIO_BITRATE:-96k}"
+audio_speed="${AUDIO_SPEED:-1.1}"
+
+[[ -d "$working_dir" ]] || die "directory does not exist: $working_dir"
+
+shopt -s nullglob
+files=("$working_dir"/chunk*.wav)
+shopt -u nullglob
+
+(( ${#files[@]} > 0 )) || die "no chunk*.wav files found in: $working_dir"
+
+printf 'Concatenating %d chunks -> %s\n' "${#files[@]}" "$output_file"
+
+ffmpeg -f concat -safe 0 -i \
+  <(write_concat_list "${files[@]}") \
+  -c:a libopus -b:a "$audio_bitrate" \
+  -af "atempo=${audio_speed}" \
+  "$output_file"
