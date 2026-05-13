@@ -26,6 +26,14 @@ window-theme = ghostty
 background-opacity = 1
 background-blur = false
 
+# Garante que o processo do Ghostty sempre exponha suas janelas para a API de Acessibilidade
+# fullscreen = true
+macos-non-native-fullscreen = true
+
+# Novo atalho: Minimiza a janela em vez de usar o toggle_quick_terminal
+# O AltTab detecta perfeitamente janelas minimizadas
+# keybind = global:cmd+grave_accent=minimize
+
 # Other
 # copy-on-select = clipboard
 # shell-integration-features = cursor,sudo,no-title
@@ -33,4 +41,4 @@ cursor-style = block
 cursor-style-blink = true
 
 # Binds Command + ` to toggle the Quick Terminal globally
-keybind = global:cmd+grave_accent=toggle_quick_terminal
+# keybind = global:cmd+grave_accent=toggle_quick_terminal
