@@ -75,8 +75,6 @@ deletePythonCache() {
     echo "Limpeza concluída com sucesso!"
 }
 
-
-
 iterm() {
     cwd=$(pwd)
     open -a iterm "$cwd"
@@ -230,7 +228,6 @@ sshc() {
   TERM=$SSH_TERM
   command ssh -q "$@"
 }
-
 
 # zsh has no decent interactive help for builtins, so yes, this calls Bash.
 # If this offends you, feel free to read 200 pages of `man zshbuiltins` instead.
