@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+printf "\n"
+for code in {0..255}; do
+scode="$(printf "% 4d" "$code")"
+  echo -en "\e[48;5;${code}m  $scode  \e[0m"
+done
+printf "\n\n"

@@ -89,11 +89,6 @@ restart_terminal() {
   tmux respawn-window -k
 }
 
-show_colors() {
-  for i in {0..255}; do
-    print -P ">>>  $(printf '%03d' "$i")  %F{$i}Dummy text%f  %F{232}%K{$i} dummy text %k%f  <<<"
-  done
-}
 
 gitconfig() {
   set -e
