@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+printf "\e[38;5;6m%.0s-\e[0m" {1..80} ; echo
