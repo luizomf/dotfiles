@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+pkill -9 -f '[A|a]lt[T|t]ab' ; sleep 5 ; open /Applications/AltTab.app
+

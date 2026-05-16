@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+trap cleanup SIGTERM SIGINT EXIT
+
+cleanup() {
+  kill_omnivoice
+}
+
+INPUT_FILE="${1:?'Missing input file path.'}"
+
+export PROJECTS_DIR="${PROJECTS_DIR:-/Users/luizotavio/Desktop/tutoriais_e_cursos}"
+export OMNIVOICE_DIR="${PROJECTS_DIR}/omnivoicetts"
+
+kill_omnivoice
+
+rsync -havz --progress --stats "${OMNIVOICE_DIR}/" \
+m4128:"${OMNIVOICE_DIR}/" --delete --exclude '.cache'
+
+"${OMNIVOICE_DIR}"/scripts/male-pt-m4128 \
+< "${INPUT_FILE}"
