@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+export PROJECTS_DIR="${PROJECTS_DIR:-/Users/luizotavio/Desktop/tutoriais_e_cursos}"
+export OMNIVOICE_DIR="${PROJECTS_DIR}/omnivoicetts"
+
+(
+  cd "${OMNIVOICE_DIR}/" || (echo "Directory not found: ${OMNIVOICE_DIR}" ; exit 1)
+  ./scripts/clear_cache
+)
+
