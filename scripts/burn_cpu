@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+pkill -9 -f "[w]hile :; do :; done" 2>/dev/null 2>&1 || true
+
+SECS="${1:-60}"
+CORES="$(nproc)"
+USE_CORES="$(("${CORES}"-2))"
+
+if [[ "${USE_CORES}" -le 0 ]]; then
+  USE_CORES=1
+fi
+
+for _ in $(seq "$USE_CORES");
+  do timeout "$SECS" bash -c "while :; do :; done" &
+done
+
+echo
+echo -e "\e[38;5;2mCheck:\e[0m"
+echo -e '\e[38;5;6mps aux -o comm= | rg -si "[w]hile"\e[0m'
+echo -e "\e[38;5;2mKill all:\e[0m"
+echo -e '\e[38;5;6mpkill -9 -f "[w]hile :; do :; done"\e[0m'
+echo
