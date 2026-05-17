@@ -9,9 +9,12 @@ M.set_groups = function()
   -- ┌─────────────────────────────────────────────┐
   -- │  Base / Editor UI                           │
   -- └─────────────────────────────────────────────┘
-  hl("Normal", { fg = p.gray_22, bg = p.bg })
-  hl("NormalNC", { fg = p.gray_22, bg = p.gray_01 })
-  hl("NormalSB", { fg = p.gray_24, bg = p.gray_01 })
+  -- hl("Normal", { fg = p.gray_22, bg = p.bg })
+  -- hl("NormalNC", { fg = p.gray_22, bg = p.gray_01 })
+  -- hl("NormalSB", { fg = p.gray_24, bg = p.gray_01 })
+  hl("Normal", { fg = p.gray_22, bg = "NONE" })
+  hl("NormalNC", { fg = p.gray_22, bg = "NONE" })
+  hl("NormalSB", { fg = p.gray_24, bg = "NONE" })
   hl("NonText", { fg = p.gray_02 })
   hl("Whitespace", { fg = p.gray_02 })
   hl("EndOfBuffer", { fg = p.gray_01 })
@@ -197,10 +200,18 @@ M.set_groups = function()
   hl("@markup.heading.7.markdown", { bold = true, fg = p.orange })
   hl("@markup.heading.8.markdown", { bold = true, fg = p.red })
   hl("@markup.heading.1.delimiter.vimdoc", {
-    underdouble = true, nocombine = true, sp = p.bg, bg = p.bg, fg = p.fg,
+    underdouble = true,
+    nocombine = true,
+    sp = p.bg,
+    bg = p.bg,
+    fg = p.fg,
   })
   hl("@markup.heading.2.delimiter.vimdoc", {
-    underline = true, nocombine = true, sp = p.bg, bg = p.bg, fg = p.fg,
+    underline = true,
+    nocombine = true,
+    sp = p.bg,
+    bg = p.bg,
+    fg = p.fg,
   })
 
   -- ┌─────────────────────────────────────────────┐

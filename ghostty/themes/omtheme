@@ -4,7 +4,7 @@ palette = 2=#37feb7
 palette = 3=#ffda76
 palette = 4=#88aaf2
 palette = 5=#ff87bc
-palette = 6=#30f4f2
+palette = 6=#5CF4FF
 palette = 7=#d6d1ff
 palette = 8=#6a6a8a
 palette = 9=#ffa8bb
@@ -12,7 +12,7 @@ palette = 10=#72ffcd
 palette = 11=#ffeab2
 palette = 12=#b2cbff
 palette = 13=#ff88ef
-palette = 14=#a2fbfc
+palette = 14=#00EEFF
 palette = 15=#f0efff
 
 background = #0f0f14
