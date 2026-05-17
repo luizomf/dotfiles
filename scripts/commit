@@ -14,7 +14,7 @@ PROMPT+="Create organized and well-documented commit messages, using the "
 PROMPT+="conventional commit style, and commit the files with clear commit messages. " 
 PROMPT+="Use the message body for longer messages, if necessary. The language is English. " 
 PROMPT+="Do not touch, edit, or delete files. Your only task is to document what was done "
-PROMPT+="and confirm the changes. "
+PROMPT+="and confirm the changes. Be careful about expanding bash and zsh commands in your messages."
 
 MODEL="${MODEL}" printf "%b" "${PROMPT}\n" | ollama_os
 
