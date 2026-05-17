@@ -108,7 +108,7 @@ map(
 )
 map(
   "v",
-  "<leader>wQ",
+  "<leader>wqq",
   "<Esc><Cmd>lua require('settings.utils').wrap_in_chars('\"')<CR>",
   { desc = 'Wrap double quotes - " and "' }
 )
