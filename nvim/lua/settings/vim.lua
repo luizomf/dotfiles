@@ -1,8 +1,8 @@
 vim.opt.number = true
 vim.opt.relativenumber = true
 
-vim.opt.timeoutlen = 300
-vim.opt.ttimeoutlen = 30
+-- vim.opt.timeoutlen = 300
+-- vim.opt.ttimeoutlen = 30
 
 vim.opt.cursorline = true
 -- vim.opt.colorcolumn = { 80 }
