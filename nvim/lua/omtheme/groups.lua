@@ -9,12 +9,15 @@ M.set_groups = function()
   -- ┌─────────────────────────────────────────────┐
   -- │  Base / Editor UI                           │
   -- └─────────────────────────────────────────────┘
-  -- hl("Normal", { fg = p.gray_22, bg = p.bg })
-  -- hl("NormalNC", { fg = p.gray_22, bg = p.gray_01 })
-  -- hl("NormalSB", { fg = p.gray_24, bg = p.gray_01 })
-  hl("Normal", { fg = p.gray_22, bg = "NONE" })
-  hl("NormalNC", { fg = p.gray_22, bg = "NONE" })
-  hl("NormalSB", { fg = p.gray_24, bg = "NONE" })
+  hl("Normal", { fg = p.gray_22, bg = p.bg })
+  hl("NormalNC", { fg = p.gray_22, bg = p.gray_01 })
+  hl("NormalSB", { fg = p.gray_24, bg = p.gray_01 })
+
+  -- For blur and transparent background
+  -- hl("Normal", { fg = p.gray_22, bg = "NONE" })
+  -- hl("NormalNC", { fg = p.gray_22, bg = "NONE" })
+  -- hl("NormalSB", { fg = p.gray_24, bg = "NONE" })
+
   hl("NonText", { fg = p.gray_02 })
   hl("Whitespace", { fg = p.gray_02 })
   hl("EndOfBuffer", { fg = p.gray_01 })
