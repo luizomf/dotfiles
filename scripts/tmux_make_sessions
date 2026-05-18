@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+trap 'echo "Error on line $LINENO"' ERR
+
+tmux_make_sessions() {
+  projects_dir=${1:-${HOME}/Desktop/tutoriais_e_cursos}
+
+  [[ -d "${projects_dir}" ]] || logerror "'${projects_dir}' is not a directory"
+
+  [[ "$(pgrep tmux)" ]] && (echo "Kill tmux current server, then run this script." ; exit 1)
+
+
+  echo "This may take a while. Please wait..."
+
+  rm -Rf ~/.local/share/tmux/resurrect/*.*
+
+  tmux new -s "HOME" -d -n code -c "${HOME}"
+  tmux neww -k -S -a -t "HOME" -d -n term -c "${HOME}"
+
+  tmux new -s "dotfiles" -d -n code -c "${HOME}/dotfiles"
+  tmux neww -k -S -a -t "dotfiles" -d -n term -c "${HOME}/dotfiles"
+
+  find "${projects_dir}" -mindepth 1 -maxdepth 1 -type d -print0 | while IFS= read -r -d '' dir; do
+    dirname=$(basename "${dir}")
+
+    session_name="${dirname//./_}"
+    first_window_name="code"
+    second_window_name="term"
+
+    tmux new -s "${session_name}" -d -n "${first_window_name}" -c "${dir}"
+    tmux neww -d -k -S -a -n "${second_window_name}" -t "${session_name}" -c "${dir}"
+  done
+
+  ~/.tmux/plugins/tmux-resurrect/scripts/save.sh
+
+  echo "Done. Now run: 'tmux a'"
+}
+
+tmux_make_sessions

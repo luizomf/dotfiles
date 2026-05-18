@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+gitconfig() {
+  set -e
+
+  echo "Your name:"
+  read -r NAME
+
+  echo "Your e-mail:"
+  read -r EMAIL
+
+  echo
+
+  # Initialize git
+  echo "Command: git init"
+  git init
+
+  # Configurar o nome do usuário"
+  echo "Command: git config user.name \"${NAME}\""
+  git config user.name "${NAME}"
+
+  # Configurar o e-mail do usuário"
+  echo "Command: git config user.email \"${EMAIL}\""
+  git config user.email "${EMAIL}"
+
+  # Muda o nome do branch para main"
+  echo "Command: git branch -m main"
+  git branch -m main
+
+  # Garantir que o Git converta CRLF para LF apenas ao commitar (ótimo para projetos multiplataforma)"
+  echo "Command: git config core.autocrlf input"
+  git config core.autocrlf input
+
+  # Forçar o Git a usar LF como fim de linha sempre"
+  echo "Command: git config core.eol lf"
+  git config core.eol lf
+
+  # Verificar as configurações aplicadas"
+  echo "Command: git config --list --local"
+  # git config --list --local
+  #
+  # Adicionando o repositório"
+  # echo "git add ."
+  # echo "git commit -m \"initial\""
+  # echo "git remote add origin LINK-REPO"
+  # echo "git push origin main -u  "
+}
+
+gitconfig

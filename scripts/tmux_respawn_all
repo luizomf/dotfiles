@@ -1,0 +1,61 @@
+#!/usr/bin/env zsh
+
+set -eo pipefail
+
+respawn_all() {
+  echo "Starting  Clean & Respawn Tmux Panes"
+
+  echo "Saving history: fc -W"
+  fc -W
+
+  echo "Sourcing .zshrc"
+  # shellcheck source=../.zshrc
+  . "${HOME}/.zshrc"
+
+  echo "Cleaning nvim echos"
+  cleanNeovimLogs
+
+  echo "Synchronizing zsh history"
+  "${HOME}/dotfiles/scripts/zsh_history_sync.py"
+
+  echo "Removing old tmux sessions..."
+  rm -Rfv "${HOME}/.local/share/tmux/resurrect"/*.*
+  rm -Rfv "${HOME}/.local/share/tmux/resurrect/last"
+
+  echo "Nap a bit..."
+  sleep 1
+
+  echo "Saving current session"
+  "${HOME}/.tmux/plugins/tmux-resurrect/scripts/save.sh"
+
+  echo "Nap a bit again..."
+  sleep 1
+
+  echo "Tmux resurrect cleaned!"
+  echo "Restoring sessions now"
+
+  "${HOME}/.tmux/plugins/tmux-resurrect/scripts/restore.sh"
+
+  echo "Nap again, last time..."
+  sleep 1
+
+  echo "Respawning all panes"
+  for pane in $(tmux list-panes -a -F '#D'); do
+    tmux respawn-pane -k -t "$pane";
+  done
+
+  sleep 1
+
+  echo "Saving sessions after respawn..."
+  "${HOME}/.tmux/plugins/tmux-resurrect/scripts/save.sh"
+
+  echo "All done. I hope it helps."
+
+  echo "Proof"
+  for pane in $(tmux list-panes -a -F '#D'); do
+    tmux send-keys -t "$pane" "echo \"Respawned: ${pane}\"" C-m
+  done
+}
+
+respawn_all
+

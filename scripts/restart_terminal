@@ -1,0 +1,13 @@
+#!/usr/bin/env zsh
+
+set -eo pipefail
+
+restart_terminal() {
+  fc -W
+  . "${HOME}"/dotfiles/zsh/.zshrc
+  reset
+  [[ "$(pgrep tmux)" ]] && tmux respawn-window -k
+  exit 0
+}
+
+restart_terminal
