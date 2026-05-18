@@ -7,6 +7,7 @@ respawn_all() {
 
   [[ "$(pgrep tmux)" ]] || (echo "tmux server not started." ; exit 1)
 
+  sync
   echo "Saving history: fc -W"
   fc -W
 
