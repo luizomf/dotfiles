@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+cleanNeovimLogs() {
+  echo "Starting nvim cleanup"
+
+  [[ -d ${HOME}/.local/state/nvim ]] && rm -Rfv ~/.local/state/nvim/*.log
+  [[ -d ${HOME}/.cache/nvim ]] && rm -Rfv ~/.cache/nvim/*.log
+  [[ -d ${HOME}/.cache/nvim/shada ]] && "rm -Rfv ${HOME}/.cache/nvim/shada"
+  [[ -d ${HOME}/.cache/nvim/sessions ]] && "rm -Rfv ${HOME}/.cache/nvim/sessions"
+  echo "NeoVim cleaned..."
+}
+
+cleanNeovimLogs
