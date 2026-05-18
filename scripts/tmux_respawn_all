@@ -5,6 +5,8 @@ set -eo pipefail
 respawn_all() {
   echo "Starting  Clean & Respawn Tmux Panes"
 
+  [[ "$(pgrep tmux)" ]] || (echo "tmux server not started." ; exit 1)
+
   echo "Saving history: fc -W"
   fc -W
 
