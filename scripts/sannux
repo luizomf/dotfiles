@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+: "${PROJECTS_DIR:?Set PROJECTS_DIR before running sannux}"
+
+sannux_dir="${PROJECTS_DIR%/}/sannux"
+justfile="${sannux_dir}/justfile"
+
+[[ -f "$justfile" ]] || {
+  echo "Missing justfile: $justfile" >&2
+  exit 1
+}
+
+exec just -f "$justfile" "$@"
