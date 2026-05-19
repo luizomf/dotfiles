@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+CURDIR="$(pwd)"
+
+: "${PROJECTS_DIR:?Set PROJECTS_DIR before running sannux}"
+
+sannux_dir="${PROJECTS_DIR%/}/sannux"
+
+cd "$sannux_dir" || exit 1
+template="${1:?'Usage: sannux_ephemeral <template_name>'}"
+
+case "$template" in
+  codex | codex-ollama) ;;
+  *)
+    echo "Only codex and codex-ollama are supported for now: $template" >&2
+    exit 2
+    ;;
+esac
+
+cd "templates/$template" || exit 1
+shift
+
+# EPHEMERAL
+tmp_home="$(mktemp -d)"
+persistent_home="$HOME/sannux-data/agent-homes/$template"
+tmp_workspace="$CURDIR"
+
+# THE HOME WILL BE REMOVED AFTER DONE
+trap 'rm -rf "$tmp_home"' EXIT
+
+mkdir -p "$tmp_workspace"
+test -d "$persistent_home"
+cp -a "$persistent_home/." "$tmp_home/"
+
+docker compose run \
+  -v "$tmp_workspace:/workspace" \
+  -v "$tmp_home:/home/agent" \
+  --rm -T agent exec - --ephemeral --yolo
