@@ -6,7 +6,7 @@ pkill -9 -f "[w]hile :; do :; done" 2>/dev/null 2>&1 || true
 
 SECS="${1:-60}"
 CORES="$(nproc)"
-USE_CORES="$(("${CORES}"-2))"
+USE_CORES="$(("${CORES}"-4))"
 
 if [[ "${USE_CORES}" -le 0 ]]; then
   USE_CORES=1
