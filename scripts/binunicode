@@ -1,0 +1,59 @@
+#!/usr/bin/env python3.14
+
+import argparse
+import textwrap
+
+
+class Args(argparse.Namespace):
+    bin: str
+
+
+def make_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="binunicode",
+        description=textwrap.dedent(
+            "Takes a string and convert it to unicode or vice-versa."
+        ),
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+
+    parser.add_argument(
+        "-b", "--bin", default="", help="A string with binaries", type=str
+    )
+
+    parser.add_argument(
+        "-u", "--unicode", default="", help="A string with unicode", type=str
+    )
+
+    return parser
+
+
+def bin_to_unicode(args: Args):
+    return bytes(int(b, 2) for b in args.bin.split()).decode("utf-8")
+
+
+def unicode_to_bin(args: Args):
+    return " ".join(f"{byte:08b}" for byte in args.unicode.encode("utf-8"))
+
+
+def main():
+    parser = make_parser()
+    args = parser.parse_args(namespace=Args())
+
+    if args.unicode and args.bin:
+        msg = "Do not use both binary (-b) and unicode (-u) at the same time."
+        raise argparse.ArgumentTypeError(msg)
+
+    try:
+        if args.bin:
+            print(bin_to_unicode(args))
+
+        if args.unicode:
+            print(unicode_to_bin(args))
+    except ValueError:
+        parser.print_help()
+        print("\nThe value you are trying to use could not be converted.\n")
+
+
+if __name__ == "__main__":
+    main()
