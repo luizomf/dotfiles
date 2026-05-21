@@ -1,0 +1,51 @@
+#!/usr/bin/env zsh
+
+set -eo pipefail
+
+echo "Sleeping for 1 sec..."
+sleep 1
+
+echo "Writing history to file"
+fc -W
+echo "Sourcing .zshrc"
+# shellcheck source=../.zshrc
+source "${HOME}/.zshrc"
+
+echo "Sourcing .tmux.conf"
+# shellcheck source=../tmux/.tmux.conf
+tmux source "${HOME}/.tmux.conf"
+
+echo "Cleaning nvim echos..."
+cleanNeovimLogs
+
+echo "Synchronizing ZSH history to local computers..."
+pyenv exec "${HOME}/dotfiles/scripts/zsh_history_sync.py"
+sleep 5
+
+echo "Running brew update"
+brew update
+echo "Running brew upgrade"
+brew upgrade
+echo "Running omz update"
+omz update
+echo "Running brew cleanup"
+brew cleanup
+
+echo "Regenerating brew bundle file"
+local brewfile="${HOME}/dotfiles/homebrew/Brewfile"
+brew bundle dump --file="${brewfile}" --force --no-restart --no-npm
+awk '!/^brew "node"$/ && !/^npm / { print }' "${brewfile}" > "${brewfile}.tmp" \
+  && mv "${brewfile}.tmp" "${brewfile}"
+
+echo "Running uv self update"
+uv self update
+echo "Running uv upgrade tools: pyright mupy ruff"
+uv tool upgrade pyright mypy ruff
+echo "Running uv python upgrade"
+uv python upgrade
+
+echo "Running npm upgrade for global packages: gemini npm prettier corepack"
+npm -g upgrade @google/gemini-cli npm prettier corepack
+
+echo "Sleeping for 1 sec..."
+sleep 1
