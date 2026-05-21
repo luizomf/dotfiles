@@ -5,8 +5,33 @@ set -eo pipefail
 restart_terminal() {
   fc -W
   . "${HOME}"/dotfiles/zsh/.zshrc
-  reset
-  [[ "$(pgrep tmux)" ]] && tmux respawn-window -k
+
+  local has_tty=false
+  [[ -t 0 && -t 1 && -t 2 ]] && has_tty=true
+
+  local is_ssh=false
+  [[ -n "${SSH_CONNECTION:-}" || -n "${SSH_CLIENT:-}" ]] && is_ssh=true
+
+  if [[ "$has_tty" == true ]]; then
+    /usr/bin/reset || true
+  fi
+
+  local tmux_bin=""
+  for tmux_candidate in /opt/homebrew/bin/tmux /usr/local/bin/tmux /usr/bin/tmux; do
+    if [[ -x "$tmux_candidate" ]]; then
+      tmux_bin="$tmux_candidate"
+      break
+    fi
+  done
+
+  if [[
+    "$has_tty" == true &&
+    "$is_ssh" != true &&
+    -n "${TMUX:-}" &&
+    -n "$tmux_bin"
+  ]]; then
+    "$tmux_bin" respawn-window -k || true
+  fi
   exit 0
 }
 
