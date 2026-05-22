@@ -2,6 +2,9 @@
 
 set -eo pipefail
 
+echo "Cleaning ZSH"
+find "${HOME}/.zsh_history_bkp" -type f -mtime +1 -exec rm {} \+
+
 echo "Sleeping for 1 sec..."
 sleep 1
 
