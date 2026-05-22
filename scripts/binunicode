@@ -1,59 +1,174 @@
 #!/usr/bin/env python3.14
 
+"""Convert between Unicode text and UTF-8 bytes written as binary."""
+
 import argparse
+import re
+import sys
 import textwrap
+from typing import Literal
+
+BINARY_BYTE_RE = re.compile(r"^[01]{8}(?:\s+[01]{8})*$")
+
+
+InputKind = Literal["binary", "unicode"]
 
 
 class Args(argparse.Namespace):
-    bin: str
+    binary: str | None
+    unicode: str | None
 
 
 def make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="binunicode",
         description=textwrap.dedent(
-            "Takes a string and convert it to unicode or vice-versa."
+            """
+            Convert between Unicode text and UTF-8 bytes written as binary.
+
+            Without -b or -u, binunicode reads stdin and auto-detects the
+            direction. Binary input must be a list of 8-bit groups separated by
+            whitespace. Anything else is treated as Unicode text.
+            """
+        ).strip(),
+        epilog=textwrap.dedent(
+            """
+            Examples:
+              printf 'Oi' | binunicode
+              printf '01001111 01101001' | binunicode
+              binunicode -u 'Oi'
+              binunicode -b '01001111 01101001'
+
+            Auto-detection rule:
+              "01001111 01101001" -> binary to Unicode
+              "Oi"                 -> Unicode to binary
+
+            If text itself looks like binary, use -u to force Unicode input.
+            """
         ),
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
-    parser.add_argument(
-        "-b", "--bin", default="", help="A string with binaries", type=str
+    input_group = parser.add_mutually_exclusive_group()
+    input_group.add_argument(
+        "-b",
+        "--bin",
+        "--binary",
+        dest="binary",
+        metavar="BYTES",
+        help="Convert whitespace-separated 8-bit binary bytes to Unicode",
+        type=str,
     )
 
-    parser.add_argument(
-        "-u", "--unicode", default="", help="A string with unicode", type=str
+    input_group.add_argument(
+        "-u",
+        "--unicode",
+        metavar="TEXT",
+        help="Convert Unicode text to whitespace-separated 8-bit binary bytes",
+        type=str,
     )
 
     return parser
 
 
-def bin_to_unicode(args: Args):
-    return bytes(int(b, 2) for b in args.bin.split()).decode("utf-8")
+def is_binary(value: str) -> bool:
+    """Return True only for complete whitespace-separated 8-bit groups."""
+    return bool(BINARY_BYTE_RE.fullmatch(value.strip()))
 
 
-def unicode_to_bin(args: Args):
-    return " ".join(f"{byte:08b}" for byte in args.unicode.encode("utf-8"))
+def detect_kind(value: str) -> InputKind:
+    """Decide the conversion direction for stdin input."""
+    if is_binary(value):
+        return "binary"
+
+    return "unicode"
 
 
-def main():
+def normalize_stdin(value: str) -> str:
+    """Drop one final line break commonly added by echo."""
+    if value.endswith("\n"):
+        value = value[:-1]
+
+    if value.endswith("\r"):
+        value = value[:-1]
+
+    return value
+
+
+def read_stdin() -> str | None:
+    """Read stdin when data is piped or redirected."""
+    if sys.stdin.isatty():
+        return None
+
+    value = sys.stdin.read()
+    if value == "":
+        return None
+
+    return normalize_stdin(value)
+
+
+def bin_to_unicode(value: str) -> str:
+    if not is_binary(value):
+        raise ValueError("binary input must use 8-bit groups")
+
+    return bytes(int(byte, 2) for byte in value.split()).decode("utf-8")
+
+
+def unicode_to_bin(value: str) -> str:
+    return " ".join(f"{byte:08b}" for byte in value.encode("utf-8"))
+
+
+def get_input(args: Args, stdin_value: str | None) -> tuple[InputKind, str] | None:
+    selected_inputs = [
+        ("binary", args.binary),
+        ("unicode", args.unicode),
+        ("stdin", stdin_value),
+    ]
+    selected_inputs = [
+        (kind, value) for kind, value in selected_inputs if value is not None
+    ]
+
+    if not selected_inputs:
+        return None
+
+    if len(selected_inputs) > 1:
+        raise ValueError("use only one input source: stdin, -b, or -u")
+
+    selected_kind, value = selected_inputs[0]
+    if selected_kind == "stdin":
+        return detect_kind(value), value
+
+    return selected_kind, value
+
+
+def convert(kind: InputKind, value: str) -> str:
+    if kind == "binary":
+        return bin_to_unicode(value)
+
+    return unicode_to_bin(value)
+
+
+def main() -> int:
     parser = make_parser()
     args = parser.parse_args(namespace=Args())
-
-    if args.unicode and args.bin:
-        msg = "Do not use both binary (-b) and unicode (-u) at the same time."
-        raise argparse.ArgumentTypeError(msg)
+    stdin_value = read_stdin()
 
     try:
-        if args.bin:
-            print(bin_to_unicode(args))
+        conversion_input = get_input(args, stdin_value)
+    except ValueError as error:
+        parser.error(str(error))
 
-        if args.unicode:
-            print(unicode_to_bin(args))
-    except ValueError:
-        parser.print_help()
-        print("\nThe value you are trying to use could not be converted.\n")
+    if conversion_input is None:
+        parser.error("pass stdin, -b/--binary, or -u/--unicode")
+
+    kind, value = conversion_input
+    try:
+        print(convert(kind, value))
+    except (UnicodeDecodeError, ValueError) as error:
+        parser.error(f"the input could not be converted: {error}")
+
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
