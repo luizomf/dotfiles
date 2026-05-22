@@ -2,13 +2,7 @@
 
 set -euo pipefail
 
-if [ -t 0 ]; then
-    echo "Error: No stdin provided." >&2
-    exit 1
-fi
-
 CURDIR="$(pwd)"
-
 
 : "${PROJECTS_DIR:?Set PROJECTS_DIR before running sannux}"
 
