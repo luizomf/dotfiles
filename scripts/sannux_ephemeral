@@ -38,4 +38,4 @@ cp -a "$persistent_home/." "$tmp_home/"
 docker compose run \
   -v "$tmp_workspace:/workspace" \
   -v "$tmp_home:/home/agent" \
-  --rm -T agent exec - --ephemeral --yolo
+  --rm -T agent "${@}"
