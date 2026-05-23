@@ -12,7 +12,6 @@ cd "$sannux_dir" || exit 1
 template="${1:?'Usage: sannux_ephemeral <template_name>'}"
 
 cd "templates/$template" || exit 1
-shift
 
 # shellcheck disable=SC1091
 source .env
@@ -27,9 +26,35 @@ trap 'rm -rf "$tmp_home"' EXIT
 
 mkdir -p "$tmp_workspace"
 test -d "$persistent_home"
-cp -a "$persistent_home/." "$tmp_home/"
+# cp -a "$persistent_home/." "$tmp_home/"
 
-docker compose run \
-  -v "$tmp_workspace:/workspace" \
-  -v "$tmp_home:/home/agent" \
-  --rm -T agent "${@}"
+case $template in
+  codex|codex-ollama)
+    mkdir -p "${tmp_home}/.codex"
+    cp "$persistent_home/.codex/config.toml" "$tmp_home/.codex/config.toml"
+
+    if [[ -f "$persistent_home/.codex/auth.json" ]]; then
+      cp "$persistent_home/.codex/auth.json" "$tmp_home/.codex/auth.json"
+    fi
+    shift
+    ;;
+  *)
+    printf "%b\n" "Template not configured"
+    exit 1
+esac
+
+declare -a docker_cmd=("docker compose run -v $tmp_workspace:/workspace -v $tmp_home:/home/agent --rm")
+
+# STDIN
+if [[ ! -t 0 ]]; then
+  docker_cmd=("${docker_cmd[@]} -T agent")
+
+  # shellcheck disable=SC2128
+  $docker_cmd "${@}"
+  exit $?
+fi
+
+docker_cmd=("${docker_cmd[@]} -it agent")
+# shellcheck disable=SC2128
+$docker_cmd "${@}"
+exit $?
