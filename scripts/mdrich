@@ -73,7 +73,7 @@ main() {
     [[ -f "$file" ]] || die "file not found: $file"
   done
 
-  uv run --with "rich==${DEFAULT_RICH_VERSION}" -m rich.markdown "${files[@]}"
+  uv run --with "rich==${DEFAULT_RICH_VERSION}" -m rich.markdown -c -p -w 80 "${files[@]}"
 }
 
 main "$@"
