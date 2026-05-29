@@ -2,7 +2,7 @@
 theme = omtheme
 
 # Font 
-font-family = JetBrains Mono
+font-family = Space Mono
 font-size = 28
 # Disable Ligatures completely
 font-feature = -calt
