@@ -20,12 +20,20 @@ PROMPT+="Current date: $(date "+%Y-%m-%dT%H:%M:%S")\n"
 PROMPT+="\n"
 PROMPT+="Execute completely: write the file, commit, and push.\n"
 
-# codex exec "$PROMPT" --yolo
-# gemini -y -p "$PROMPT"
-claude --model claude-opus-4-6 -p "$PROMPT" --dangerously-skip-permissions
+# Codex CLI
+# printf "%s\n" "${PROMPT}" | codex exec --yolo --ephemeral
 
-# This does not work in tmux popups
-# nohup gemini -p "$PROMPT" -y > /dev/null 2>&1 < /dev/null &
+# Gemini CLI
+# # Gemini will be discontinued (July 18)
+# printf "%s\n" "${PROMPT}" | gemini -y -p -
+
+# Antigravity CLI (any)
+# printf "%s\n" "${PROMPT}" | agy --dangerously-skip-permissions --print -
+
+# Claude Code
+printf "%s\n" "${PROMPT}" | claude --model claude-opus-4-8 --effort xhigh \
+  --no-session-persistence --dangerously-skip-permissions \
+  -p -
 
 cd "${CURDIR}" || exit 1
 
