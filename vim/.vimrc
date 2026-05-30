@@ -18,16 +18,15 @@ set nocompatible
 set nocursorline
 "set colorcolumn=80
 set backupcopy=yes
-set expandtab
 set tabstop=2
 set shiftwidth=2
 set expandtab
-"set autoindent
-"set smartindent
+set autoindent
+set smartindent
 set noautoindent
 set nosmartindent
 set mouse=""
-set clipboard=unnamed
+set clipboard=unnamedplus
 set nowrap
 set backspace=indent,eol,start
 set formatoptions-=t
@@ -62,8 +61,6 @@ match RedundantWhitespace /\s\+$\| \+\ze\t/
 
 " ### Opens the file in the same position where I left it
 autocmd BufReadPost * if line("'\"") > 0 && line("'\"") <= line("$") | exe "normal! g`\"" | endif
-
-" ### KEYMAPS
 let mapleader = " "
 
 " INSERT
@@ -127,4 +124,17 @@ function! s:maybe_save() abort
 
   let l:path = s:session_path()
   execute 'mksession!' fnameescape(l:path)
+endfunction
+
+" Fix copy/paste pain
+" https://coderwall.com/p/if9mda/automatically-set-paste-mode-in-vim-when-pasting-in-insert-mode
+let &t_SI .= "\<Esc>[?2004h"
+let &t_EI .= "\<Esc>[?2004l"
+
+inoremap <special> <expr> <Esc>[200~ XTermPasteBegin()
+
+function! XTermPasteBegin()
+  set pastetoggle=<Esc>[201~
+  set paste
+  return ""
 endfunction
