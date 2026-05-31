@@ -3,7 +3,6 @@
 # ruff: noqa: S607,S602
 import subprocess
 import sys
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -83,47 +82,30 @@ def merge_and_overwrite_histories(
     curr_history_path: Path,
 ) -> None:
     BKP_ZSH_HISTORY_DIR.mkdir(exist_ok=True)
-
-    zsh_source_cmds = f"""
-    fc -W
-    source {Path.home() / ".zshrc"}
-    fc -W
-    """
-    ssh_cp_zsh_history_cmd = """
-    ssh maclo 'cat .zsh_history'
-    """
-    subprocess.run(["fc", "-W"], check=False, shell=True)
-    subprocess.run(
-        ["-l", "-c", zsh_source_cmds],
-        executable="/bin/zsh",
-        check=False,
-        shell=True,
-        capture_output=True,
-    )
     out = subprocess.run(
-        ["-l", "-c", ssh_cp_zsh_history_cmd],
+        [
+            "-l",
+            "-c",
+            (
+                "fc -W ; sync ; ssh localhost 'fc -W ; sync ; cat ~/.zsh_history'; "
+                "ssh m4128 'fc -W ; sync ; cat ~/.zsh_history'; "
+                "ssh m132 'fc -W ; sync ; cat ~/.zsh_history'; "
+                "ssh fedoraair 'fc -W ; sync ; cat ~/.zsh_history'; "
+            ),
+        ],
         executable="/bin/zsh",
         check=False,
         shell=True,
         capture_output=True,
     )
     merge_history_bytes = out.stdout
+    merged_history_entries = sorted(
+        history_to_entries(merge_history_bytes), key=lambda e: int(e.timestamp)
+    )
 
-    merged_history_entries = merge_history(curr_history_path, merge_history_bytes)
-    curr_history_path.copy(BKP_ZSH_HISTORY_DIR / f".zsh_history_BKP_{int(time.time())}")
-
-    with CURR_ZSH_HISTORY.open("wb") as curr_file_obj:
+    with curr_history_path.open("wb") as curr_file_obj:
         for entry in merged_history_entries:
             curr_file_obj.write(entry.raw)
-
-    subprocess.run(["fc", "-W"], check=False, shell=True)
-    subprocess.run(
-        ["-l", "-c", zsh_source_cmds],
-        executable="/bin/zsh",
-        check=False,
-        shell=True,
-        capture_output=True,
-    )
 
 
 if __name__ == "__main__":
