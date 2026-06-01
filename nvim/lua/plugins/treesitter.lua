@@ -42,7 +42,6 @@ return {
         "python",
         "dockerfile",
       })
-
       -- Enable treesitter highlighting and indentation for all filetypes
       vim.api.nvim_create_autocmd("FileType", {
         callback = function()
@@ -52,7 +51,6 @@ return {
       })
     end,
   },
-
   {
     "nvim-treesitter/nvim-treesitter-textobjects",
     branch = "main",
@@ -127,7 +125,6 @@ return {
       end)
     end,
   },
-
   {
     "windwp/nvim-ts-autotag",
   },
