@@ -16,6 +16,11 @@ return {
         "just",
         "cmake",
         "bash",
+        "tmux",
+        "zsh",
+        "ssh_config",
+        "dockerfile",
+        "editorconfig",
         "lua",
         "vim",
         "vimdoc",
@@ -31,17 +36,14 @@ return {
         "json",
         "yaml",
         "toml",
-        "zsh",
-        "ssh_config",
         "htmldjango",
         "passwd",
         "terraform",
-        "editorconfig",
         "markdown",
         "markdown_inline",
         "python",
-        "dockerfile",
       })
+
       -- Enable treesitter highlighting and indentation for all filetypes
       vim.api.nvim_create_autocmd("FileType", {
         callback = function()
