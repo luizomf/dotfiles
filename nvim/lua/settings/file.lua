@@ -7,6 +7,6 @@ vim.filetype.add({
   pattern = {
     [vim.fn.expand("~") .. "/dotfiles/zsh/config/.*"] = "sh",
     [vim.fn.expand("~") .. "/dotfiles/ghostty/config"] = "sh",
-    [vim.fn.expand("~") .. "/%.ssh/config%.d/.*"] = "sshconfig",
+    [vim.fn.expand("~") .. "/%.ssh/config%.d/.*"] = "ssh_config",
   },
 })
