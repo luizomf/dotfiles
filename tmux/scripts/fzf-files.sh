@@ -115,9 +115,9 @@ export FIELD_SEPARATOR
 SELECTED_LINE="$(
   fd . "${ROOTS[@]}" \
     --type f \
+    --hidden \
     --max-depth "$MAX_DEPTH" \
     --exclude .git \
-    --exclude .claude \
     --exclude node_modules \
     --exclude .next \
     --exclude dist \
@@ -131,6 +131,7 @@ SELECTED_LINE="$(
     done \
     | fzf \
       --tmux center,90%,85% \
+      --sort --algo=v2 --tiebreak=length \
       --prompt="> " \
       --delimiter="$FIELD_SEPARATOR" \
       --with-nth='{2}    {3}' \

@@ -109,6 +109,7 @@ SELECTED="$(
     --ansi \
     --disabled \
     --prompt="> " \
+    --sort --algo=v2 --tiebreak=length \
     --delimiter="$FIELD_SEPARATOR" \
     --with-nth='{4}:{2}    {5}    {6..}' \
     --preview='
@@ -172,7 +173,6 @@ SELECTED="$(
         --max-depth "$MAX_DEPTH" \
         --max-filesize "$MAX_FILESIZE" \
         --glob "!.git" \
-        --glob "!.claude" \
         --glob "!node_modules" \
         --glob "!.next" \
         --glob "!dist" \
