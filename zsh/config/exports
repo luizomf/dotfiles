@@ -7,11 +7,7 @@ export EDITOR="nvim"
 export VISUAL="nvim"
 export TABSIZE=2
 
-export KOKORO_VOICES_PT='pf_dora,af_heart,if_sara,ff_siwis,ef_dora,pm_santa'
-export KOKORO_VOICES_EN='bf_emma,af_heart,af_bella,bf_isabella,ff_siwis,if_sara'
-
 export SSH_TERM="xterm-256color"
-
 export PROJECTS_DIR="${HOME}/Desktop/tutoriais_e_cursos"
 
 ZSH_HIGHLIGHT_STYLES[comment]='fg=240'
@@ -25,6 +21,9 @@ export OLLAMA_KEEP_ALIVE='10m'
 export LOCAL_MODEL="qwen3.6:35b-a3b-mxfp8"
 export MODEL="${LOCAL_MODEL}"
 
+export KOKORO_VOICES_PT='pf_dora,af_heart,if_sara,ff_siwis,ef_dora,pm_santa'
+export KOKORO_VOICES_EN='bf_emma,af_heart,af_bella,bf_isabella,ff_siwis,if_sara'
+
 export FZF_DEFAULT_OPTS='
   --color=fg:#c0c0da,fg+:#f0efff,bg:#0a0a14,bg+:#242436
   --color=hl:#37feb7,hl+:#72ffcd,info:#30f4f2,marker:#30f4f2
@@ -33,6 +32,13 @@ export FZF_DEFAULT_OPTS='
   --color=label:#c0c0da,query:#c0c0da
   --preview-window="border-rounded" --prompt="> " --marker=">" --pointer="◆"
   --separator="─" --scrollbar="│" --layout="reverse"'
+
+export FZF_FILE_LIMIT=1000
+export FZF_FILE_DEPTH=8
+
+export FZF_RG_LIMIT=100
+export FZF_RG_DEPTH=8
+export FZF_RG_MAX_FILESIZE=1M
 
 # BE SURE TO FIX THE ENV VARIABLES
 # brew install libpq --build-from-source
@@ -63,7 +69,7 @@ fi
 
 export PYENV_ROOT="${HOME}/.pyenv"
 PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:${PATH}"
-eval "$(pyenv init -)"
+[[ -z "$PYENV_ROOT" ]] || eval "$(pyenv init -)"
 
 . "$HOME/.local/bin/env"
 [ -f ~/.fzf.zsh ] && . "${HOME}/.fzf.zsh"
