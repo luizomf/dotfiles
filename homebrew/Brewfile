@@ -1,4 +1,4 @@
-tap "docker/tap"
+tap "docker/tap", trusted: true
 brew "openssl@3"
 brew "ffmpeg"
 brew "auto-editor"
