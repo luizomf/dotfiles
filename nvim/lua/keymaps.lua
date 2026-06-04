@@ -91,6 +91,18 @@ map("n", "<Tab>", ":bnext<CR>", opts)
 map("n", "<S-Tab>", ":bprevious<CR>", opts)
 map("n", "<leader>bd", ":bdelete<CR>", { desc = "Fechar buffer" })
 map("n", "<leader>bu", "<C-^>", { desc = "Reabrir último buffer" })
+-- Read-only buffers (so I don't change it accidentally)
+vim.keymap.set("n", "<leader>ro", function()
+  if vim.opt_local.modifiable:get() then
+    vim.opt_local.modifiable = false
+    vim.opt_local.readonly = true
+    print("Buffer in READ-ONLY mode")
+  else
+    vim.opt_local.modifiable = true
+    vim.opt_local.readonly = false
+    print("Buffer ready for changes")
+  end
+end, { desc = "Change Buffer To Read-Only Mode" })
 
 -- WrapIn
 -- Wrap com parênteses
