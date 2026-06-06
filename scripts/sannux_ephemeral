@@ -2,6 +2,12 @@
 
 set -euo pipefail
 
+# Examples
+# echo "Testing. Please, answer: 'OK'" | sannux_ephemeral codex exec --ephemeral --yolo 2>/dev/null
+# echo "Testing. Please, answer: 'OK'" | sannux_ephemeral codex-ollama exec --ephemeral --yolo 2>/dev/null
+# echo "Testing. Please, answer: 'OK'" | sannux_ephemeral claude-code --no-session-persistence --dangerously-skip-permissions -p - 2>/dev/null
+# echo "Testing. Please, answer: 'OK'" | sannux_ephemeral claude-ollama --no-session-persistence --dangerously-skip-permissions -p - 2>/dev/null
+
 CURDIR="$(pwd)"
 
 : "${PROJECTS_DIR:?Set PROJECTS_DIR before running sannux}"
@@ -36,6 +42,21 @@ case $template in
     if [[ -f "$persistent_home/.codex/auth.json" ]]; then
       cp "$persistent_home/.codex/auth.json" "$tmp_home/.codex/auth.json"
     fi
+    shift
+    ;;
+  claude-code)
+    mkdir -p "${tmp_home}/.claude"
+    cp -rf "$persistent_home/.claude/" "$tmp_home/.claude/"
+
+    if [[ -f "$persistent_home/.codex/.claude.json" ]]; then
+      cp "$persistent_home/.claude.json" "$tmp_home/.claude.json"
+    fi
+    shift
+    ;;
+  claude-ollama)
+    mkdir -p "${tmp_home}/.claude"
+    cp -rf "$persistent_home/.claude/" "$tmp_home/.claude/"
+
     shift
     ;;
   *)
