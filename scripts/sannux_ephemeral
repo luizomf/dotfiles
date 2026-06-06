@@ -8,7 +8,7 @@ set -euo pipefail
 # echo "Testing. Please, answer: 'OK'" | sannux_ephemeral claude-code --no-session-persistence --dangerously-skip-permissions -p - 2>/dev/null
 # echo "Testing. Please, answer: 'OK'" | sannux_ephemeral claude-ollama --no-session-persistence --dangerously-skip-permissions -p - 2>/dev/null
 
-CURDIR="$(pwd)"
+CURDIR="${CURDIR:-"$(pwd)"}"
 
 : "${PROJECTS_DIR:?Set PROJECTS_DIR before running sannux}"
 
