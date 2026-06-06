@@ -32,7 +32,6 @@ trap 'rm -rf "$tmp_home"' EXIT
 
 mkdir -p "$tmp_workspace"
 test -d "$persistent_home"
-# cp -a "$persistent_home/." "$tmp_home/"
 
 case $template in
   codex|codex-ollama)
@@ -45,17 +44,22 @@ case $template in
     shift
     ;;
   claude-code)
-    mkdir -p "${tmp_home}/.claude"
+    mkdir -p "${tmp_home}"
     cp -rf "$persistent_home/.claude/" "$tmp_home/.claude/"
 
-    if [[ -f "$persistent_home/.codex/.claude.json" ]]; then
+    if [[ -f "$persistent_home/.claude.json" ]]; then
       cp "$persistent_home/.claude.json" "$tmp_home/.claude.json"
     fi
+
     shift
     ;;
   claude-ollama)
-    mkdir -p "${tmp_home}/.claude"
+    mkdir -p "${tmp_home}"
     cp -rf "$persistent_home/.claude/" "$tmp_home/.claude/"
+
+    if [[ -f "$persistent_home/.claude.json" ]]; then
+      cp "$persistent_home/.claude.json" "$tmp_home/.claude.json"
+    fi
 
     shift
     ;;
