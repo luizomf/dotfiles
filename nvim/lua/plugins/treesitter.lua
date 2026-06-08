@@ -42,6 +42,7 @@ return {
         "markdown",
         "markdown_inline",
         "python",
+        "astro",
       })
 
       -- Enable treesitter highlighting and indentation for all filetypes
