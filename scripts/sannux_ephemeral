@@ -50,9 +50,6 @@ case $template in
     mkdir -p "${tmp_home}"
     cp -a "$persistent_home/" "$tmp_home"
 
-    echo "$persistent_home"
-    echo "$tmp_home"
-
     shift
     ;;
   claude-ollama)
