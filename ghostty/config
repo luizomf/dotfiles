@@ -1,8 +1,8 @@
 # shellcheck disable=all
 theme = omtheme
 
-# Font 
-font-family = Space Mono
+# Font
+font-family = Inconsolata
 font-size = 28
 # Disable Ligatures completely
 font-feature = -calt
