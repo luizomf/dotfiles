@@ -1,0 +1,17 @@
+codex-theme-v1: {
+  "codeThemeId": "codex",
+  "theme": {
+    "accent": "#5070ff",
+    "contrast": 50,
+    "fonts": { "code": "Inconsolata", "ui": "Inconsolata" },
+    "ink": "#eae8ff",
+    "opaqueWindows": true,
+    "semanticColors": {
+      "diffAdded": "#37feb7",
+      "diffRemoved": "#ff7e9a",
+      "skill": "#b080ff"
+    },
+    "surface": "#0f0f14"
+  },
+  "variant": "dark"
+}
