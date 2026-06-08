@@ -44,12 +44,14 @@ case $template in
     shift
     ;;
   claude-code)
+    # Claude Code is trying to re-authenticate for some unknown reason.
+    # I'll try to copy the entire home and see if it fixes this problem.
+    # This problem was brought to you by Anthropic. Best harness so far.
     mkdir -p "${tmp_home}"
-    cp -rf "$persistent_home/.claude/" "$tmp_home/.claude/"
+    cp -a "$persistent_home/" "$tmp_home"
 
-    if [[ -f "$persistent_home/.claude.json" ]]; then
-      cp "$persistent_home/.claude.json" "$tmp_home/.claude.json"
-    fi
+    echo "$persistent_home"
+    echo "$tmp_home"
 
     shift
     ;;
