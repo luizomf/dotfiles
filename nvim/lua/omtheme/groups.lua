@@ -264,11 +264,11 @@ M.set_groups = function()
   -- ┌─────────────────────────────────────────────┐
   -- │  Telescope                                  │
   -- └─────────────────────────────────────────────┘
-  hl("TelescopeNormal", { fg = p.fg, bg = p.bg })
-  hl("TelescopeBorder", { fg = p.gray_05, bg = p.bg })
-  hl("TelescopePromptTitle", { fg = p.gray_12, bg = p.bg })
-  hl("TelescopePromptBorder", { fg = p.gray_05, bg = p.bg })
-  hl("TelescopeResultsComment", { fg = p.comment })
+  hl("TelescopeNormal", { fg = p.fg, bg = p.gray_00 })
+  hl("TelescopeBorder", { fg = p.gray_06, bg = p.gray_00 })
+  hl("TelescopePromptTitle", { fg = p.gray_22, bg = p.gray_00 })
+  hl("TelescopePromptBorder", { fg = p.gray_06, bg = p.gray_00 })
+  hl("TelescopeResultsComment", { fg = p.gray_22 })
 
   -- ┌─────────────────────────────────────────────┐
   -- │  Cmp (Completion)                           │
