@@ -1,10 +1,22 @@
 #!/usr/bin/env bash
 
+export FZF_DEFAULT_COMMAND='fd --type f --strip-cwd-prefix --hidden --follow --exclude .git'
+export FZF_DEFAULT_OPTS=${FZF_DEFAULT_OPTS:-}"
+  --color=fg:#eae8ff,fg+:#41e2ff,bg:#0f0f14,bg+:#191928
+  --color=hl:#41e2ff,hl+:#ffffff,info:#41e2ff,marker:#41e2ff
+  --color=prompt:#eeeeff,spinner:#41e2ff,pointer:#41e2ff,header:#41e2ff
+  --color=gutter:#191928,border:#191928,separator:#191928,scrollbar:#41e2ff
+  --color=label:#41e2ff,query:#ccccee
+  --border=\"rounded\" --border-label=\"tmux\" --border-label-pos=\"0\" 
+  --preview-window=\"border-rounded\"
+  --padding=\"1\" --margin=\"0\" --prompt=\"> \" --marker=\">\"
+  --pointer=\"◆\" --separator=\"─\" --scrollbar=\"│\" --layout=\"reverse\""
+
 SELECTED="$(tmux list-window \
   -a -F "#S:#I #W #P #D" | \
   fzf --sync \
   --sort --algo=v2 --tiebreak=length \
-  --tmux center,90%,85%
+  --tmux center,50%,50%
 )"
 
 [[ -z $SELECTED ]] && exit 0
