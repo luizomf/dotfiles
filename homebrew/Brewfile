@@ -49,7 +49,6 @@ brew "nano"
 brew "tree-sitter"
 # Ambitious Vim-fork focused on extensibility and agility
 brew "neovim"
-# Open-source, cross-platform JavaScript runtime environment
 # Create, run, and share large language models (LLMs)
 brew "ollama"
 # 7-Zip (high compression file archiver) implementation
