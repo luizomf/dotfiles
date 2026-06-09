@@ -44,13 +44,8 @@ case $template in
     shift
     ;;
   claude-code)
-    # Claude Code is trying to re-authenticate for some unknown reason.
-    # I'll try to copy the entire home and see if it fixes this problem.
-    # This problem was brought to you by Anthropic. Best harness so far.
     mkdir -p "${tmp_home}"
-    cp -a "$persistent_home/" "$tmp_home"
-
-    shift
+    cp -a "$persistent_home/" "$tmp_home/"
     ;;
   claude-ollama)
     mkdir -p "${tmp_home}"
