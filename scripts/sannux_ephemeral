@@ -45,7 +45,8 @@ case $template in
     ;;
   claude-code)
     mkdir -p "${tmp_home}"
-    cp -a "$persistent_home/" "$tmp_home/"
+    cp -a "$persistent_home"/. "$tmp_home"/
+    shift
     ;;
   claude-ollama)
     mkdir -p "${tmp_home}"
@@ -62,18 +63,21 @@ case $template in
     exit 1
 esac
 
-declare -a docker_cmd=("docker compose run -v $tmp_workspace:/workspace -v $tmp_home:/home/agent --rm")
+declare -a docker_cmd=(
+  docker compose run
+  -v "$tmp_workspace:/workspace"
+  -v "$tmp_home:/home/agent"
+  --rm
+)
 
 # STDIN
 if [[ ! -t 0 ]]; then
-  docker_cmd=("${docker_cmd[@]} -T agent")
+  docker_cmd+=(-T agent)
 
-  # shellcheck disable=SC2128
-  $docker_cmd "${@}"
+  "${docker_cmd[@]}" "${@}"
   exit $?
 fi
 
-docker_cmd=("${docker_cmd[@]} -it agent")
-# shellcheck disable=SC2128
-$docker_cmd "${@}"
+docker_cmd+=(-it agent)
+"${docker_cmd[@]}" "${@}"
 exit $?
