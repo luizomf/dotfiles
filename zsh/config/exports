@@ -24,14 +24,15 @@ export MODEL="${LOCAL_MODEL}"
 export KOKORO_VOICES_PT='pf_dora,af_heart,if_sara,ff_siwis,ef_dora,pm_santa'
 export KOKORO_VOICES_EN='bf_emma,af_heart,af_bella,bf_isabella,ff_siwis,if_sara'
 
-export FZF_DEFAULT_OPTS='
-  --color=fg:#c0c0da,fg+:#f0efff,bg:#0a0a14,bg+:#242436
-  --color=hl:#37feb7,hl+:#72ffcd,info:#30f4f2,marker:#30f4f2
-  --color=prompt:#c0c0da,spinner:#30f4f2,pointer:#30f4f2,header:#30f4f2
-  --color=gutter:#0a0a14,border:#0a0a14,separator:#6a6a8a,scrollbar:#6a6a8a
-  --color=label:#c0c0da,query:#c0c0da
-  --preview-window="border-rounded" --prompt="> " --marker=">" --pointer="◆"
-  --separator="─" --scrollbar="│" --layout="reverse"'
+export FZF_DEFAULT_OPTS=${FZF_DEFAULT_OPTS:-}'
+  --color=fg:#eae8ff,fg+:#41e2ff,bg:#121212,bg+:#242436
+  --color=hl:#41e2ff,hl+:#41e2ff,info:#41e2ff,marker:#41e2ff
+  --color=prompt:#eae8ff,spinner:#41e2ff,pointer:#41e2ff,header:#41e2ff
+  --color=gutter:#242436,border:#242436,separator:#242436,scrollbar:#41e2ff
+  --color=label:#41e2ff,query:#6a6a8a
+  --border="rounded" --border-label="fzf" --border-label-pos="0" --preview-window="border-rounded"
+  --padding="1" --margin="1" --prompt="> " --marker=">"
+  --pointer="◆" --separator="─" --scrollbar="│" --layout="reverse"'
 
 export FZF_FILE_LIMIT=1000
 export FZF_FILE_DEPTH=8
@@ -55,7 +56,10 @@ export LDFLAGS="-L/opt/homebrew/lib -L/opt/homebrew/opt/openssl/lib -L/opt/homeb
 
 # CPPFLAGS (cabeçalhos de compilação)
 export CPPFLAGS="-I/opt/homebrew/include -I/opt/homebrew/opt/openssl/include -I/opt/homebrew/opt/openssl@3/include -I/opt/homebrew/opt/curl/include -I/opt/homebrew/opt/mysql-client/include -I/opt/homebrew/opt/libpq/include -I/opt/homebrew/opt/sqlite/include"
+
+# bat command
 export BAT_STYLE="header"
+export BAT_THEME="ansi"
 
 PATH="/opt/homebrew/opt/curl/bin:/opt/homebrew/opt/mysql-client/bin:/opt/homebrew/opt/libpq/bin:${PATH}"
 
