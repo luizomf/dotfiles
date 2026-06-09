@@ -10,8 +10,8 @@ M.set_groups = function()
   -- │  Base / Editor UI                           │
   -- └─────────────────────────────────────────────┘
   hl("Normal", { fg = p.gray_22, bg = p.bg })
-  hl("NormalNC", { fg = p.gray_22, bg = p.gray_01 })
-  hl("NormalSB", { fg = p.gray_24, bg = p.gray_01 })
+  hl("NormalNC", { fg = p.gray_22, bg = p.bg })
+  hl("NormalSB", { fg = p.gray_24, bg = p.bg })
 
   -- For blur and transparent background
   -- hl("Normal", { fg = p.gray_22, bg = "NONE" })
@@ -264,10 +264,10 @@ M.set_groups = function()
   -- ┌─────────────────────────────────────────────┐
   -- │  Telescope                                  │
   -- └─────────────────────────────────────────────┘
-  hl("TelescopeNormal", { fg = p.gray_22, bg = p.black })
-  hl("TelescopeBorder", { fg = p.gray_08, bg = p.black })
-  hl("TelescopePromptTitle", { fg = p.gray_22, bg = p.black })
-  hl("TelescopePromptBorder", { fg = p.gray_08, bg = p.black })
+  hl("TelescopeNormal", { fg = p.fg, bg = p.bg })
+  hl("TelescopeBorder", { fg = p.gray_05, bg = p.bg })
+  hl("TelescopePromptTitle", { fg = p.gray_12, bg = p.bg })
+  hl("TelescopePromptBorder", { fg = p.gray_05, bg = p.bg })
   hl("TelescopeResultsComment", { fg = p.comment })
 
   -- ┌─────────────────────────────────────────────┐
