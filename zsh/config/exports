@@ -24,15 +24,17 @@ export MODEL="${LOCAL_MODEL}"
 export KOKORO_VOICES_PT='pf_dora,af_heart,if_sara,ff_siwis,ef_dora,pm_santa'
 export KOKORO_VOICES_EN='bf_emma,af_heart,af_bella,bf_isabella,ff_siwis,if_sara'
 
-export FZF_DEFAULT_OPTS=${FZF_DEFAULT_OPTS:-}'
-  --color=fg:#eae8ff,fg+:#41e2ff,bg:#121212,bg+:#242436
-  --color=hl:#41e2ff,hl+:#41e2ff,info:#41e2ff,marker:#41e2ff
-  --color=prompt:#eae8ff,spinner:#41e2ff,pointer:#41e2ff,header:#41e2ff
-  --color=gutter:#242436,border:#242436,separator:#242436,scrollbar:#41e2ff
-  --color=label:#41e2ff,query:#6a6a8a
-  --border="rounded" --border-label="fzf" --border-label-pos="0" --preview-window="border-rounded"
-  --padding="1" --margin="1" --prompt="> " --marker=">"
-  --pointer="◆" --separator="─" --scrollbar="│" --layout="reverse"'
+export FZF_DEFAULT_COMMAND='fd --type f --strip-cwd-prefix --hidden --follow --exclude .git'
+export FZF_DEFAULT_OPTS=${FZF_DEFAULT_OPTS:-}"
+  --color=fg:#eae8ff,fg+:#41e2ff,bg:#0f0f14,bg+:#191928
+  --color=hl:#41e2ff,hl+:#ffffff,info:#41e2ff,marker:#41e2ff
+  --color=prompt:#eeeeff,spinner:#41e2ff,pointer:#41e2ff,header:#41e2ff
+  --color=gutter:#191928,border:#191928,separator:#191928,scrollbar:#41e2ff
+  --color=label:#41e2ff,query:#ccccee
+  --border=\"rounded\" --border-label=\"tmux\" --border-label-pos=\"0\" 
+  --preview-window=\"border-rounded\"
+  --padding=\"1\" --margin=\"0\" --prompt=\"> \" --marker=\">\"
+  --pointer=\"◆\" --separator=\"─\" --scrollbar=\"│\" --layout=\"reverse\""
 
 export FZF_FILE_LIMIT=1000
 export FZF_FILE_DEPTH=8
