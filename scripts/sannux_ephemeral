@@ -58,6 +58,11 @@ case $template in
 
     shift
     ;;
+  agy)
+    mkdir -p "${tmp_home}"
+    cp -a "$persistent_home"/. "$tmp_home"/
+    shift
+    ;;
   *)
     printf "%b\n" "Template not configured"
     exit 1
