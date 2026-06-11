@@ -78,7 +78,7 @@ M.green_mint = "#a0ffe0" -- mint
 -- │  The glowing river, crystals and mushrooms       │
 -- └──────────────────────────────────────────────────┘
 -- M.cyan = "#30f4f2" -- ANSI cyan (neon teal)
-M.cyan = "#56b8ff" -- ANSI cyan (neon teal)
+M.cyan = "#6bccff" -- ANSI cyan (neon teal)
 -- M.teal = "#20d8d6" -- teal (borders, links)
 M.teal = "#77dbff" -- teal (borders, links)
 M.teal_bright = "#8ce0fe" -- ANSI bright cyan
