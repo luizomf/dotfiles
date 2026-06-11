@@ -1,22 +1,50 @@
+# Normal
+
+# Black (Original #0f0f14)
 palette = 0=#0f0f14
+# Red (Original #ff7e9a)
 palette = 1=#ff7e9a
+# Green (Original #37feb7)
 palette = 2=#37feb7
+# Yellow (Original #ffda76)
 palette = 3=#ffda76
+# Blue (Original #88aaf2)
 palette = 4=#88aaf2
+# Magenta/Purple (Original #ff87bc)
 palette = 5=#ff87bc
-palette = 6=#5CF4FF
+# Cyan (Original #5CF4FF)
+palette = 6=#56b8ff
+# White (Original #d6d1ff)
 palette = 7=#d6d1ff
-palette = 8=#6a6a8a
+
+# Bright
+
+# B. Black (Original #6a6a8a)
+palette = 8=#505068
+# B. Red (Original #ffa8bb)
 palette = 9=#ffa8bb
+# B. Green (Original #72ffcd)
 palette = 10=#72ffcd
+# B. Yellow (Original #ffeab2)
 palette = 11=#ffeab2
+# B. Blue (Original #b2cbff)
 palette = 12=#b2cbff
+# B. Magenta/Purple (Original #ff88ef)
 palette = 13=#ff88ef
-palette = 14=#00EEFF
+# B. Cyan (Original #00EEFF)
+palette = 14=#77c6ff
+# B. White (Original #f0efff)
 palette = 15=#f0efff
 
+# Same as 0
 background = #0f0f14
+# Same as 15
 foreground = #eae8ff
+
+# Same as 7
 cursor-color = #d6d1ff
+
+# Selection blueish
 selection-background = #3b4fa6
 selection-foreground = #FFFFFF
+
