@@ -4,11 +4,11 @@ set -euo pipefail
 
 WINDOW_NAME="tmp"
 
-# Shameful fix 😅
 if (($# > 0)); then
-  WINDOW_NAME="$1"
+  WINDOW_NAME="${1:-new}"
   shift
 fi
 
 SESSION_NAME="$(tmux display-message -p "#{session_name}")"
-tmux neww -t "$SESSION_NAME" -c "$(pwd)" -n "$WINDOW_NAME" -a "$@"
+WINDIR="${WINDIR:-$(pwd)}"
+tmux neww -t "$SESSION_NAME" -c "$WINDIR" -n "$WINDOW_NAME" -a "$@"
