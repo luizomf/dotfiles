@@ -13,11 +13,41 @@ M.set_groups = function()
   -- hl("Normal", { fg = p.gray_22, bg = p.bg })
   -- hl("NormalNC", { fg = p.gray_22, bg = p.bg })
   -- hl("NormalSB", { fg = p.gray_24, bg = p.bg })
+  -- hl("LineNr", { fg = p.comment, bg = p.bg })
+  -- hl("@markup.heading.1.delimiter.vimdoc", {
+  --   underdouble = true,
+  --   nocombine = true,
+  --   sp = p.bg,
+  --   bg = p.bg,
+  --   fg = p.fg,
+  -- })
+  -- hl("@markup.heading.2.delimiter.vimdoc", {
+  --   underline = true,
+  --   nocombine = true,
+  --   sp = p.bg,
+  --   bg = p.bg,
+  --   fg = p.fg,
+  -- })
 
   -- For blur and transparent background
   hl("Normal", { fg = p.gray_22, bg = "NONE" })
   hl("NormalNC", { fg = p.gray_22, bg = "NONE" })
   hl("NormalSB", { fg = p.gray_24, bg = "NONE" })
+  hl("LineNr", { fg = p.comment, bg = "NONE" })
+  hl("@markup.heading.1.delimiter.vimdoc", {
+    underdouble = true,
+    nocombine = true,
+    sp = "NONE",
+    bg = "NONE",
+    fg = p.fg,
+  })
+  hl("@markup.heading.2.delimiter.vimdoc", {
+    underline = true,
+    nocombine = true,
+    sp = "NONE",
+    bg = "NONE",
+    fg = p.fg,
+  })
 
   hl("NonText", { fg = p.gray_02 })
   hl("Whitespace", { fg = p.gray_02 })
@@ -37,7 +67,6 @@ M.set_groups = function()
   hl("CursorLine", { bg = p.gray_02 })
   hl("CursorColumn", { bg = p.gray_02 })
   hl("CursorLineNr", { bold = false, fg = p.magenta })
-  hl("LineNr", { fg = p.comment, bg = p.bg })
   hl("ColorColumn", { bg = p.gray_02 })
   hl("VirtColumn", { link = "ColorColumn" })
   hl("SignColumn", { fg = p.gray_08 })
@@ -203,20 +232,6 @@ M.set_groups = function()
   hl("@markup.heading.6.markdown", { bold = true, fg = p.purple_light })
   hl("@markup.heading.7.markdown", { bold = true, fg = p.orange })
   hl("@markup.heading.8.markdown", { bold = true, fg = p.red })
-  hl("@markup.heading.1.delimiter.vimdoc", {
-    underdouble = true,
-    nocombine = true,
-    sp = p.bg,
-    bg = p.bg,
-    fg = p.fg,
-  })
-  hl("@markup.heading.2.delimiter.vimdoc", {
-    underline = true,
-    nocombine = true,
-    sp = p.bg,
-    bg = p.bg,
-    fg = p.fg,
-  })
 
   -- ┌─────────────────────────────────────────────┐
   -- │  Treesitter: JSX / TSX                      │
