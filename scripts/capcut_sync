@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+USER_HOME="${HOME}"
+CAPCUT_DIR="${USER_HOME}/Movies/CapCut"
+# CAPCUT_SYNC_DIR="${CAPCUT_DIR}/User Data/Presets" # PRESETS
+CAPCUT_SYNC_DIR="${CAPCUT_DIR}/User Data"
+
+rsync -havz --progress --stats "${CAPCUT_SYNC_DIR}/" m4128:"'${CAPCUT_SYNC_DIR}/'" \
+  --exclude="Cache"
+rsync -havz --progress --stats m4128:"'${CAPCUT_SYNC_DIR}/'" "${CAPCUT_SYNC_DIR}/" \
+  --exclude="Cache"
+
+rsync -havz --progress --stats "${CAPCUT_SYNC_DIR}/" m4128:"'${CAPCUT_SYNC_DIR}/'" --delete \
+  --exclude="Cache"
