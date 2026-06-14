@@ -3,8 +3,10 @@ set -euo pipefail
 
 FILE="${1:?Use: ./extract_md_links arquivo.md}"
 
-{
-  grep -oE '\[[^]]+\]\((https?://[^)]+)\)' "$FILE" \
-    | sed -E 's/.*\((https?:\/\/[^)]+)\)$/\1/'
-  grep -oE 'https?://[^][(){}<>"'\''[:space:]]+' "$FILE"
-} | sort -u
+# {
+#   grep -oE '\[[^]]+\]\((https?://[^)]+)\)' "$FILE" \
+#     | sed -E 's/.*\((https?:\/\/[^)]+)\)$/\1/'
+#   grep -oE 'https?://[^][(){}<>"'\''[:space:]]+' "$FILE"
+# } | sort -u
+
+rg -o '[[^]>]+]((https?://[^)>]+))' -r '$1' "$FILE" | sort -u
