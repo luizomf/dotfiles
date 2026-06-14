@@ -41,6 +41,10 @@ case $template in
     if [[ -f "$persistent_home/.codex/auth.json" ]]; then
       cp "$persistent_home/.codex/auth.json" "$tmp_home/.codex/auth.json"
     fi
+
+    if [[ -f "$persistent_home/.codex/AGENTS.md" ]]; then
+      cp "$persistent_home/.codex/AGENTS.md" "$tmp_home/.codex/AGENTS.md"
+    fi
     shift
     ;;
   claude-code)
