@@ -18,7 +18,7 @@ export OLLAMA_HOST=192.168.0.109:11434
 export OLLAMA_TIMEOUT_MS=10000
 export OLLAMA_LOAD_TIMEOUT='10m'
 export OLLAMA_KEEP_ALIVE='10m'
-export LOCAL_MODEL="qwen3.6:35b-a3b-mxfp8"
+export LOCAL_MODEL="qwen3.6:35b-a3b-mlx-bf16"
 export MODEL="${LOCAL_MODEL}"
 
 export KOKORO_VOICES_PT='pf_dora,af_heart,if_sara,ff_siwis,ef_dora,pm_santa'

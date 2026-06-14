@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-MODEL="${MODEL:-qwen3.6:35b-a3b-mxfp8}"
+MODEL="${MODEL:-qwen3.6:35b-a3b-mlx-bf16}"
 
 main () {
   local prompt=''

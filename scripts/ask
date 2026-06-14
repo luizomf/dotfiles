@@ -13,7 +13,7 @@ Prompt input:
   stdin                 Read the prompt from a pipe or heredoc
 
 Options:
-  -m, --model <model>   Model alias/name (default: \${MODEL:-qwen3.6:35b-a3b-mxfp8})
+  -m, --model <model>   Model alias/name (default: \${MODEL:-qwen3.6:35b-a3b-mlx-bf16})
   -t, --tts             Enable TTS
   -l, --lang <lang>     TTS language: a/en -> voiceen, p/pt -> voicept (default: a)
   -v, --voice <value>   Legacy option; a/p/en/pt also select the TTS language
@@ -50,7 +50,7 @@ main() {
   # shellcheck disable=SC1091
   . "${HOME}/dotfiles/zsh/config/aliases"
 
-  local model="${MODEL:-qwen3.6:35b-a3b-mxfp8}"
+  local model="${MODEL:-qwen3.6:35b-a3b-mlx-bf16}"
   local prompt=""
   local editor=0
   local tts_lang="a"
