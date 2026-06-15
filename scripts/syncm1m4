@@ -1,11 +1,8 @@
 #!/usr/bin/env zsh
 
-set -euo pipefail
-
 fc -W
 
 "$HOME"/dotfiles/scripts/zsh_history_sync.py
-
 "$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh
 
 sleep 2
@@ -22,8 +19,25 @@ sleep 2
 
 ls -lah "$HOME"/.local/share/tmux/resurrect
 
+echo
+prline
+
+# m4128
 rsync -havz --progress --stats "$HOME"/.local/share/tmux/resurrect/ \
   m4128:~/.local/share/tmux/resurrect/ --delete
 
 rsync -havz --progress --stats "$HOME"/Desktop/tutoriais_e_cursos/ \
   m4128:~/Desktop/tutoriais_e_cursos --delete
+
+echo
+prline
+
+# fedoraair
+rsync -havz --progress --stats "$HOME"/.local/share/tmux/resurrect/ \
+  fedoraair:~/.local/share/tmux/resurrect/ --delete
+
+rsync -havz --progress --stats "$HOME"/Desktop/tutoriais_e_cursos/ \
+  fedoraair:~/Desktop/tutoriais_e_cursos --delete
+
+echo
+prline
