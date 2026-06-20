@@ -5,12 +5,12 @@
 # shellcheck disable=SC1091
 [[ -f ~/.env ]] && source "${HOME}/.env"
 
-if [[ -z "$SPLASH_SHOWN" ]]; then
-  export SPLASH_SHOWN=1
-  # printf "%b\n\n" "$(< "${HOME}/dotfiles/zsh/splash.txt")"
-  clear ; fastfetch --data "$(printf "%b\n\n" "$(< "${HOME}/dotfiles/zsh/splash.txt")")"
-  # printf "%b\n\n" "$(cat "${HOME}/dotfiles/zsh/splash.txt")"
-fi
+# if [[ -z "$SPLASH_SHOWN" ]]; then
+#   export SPLASH_SHOWN=1
+#   # printf "%b\n\n" "$(< "${HOME}/dotfiles/zsh/splash.txt")"
+#   clear ; fastfetch --data "$(printf "%b\n\n" "$(< "${HOME}/dotfiles/zsh/splash.txt")")"
+#   # printf "%b\n\n" "$(cat "${HOME}/dotfiles/zsh/splash.txt")"
+# fi
 
 
 ZSH_CONFIG_DIR="$HOME/dotfiles/zsh/config"

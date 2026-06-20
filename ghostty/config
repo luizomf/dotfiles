@@ -36,5 +36,9 @@ background-blur = false
 cursor-style = block
 cursor-style-blink = true
 
+# Quick terminal
+quick-terminal-size = 50%,100%
+quick-terminal-position = top
+
 # Binds Command + ` to toggle the Quick Terminal globally
-# keybind = global:cmd+grave_accent=toggle_quick_terminal
+keybind = global:cmd+shift+'=toggle_quick_terminal
