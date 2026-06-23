@@ -10,7 +10,7 @@ cleanup() {
 
 INPUT_FILE="${1:?'Missing input file path.'}"
 
-export PROJECTS_DIR="${PROJECTS_DIR:-/Users/luizotavio/Desktop/tutoriais_e_cursos}"
+export PROJECTS_DIR="${PROJECTS_DIR:-$HOME/Desktop/tutoriais_e_cursos}"
 export OMNIVOICE_DIR="${PROJECTS_DIR}/omnivoicetts"
 
 kill_omnivoice
