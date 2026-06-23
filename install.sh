@@ -119,9 +119,9 @@ elif [[ "$OP_SYSTEM" == "ubuntu" ]]; then
   if ! command -v zsh &> /dev/null; then
     loginfo "Installing ZSH..."
     sudo apt install zsh -y
-    chsh -s $(which zsh)
+    chsh -s "$(which zsh)"
   else
-    loginfo "nvim já instalado..."
+    loginfo "zsh já instalado..."
   fi
 
 
@@ -231,6 +231,27 @@ ln -sf "$HOME/dotfiles/zsh/config/omtheme.zsh-theme" "$ZSH_CUSTOM/themes/omtheme
 rm -Rf "$HOME/.gitconfig"
 ln -sf "$HOME/dotfiles/git/.gitconfig" "$HOME/.gitconfig"
 
+# Identidade do Git — fica em ~/.gitconfig.local (NÃO versionado).
+# O git/.gitconfig inclui esse arquivo. Perguntamos seu nome e e-mail aqui
+# pra que seus commits saiam com a SUA identidade, e não com a de outra pessoa.
+GIT_LOCAL="$HOME/.gitconfig.local"
+if git config -f "$GIT_LOCAL" user.name > /dev/null 2>&1; then
+  loginfo "Identidade do Git já existe em ~/.gitconfig.local. Mantendo."
+else
+  loginfo "Configure sua identidade do Git (vai aparecer nos seus commits):"
+  read -rp "  Seu nome   (git user.name) : " GIT_USER_NAME
+  read -rp "  Seu e-mail (git user.email): " GIT_USER_EMAIL
+  if [ -n "$GIT_USER_NAME" ] && [ -n "$GIT_USER_EMAIL" ]; then
+    git config -f "$GIT_LOCAL" user.name "$GIT_USER_NAME"
+    git config -f "$GIT_LOCAL" user.email "$GIT_USER_EMAIL"
+    logsuccess "Identidade salva em ~/.gitconfig.local."
+  else
+    logerror "Nome ou e-mail vazio — pulei essa etapa. Configure depois com:"
+    echo "  git config -f ~/.gitconfig.local user.name \"Seu Nome\""
+    echo "  git config -f ~/.gitconfig.local user.email \"voce@exemplo.com\""
+  fi
+fi
+
 # Tmux
 rm -Rf "$HOME/.tmux.conf"
 ln -sf "$HOME/dotfiles/tmux/.tmux.conf" "$HOME/.tmux.conf"
@@ -246,6 +267,10 @@ ln -sf "$HOME/dotfiles/nvim" "$HOME/.config/nvim"
 # Ghostty
 rm -Rf "$HOME/.config/ghostty"
 ln -sf "$HOME/dotfiles/ghostty" "$HOME/.config/ghostty"
+
+# Fastfetch
+rm -Rf "$HOME/.config/fastfetch"
+ln -sf "$HOME/dotfiles/fastfetch" "$HOME/.config/fastfetch"
 
 # Google Drive
 rm -Rf "$HOME/gdrive"
