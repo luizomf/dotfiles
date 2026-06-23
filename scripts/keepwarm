@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+#
+# keepwarm — keeps Claude's OAuth token alive in the sannux *persistent*
+# container.
+#
+# The ephemeral containers (sannux_ephemeral) copy the persistent home and,
+# at the end, `rm -rf` it — throwing away any token refresh they performed.
+# Because of refresh-token rotation (only one is valid at a time), an
+# ephemeral that refreshes and then discards invalidates the persistent token.
+#
+# This script avoids that by periodically pinging claude via `sannux run`
+# (which mounts the persistent home read-write), keeping the *access token*
+# always fresh. That way the ephemerals always copy a valid token and never
+# need to refresh on their own.
+#
+# INTERVAL must be shorter than the access-token lifetime, so that some ping
+# always lands near expiry and triggers the refresh that gets persisted.
+
+set -uo pipefail
+
+LOG_FILE="$HOME/dotfiles/scripts/keepwarm.log"
+
+INTERVAL="4h"        # Default: 4h  — time between pings (< access-token lifetime)
+INITIAL_RUN=1        # Default: 1   — 1 = ping once shortly after starting
+INITIAL_DELAY="10m"  # Default: 10m — wait before the first ping
+
+# Kill any previous instance. The [k] trick avoids matching the pkill itself.
+pkill -9 -f "[k]eepwarm" >/dev/null 2>&1 || true
+
+log() {
+  printf '%s %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$1" >> "$LOG_FILE"
+}
+
+trap 'log "TERM/INT received, exiting"; exit 0' TERM INT
+
+maybe_sleep() {
+  [ -n "${1:-}" ] && sleep "$1"
+}
+
+ping_claude() {
+  local out rc
+  out="$(echo "Testing. Answer with true" | sannux run \
+    claude-code -p - --no-session-persistence \
+      --model haiku --effort low 2>&1)"
+  rc=$?
+
+  # A failed ping does NOT kill the loop — just log it and retry next cycle.
+  if [ "$rc" -eq 0 ]; then
+    log "ping ok: $(printf '%s' "$out" | tr '\n' ' ')"
+  else
+    log "ping FAILED (rc=$rc): $(printf '%s' "$out" | tr '\n' ' ')"
+  fi
+}
+
+reload_loop() {
+  if [ "$INITIAL_RUN" -eq 1 ]; then
+    maybe_sleep "$INITIAL_DELAY"
+    ping_claude
+  fi
+
+  while :; do
+    maybe_sleep "$INTERVAL"
+    ping_claude
+  done
+}
+
+log "keepwarm started (interval=$INTERVAL, initial_run=$INITIAL_RUN, initial_delay=$INITIAL_DELAY)"
+reload_loop &
+disown
