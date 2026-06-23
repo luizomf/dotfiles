@@ -17,7 +17,7 @@ else
   if ! tmux has-session -t "${SESSION_NAME}" 2> /dev/null; then
       # If not, we create it
       tmux new-session -d -s "${SESSION_NAME}" -n "${WINDOW_NAME}1" -c "${CURDIR}"
-      tmux new-window  -d -t "${SESSION_NAME}" -n "${WINDOW_NAME}2" -c "${CURDIR}"
+      # tmux new-window  -d -t "${SESSION_NAME}" -n "${WINDOW_NAME}2" -c "${CURDIR}"
   fi
 
   # Open the popup
