@@ -11,6 +11,10 @@
 [pull]
   rebase=true
 
-[user]
-	email = luizomf@gmail.com
-	name = Otávio Miranda
+# A identidade (user.name / user.email) NÃO fica versionada aqui.
+# Ela vai em ~/.gitconfig.local, que o install.sh cria perguntando o seu
+# nome e e-mail. Assim cada pessoa commita com a própria identidade e
+# ninguém acaba commitando no nome de outra pessoa sem querer.
+# Git ignora silenciosamente este include se o arquivo não existir.
+[include]
+	path = ~/.gitconfig.local
