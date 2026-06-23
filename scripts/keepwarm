@@ -20,9 +20,9 @@ set -uo pipefail
 
 LOG_FILE="$HOME/dotfiles/scripts/keepwarm.log"
 
-INTERVAL="4h"        # Default: 4h  — time between pings (< access-token lifetime)
+INTERVAL="3h"        # Default: 3h  — time between pings (< access-token lifetime)
 INITIAL_RUN=1        # Default: 1   — 1 = ping once shortly after starting
-INITIAL_DELAY="10m"  # Default: 10m — wait before the first ping
+INITIAL_DELAY="10s"  # Default: 10s — wait before the first ping
 
 # Kill any previous instance. The [k] trick avoids matching the pkill itself.
 pkill -9 -f "[k]eepwarm" >/dev/null 2>&1 || true
