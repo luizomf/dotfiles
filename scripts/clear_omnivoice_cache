@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-export PROJECTS_DIR="${PROJECTS_DIR:-/Users/luizotavio/Desktop/tutoriais_e_cursos}"
+export PROJECTS_DIR="${PROJECTS_DIR:-$HOME/Desktop/tutoriais_e_cursos}"
 export OMNIVOICE_DIR="${PROJECTS_DIR}/omnivoicetts"
 
 (

@@ -96,7 +96,7 @@ elif [[ "$OP_SYSTEM" == "ubuntu" ]]; then
   sudo apt install lua5.4 liblua5.4-dev unzip make build-essential luarocks ripgrep tree-sitter-cli
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-  brew install gcc
+  brew install gcc fastfetch
 
   # Infelizmente vamos ter que buildar o neovim do zero
   # não achei uma versão recente para Ubuntu
@@ -272,13 +272,15 @@ ln -sf "$HOME/dotfiles/ghostty" "$HOME/.config/ghostty"
 rm -Rf "$HOME/.config/fastfetch"
 ln -sf "$HOME/dotfiles/fastfetch" "$HOME/.config/fastfetch"
 
-# Google Drive
-rm -Rf "$HOME/gdrive"
-ln -sf "$HOME/Google Drive" "$HOME/gdrive"
+# Google Drive (apenas macOS — depende de ~/Library/CloudStorage)
+if [[ "$OP_SYSTEM" == "darwin" ]]; then
+  rm -Rf "$HOME/gdrive"
+  ln -sf "$HOME/Google Drive" "$HOME/gdrive"
 
-# Google Drive (Shorter)
-GDRIVE_PATH=$(find "$HOME/Library/CloudStorage" -maxdepth 1 -name "GoogleDrive-*" -type d | head -n 1)
-[ -n "$GDRIVE_PATH" ] && rm -f "$HOME/gdrive" && ln -s "$GDRIVE_PATH" "$HOME/gdrive"
+  # Google Drive (Shorter)
+  GDRIVE_PATH=$(find "$HOME/Library/CloudStorage" -maxdepth 1 -name "GoogleDrive-*" -type d | head -n 1)
+  [ -n "$GDRIVE_PATH" ] && rm -f "$HOME/gdrive" && ln -s "$GDRIVE_PATH" "$HOME/gdrive"
+fi
 
 echo -e "
 [1;33mATENÇÃO: Passos manuais necessários:[0m"
