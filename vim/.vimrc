@@ -26,7 +26,7 @@ set smartindent
 set noautoindent
 set nosmartindent
 set mouse=""
-set clipboard=unnamedplus
+set clipboard=unnamed
 set nowrap
 set backspace=indent,eol,start
 set formatoptions-=t
