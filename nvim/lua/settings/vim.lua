@@ -20,6 +20,27 @@ vim.opt.smartindent = true
 
 vim.opt.mouse = ""
 vim.opt.clipboard = "unnamedplus"
+
+-- Clipboard
+if os.getenv("SSH_TTY") or os.getenv("SSH_CONNECTION") then
+  local osc52 = require("vim.ui.clipboard.osc52")
+  vim.g.clipboard = {
+    name = "OSC 52",
+    copy = {
+      ["+"] = osc52.copy("+"),
+      ["*"] = osc52.copy("*"),
+    },
+    paste = {
+      ["+"] = function()
+        return vim.split(vim.fn.getreg('"'), "\n")
+      end,
+      ["*"] = function()
+        return vim.split(vim.fn.getreg('"'), "\n")
+      end,
+    },
+  }
+end
+
 vim.opt.wrap = false
 vim.opt.hlsearch = true
 vim.opt.incsearch = true
