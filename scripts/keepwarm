@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 #
-# keepwarm — keeps Claude's OAuth token alive in the sannux *persistent*
-# container.
+# keepwarm — keeps the OAuth tokens of Claude and Codex alive in the sannux
+# *persistent* container.
 #
 # The ephemeral containers (sannux_ephemeral) copy the persistent home and,
 # at the end, `rm -rf` it — throwing away any token refresh they performed.
 # Because of refresh-token rotation (only one is valid at a time), an
 # ephemeral that refreshes and then discards invalidates the persistent token.
 #
-# This script avoids that by periodically pinging claude via `sannux run`
+# This script avoids that by periodically pinging each agent via `sannux run`
 # (which mounts the persistent home read-write), keeping the *access token*
 # always fresh. That way the ephemerals always copy a valid token and never
 # need to refresh on their own.
@@ -37,30 +37,37 @@ maybe_sleep() {
   [ -n "${1:-}" ] && sleep "$1"
 }
 
-ping_claude() {
+run_ping() {
+  # $1 = label for the log; remaining args = the command to pipe the prompt to.
+  local label="$1"; shift
   local out rc
-  out="$(echo "Testing. Answer with true" | sannux run \
-    claude-code -p - --no-session-persistence \
-      --model haiku --effort low 2>&1)"
+  out="$(echo "Testing. Answer with true" | "$@" 2>&1)"
   rc=$?
 
   # A failed ping does NOT kill the loop — just log it and retry next cycle.
   if [ "$rc" -eq 0 ]; then
-    log "ping ok: $(printf '%s' "$out" | tr '\n' ' ')"
+    log "$label ping ok: $(printf '%s' "$out" | tr '\n' ' ')"
   else
-    log "ping FAILED (rc=$rc): $(printf '%s' "$out" | tr '\n' ' ')"
+    log "$label ping FAILED (rc=$rc): $(printf '%s' "$out" | tr '\n' ' ')"
   fi
+}
+
+ping_agents() {
+  run_ping claude sannux run \
+    claude-code -p - --no-session-persistence --model haiku --effort low
+  run_ping codex sannux run \
+    codex exec --yolo - --ephemeral --model gpt-5.4-mini -c model_reasoning_effort=low
 }
 
 reload_loop() {
   if [ "$INITIAL_RUN" -eq 1 ]; then
     maybe_sleep "$INITIAL_DELAY"
-    ping_claude
+    ping_agents
   fi
 
   while :; do
     maybe_sleep "$INTERVAL"
-    ping_claude
+    ping_agents
   done
 }
 
