@@ -40,15 +40,21 @@ maybe_sleep() {
 run_ping() {
   # $1 = label for the log; remaining args = the command to pipe the prompt to.
   local label="$1"; shift
-  local out rc
-  out="$(echo "Testing. Answer with true" | "$@" 2>&1)"
+  local out err rc errfile
+  # Keep stdout (the agent's answer) and stderr (banners, progress, container
+  # noise) apart: codex dumps a verbose, ANSI-colored banner on stderr that
+  # would otherwise pollute every successful ping. We only want the answer on
+  # success, and the diagnostics only when something actually fails.
+  errfile="$(mktemp)"
+  out="$(echo "Testing. Answer with true" | "$@" 2>"$errfile")"
   rc=$?
+  err="$(cat "$errfile")"; rm -f "$errfile"
 
   # A failed ping does NOT kill the loop — just log it and retry next cycle.
   if [ "$rc" -eq 0 ]; then
     log "$label ping ok: $(printf '%s' "$out" | tr '\n' ' ')"
   else
-    log "$label ping FAILED (rc=$rc): $(printf '%s' "$out" | tr '\n' ' ')"
+    log "$label ping FAILED (rc=$rc): $(printf '%s' "$err" | tr '\n' ' ')"
   fi
 }
 
@@ -56,7 +62,7 @@ ping_agents() {
   run_ping claude sannux run \
     claude-code -p - --no-session-persistence --model haiku --effort low
   run_ping codex sannux run \
-    codex exec --yolo - --ephemeral --model gpt-5.4-mini -c model_reasoning_effort=low
+    codex exec --yolo - --ephemeral --model gpt-5.4-mini -c model_reasoning_effort=low --color never
 }
 
 reload_loop() {
