@@ -69,11 +69,17 @@ ping_agents() {
 reload_loop() {
   if [ "$INITIAL_RUN" -eq 1 ]; then
     maybe_sleep "$INITIAL_DELAY"
+
+    ping_agents
+    sleep 30
     ping_agents
   fi
 
   while :; do
     maybe_sleep "$INTERVAL"
+
+    ping_agents
+    sleep 30
     ping_agents
   done
 }
