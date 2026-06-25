@@ -2,5 +2,24 @@
 
 set -euo pipefail
 
-codex --search --model gpt-5.4-mini -c model_reasoning_effort=none exec --ephemeral --ignore-user-config --ignore-rules 2>/dev/null
+#
+# Note: for open source models
+#
+# codex \
+#   --strict-config -c model='qwen3.6:35b-a3b-mlx-bf16' \
+#   -c model_catalog_json="$HOME/.ollama/service/ollama_models.json" \
+#   -c model_reasoning_effort='max' -c model_provider='a' \
+#   -c model_providers.a.name='a' \
+#   -c model_providers.a.base_url='http://192.168.0.109:11434/v1/' \
+#   -c model_providers.a.wire_api='responses' \
+#   --yolo
+#
+
+codex \
+  --search \
+  --model gpt-5.4-mini \
+  -c model_reasoning_effort=none exec \
+  --ephemeral \
+  --ignore-user-config \
+  --ignore-rules 2>/dev/null
 
