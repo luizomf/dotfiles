@@ -61,7 +61,7 @@ run_ping() {
 ping_agents() {
   run_ping claude sannux run \
     claude-code -p - --model haiku --effort low --dangerously-skip-permissions
-  sannux run claude-code auth status
+  sannux run claude-code auth status >/dev/null 2>&1 || true
   run_ping codex sannux run \
     codex exec --yolo - --ephemeral --model gpt-5.4-mini -c model_reasoning_effort=low --color never
 }
