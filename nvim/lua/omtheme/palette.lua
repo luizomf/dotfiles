@@ -74,10 +74,12 @@ M.green_light = "#72ffcd" -- ANSI bright green
 M.green_mint = "#a0ffe0" -- mint
 
 -- ┌──────────────────────────────────────────────────┐
--- │  Cyans / Teals                                   │
+-- │  Cyans / Teals (Accent)                          │
 -- │  The glowing river, crystals and mushrooms       │
 -- └──────────────────────────────────────────────────┘
--- M.cyan = "#30f4f2" -- ANSI cyan (neon teal)
+-- M.cyan = "#30f4f2" -- (old accent) ANSI cyan (neon teal)
+
+-- MAIN ACCENT COLOR
 M.cyan = "#6bccff" -- ANSI cyan (neon teal)
 -- M.teal = "#20d8d6" -- teal (borders, links)
 M.teal = "#77dbff" -- teal (borders, links)
