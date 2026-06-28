@@ -4,13 +4,13 @@ local M = {}
 -- │  Background / Foreground                         │
 -- │  Deep indigo terrain + lavender text             │
 -- └──────────────────────────────────────────────────┘
-M.bg = "#0f0f14"
-M.fg = "#eae8ff"
+M.bg = "#000000" -- old #0f0f14
+M.fg = "#f0f0ff" -- old #eae8ff
 
 -- ┌──────────────────────────────────────────────────┐
 -- │  Grays (blue-purple tinted, darkest → lightest)  │
 -- └──────────────────────────────────────────────────┘
-M.black = "#06060c"
+M.black = "#000000" -- old #06060c
 
 M.gray_00 = "#08080f"
 M.gray_01 = "#0a0a14"
@@ -41,7 +41,7 @@ M.gray_25 = "#d2d2ec"
 M.gray_26 = "#dadaf2"
 M.gray_27 = "#e2e2f6"
 
-M.white = "#f0efff"
+M.white = "#f0f0ff"
 
 -- Semantic alias
 M.comment = M.gray_08

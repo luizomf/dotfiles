@@ -66,7 +66,7 @@ M.set_groups = function()
   -- └─────────────────────────────────────────────┘
   hl("CursorLine", { bg = p.gray_02 })
   hl("CursorColumn", { bg = p.gray_02 })
-  hl("CursorLineNr", { bold = false, fg = p.magenta })
+  hl("CursorLineNr", { bold = false, bg = p.gray_02, fg = p.magenta })
   hl("ColorColumn", { bg = p.gray_02 })
   hl("VirtColumn", { link = "ColorColumn" })
   hl("SignColumn", { fg = p.gray_08 })
