@@ -78,19 +78,19 @@ M.set_groups = function()
   -- │  Search / Visual / Substitute               │
   -- └─────────────────────────────────────────────┘
   hl("Search", { fg = p.gray_22, bg = p.blue_deep })
-  hl("IncSearch", { fg = p.black, bg = p.orange })
+  hl("IncSearch", { fg = p.gray_01, bg = p.orange })
   hl("Visual", { bg = p.gray_04 })
   hl("VisualNOS", { bg = p.gray_04 })
-  hl("Substitute", { fg = p.black, bg = p.red })
+  hl("Substitute", { fg = p.gray_01, bg = p.red })
 
   -- ┌─────────────────────────────────────────────┐
   -- │  Status / Window / Tab                      │
   -- └─────────────────────────────────────────────┘
-  hl("StatusLine", { fg = p.gray_24, bg = p.black })
-  hl("StatusLineNC", { fg = p.gray_06, bg = p.black })
+  hl("StatusLine", { fg = p.gray_24, bg = p.gray_01 })
+  hl("StatusLineNC", { fg = p.gray_06, bg = p.gray_01 })
   hl("WinSeparator", { bold = true, fg = p.gray_02 })
   hl("VertSplit", { fg = p.gray_02 })
-  hl("TabLine", { fg = p.gray_06, bg = p.black })
+  hl("TabLine", { fg = p.gray_06, bg = p.gray_01 })
   hl("TabLineSel", { fg = p.gray_02, bg = p.blue_light })
   hl("TabLineFill", { bg = p.gray_01 })
   hl("Title", { bold = true, fg = p.blue_light })
@@ -108,20 +108,20 @@ M.set_groups = function()
   -- ┌─────────────────────────────────────────────┐
   -- │  Popup / Completion Menu                    │
   -- └─────────────────────────────────────────────┘
-  hl("Pmenu", { fg = p.gray_22, bg = p.black })
+  hl("Pmenu", { fg = p.gray_22, bg = p.gray_01 })
   hl("PmenuSel", { bg = p.gray_03 })
-  hl("PmenuMatch", { fg = p.blue, bg = p.black })
+  hl("PmenuMatch", { fg = p.blue, bg = p.gray_00 })
   hl("PmenuMatchSel", { fg = p.blue, bg = p.gray_03 })
-  hl("PmenuSbar", { bg = p.black })
+  hl("PmenuSbar", { bg = p.gray_00 })
   hl("PmenuThumb", { bg = p.gray_06 })
   hl("QuickFixLine", { bold = true, bg = p.gray_03 })
 
   -- ┌─────────────────────────────────────────────┐
   -- │  Floating Windows                           │
   -- └─────────────────────────────────────────────┘
-  hl("NormalFloat", { bg = p.black })
-  hl("FloatBorder", { fg = p.teal, bg = p.black })
-  hl("FloatTitle", { fg = p.teal, bg = p.black })
+  hl("NormalFloat", { bg = p.gray_01 })
+  hl("FloatBorder", { fg = p.teal, bg = p.gray_03 })
+  hl("FloatTitle", { fg = p.teal, bg = p.gray_03 })
   hl("FloatShadow", { bg = p.gray_03, blend = 80 })
   hl("FloatShadowThrough", { bg = p.gray_03, blend = 100 })
 
@@ -250,7 +250,7 @@ M.set_groups = function()
   hl("LspReferenceText", { bg = p.gray_06 })
   hl("LspReferenceWrite", { bg = p.gray_06 })
   hl("LspSignatureActiveParameter", { bold = true, bg = p.gray_05 })
-  hl("LspInfoBorder", { fg = p.teal, bg = p.black })
+  hl("LspInfoBorder", { fg = p.teal, bg = p.gray_03 })
   hl("@lsp.type.interface", { fg = p.blue_light })
   hl("@lsp.type.unresolvedReference", { undercurl = true, sp = p.red })
   hl("@lsp.typemod.typeAlias.defaultLibrary", { fg = p.blue })
@@ -280,10 +280,10 @@ M.set_groups = function()
   -- ┌─────────────────────────────────────────────┐
   -- │  Telescope                                  │
   -- └─────────────────────────────────────────────┘
-  hl("TelescopeNormal", { fg = p.fg, bg = p.bg })
-  hl("TelescopeBorder", { fg = p.gray_06, bg = p.bg })
-  hl("TelescopePromptTitle", { fg = p.white, bg = p.bg })
-  hl("TelescopePromptBorder", { fg = p.gray_06, bg = p.bg })
+  hl("TelescopeNormal", { fg = p.fg, bg = p.gray_01 })
+  hl("TelescopeBorder", { fg = p.gray_06, bg = p.gray_01 })
+  hl("TelescopePromptTitle", { fg = p.white, bg = p.gray_01 })
+  hl("TelescopePromptBorder", { fg = p.gray_06, bg = p.gray_01 })
   hl("TelescopeResultsComment", { fg = p.white })
   hl("TelescopeSelection", { fg = p.cyan, bg = p.gray_02 })
   hl("TelescopeMatching", { fg = p.cyan, bg = p.gray_02 })
@@ -308,8 +308,8 @@ M.set_groups = function()
   hl("CmpItemKindTabNine", { fg = p.teal })
   hl("CmpItemKindCodeium", { fg = p.teal })
   hl("CmpGhostText", { fg = p.blue_deep })
-  hl("CmpDocumentation", { fg = p.gray_22, bg = p.black })
-  hl("CmpDocumentationBorder", { fg = p.teal, bg = p.black })
+  hl("CmpDocumentation", { fg = p.gray_22, bg = p.gray_01 })
+  hl("CmpDocumentationBorder", { fg = p.teal, bg = p.gray_01 })
   hl("ComplHint", { fg = p.comment })
 
   -- ┌─────────────────────────────────────────────┐
@@ -324,9 +324,9 @@ M.set_groups = function()
   hl("debugPC", { bg = p.gray_01 })
   hl("debugBreakpoint", { fg = p.aqua, bg = p.gray_08 })
   hl("RedrawDebugNormal", { reverse = true })
-  hl("RedrawDebugClear", { fg = p.black, bg = p.yellow })
+  hl("RedrawDebugClear", { fg = p.gray_02, bg = p.yellow })
   hl("RedrawDebugComposed", { bg = p.green })
-  hl("RedrawDebugRecompose", { fg = p.black, bg = p.red })
+  hl("RedrawDebugRecompose", { fg = p.gray_02, bg = p.red })
 
   -- ┌─────────────────────────────────────────────┐
   -- │  Health                                     │
