@@ -13,8 +13,8 @@ M.fg = "#f0f0ff" -- old #eae8ff
 M.black = "#000000" -- old #06060c
 
 M.gray_00 = "#08080f"
-M.gray_01 = "#0a0a14"
-M.gray_02 = "#14141e"
+M.gray_01 = "#14141f"
+M.gray_02 = "#161622"
 M.gray_03 = "#1c1c2a"
 M.gray_04 = "#242436"
 M.gray_05 = "#2c2c40"
