@@ -14,6 +14,8 @@ ZSH_HIGHLIGHT_STYLES[comment]='fg=240'
 ZSH_HIGHLIGHT_STYLES[default]='fg=251'
 ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=red,bold'
 
+export MANPAGER='nvim +Man!'
+
 export OLLAMA_HOST=192.168.0.109:11434
 export OLLAMA_TIMEOUT_MS=10000
 export OLLAMA_LOAD_TIMEOUT='10m'
