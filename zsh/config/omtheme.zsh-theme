@@ -51,7 +51,7 @@ local RESET_ALL="%f%k"
 ZSH_THEME_GIT_PROMPT_PREFIX=" ${FG_CYAN}("
 ZSH_THEME_GIT_PROMPT_SUFFIX="${FG_CYAN})${RESET_ALL}"
 ZSH_THEME_GIT_PROMPT_DIRTY="${FG_RED} ✱${RESET_ALL}"
-ZSH_THEME_GIT_PROMPT_CLEAN="${FG_GREEN} ●${RESET_ALL}"
+ZSH_THEME_GIT_PROMPT_CLEAN="${FG_GREEN}${RESET_ALL}"
 
 # Desativa o prompt padrão do venv - (.venv)
 # Sem isso, o tema duplicaria o nome do venv
