@@ -2,7 +2,7 @@
 theme = omtheme
 
 # Font
-font-family = Inconsolata
+font-family = Fira Code
 font-size = 28
 # Disable Ligatures completely
 font-feature = -calt
