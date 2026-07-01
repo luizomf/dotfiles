@@ -83,6 +83,8 @@ brew "watch"
 brew "wget"
 # Tools for the WireGuard secure network tunnel
 brew "wireguard-tools"
+# Utilities to create and convert Web Open Font File (WOFF) files
+brew "woff2"
 # HTTP benchmarking tool
 brew "wrk"
 # General-purpose lossless data-compression library
