@@ -32,6 +32,7 @@ restart_terminal() {
   ]]; then
     "$tmux_bin" respawn-window -k || true
   fi
+
   exit 0
 }
 
