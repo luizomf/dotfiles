@@ -70,7 +70,7 @@ brew "sox"
 # Tool Command Language
 brew "tcl-tk"
 # Terminal multiplexer
-brew "tmux"
+brew "tmux", args: ["HEAD"]
 # Display directories as trees (with optional color/HTML output)
 brew "tree"
 # Parser generator tool
