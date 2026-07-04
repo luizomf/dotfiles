@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+export MANPAGER='less'
+
 readonly DEFAULT_RICH_VERSION="14.1.0"
 
 usage() {
