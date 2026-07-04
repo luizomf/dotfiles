@@ -2,7 +2,7 @@
 
 SESSION_NAME="${1:-float}"
 WINDOW_NAME="${2:-term}"
-CURDIR="${3:-$(pwd)}"
+CURDIR="${3:-$(tmux display-message -p '#{pane_current_path}')}"
 
 CURRENT_SESSION=$(tmux display-message -p "#{session_name}")
 
@@ -17,12 +17,13 @@ else
   if ! tmux has-session -t "${SESSION_NAME}" 2> /dev/null; then
       # If not, we create it
       tmux new-session -d -s "${SESSION_NAME}" -n "${WINDOW_NAME}1" -c "${CURDIR}"
+      tmux set status
       # tmux new-window  -d -t "${SESSION_NAME}" -n "${WINDOW_NAME}2" -c "${CURDIR}"
   fi
 
   # Open the popup
   # -E: closes when command ends
   # attach: attach to the floating session
-  tmux popup -d "#{pane_current_path}" -xC -yC -w80% -h80% \
+  tmux popup -d "#{pane_current_path}" -xC -yC -w90% -h90% \
       -E "tmux attach -t ${SESSION_NAME}"
 fi
