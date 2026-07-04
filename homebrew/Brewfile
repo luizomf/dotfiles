@@ -29,6 +29,8 @@ brew "fd"
 brew "fzf"
 # GitHub command-line tool
 brew "gh"
+# Render markdown on the CLI
+brew "glow"
 # Open source programming language to build simple/reliable/efficient software
 brew "go"
 # Improved top (interactive process viewer)
