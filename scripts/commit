@@ -17,4 +17,4 @@ PROMPT+="Do not touch, edit, or delete files. Your only task is to document what
 PROMPT+="and confirm the changes. Be careful about expanding bash and zsh commands in your messages."
 
 # MODEL="${MODEL}" printf "%b" "${PROMPT}\n" | ollama_os
-printf "%b" "${PROMPT}\n" | sannux_ephemeral codex-ollama exec --ephemeral --yolo
+printf "%b" "${PROMPT}\n" | sannux_ephemeral codex-ollama exec --ephemeral --yolo "${@:-}"
