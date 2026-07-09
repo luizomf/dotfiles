@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+find "${PROJECTS_DIR}" -type d -maxdepth 1 -mindepth 1  \
+  -exec bash -lc '
+  set -euo pipefail
+  cd {} || exit 1
+  git status --porcelain >/dev/null 2>&1
+  echo "{}"
+  git pull --ff-only
+  prline 
+  ' \;
+
