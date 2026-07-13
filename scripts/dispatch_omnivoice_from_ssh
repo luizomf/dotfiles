@@ -100,7 +100,8 @@ fi
 # Repeated SSH deliveries must not start concurrent work for the same audio.
 # Terminal markers are history, not locks, so a later explicit dispatch may
 # retry a succeeded or failed job.
-if existing_marker="$("$NODE_BIN" - "$QUEUE_DIR" "$tts_path" <<'NODE'
+if existing_marker="$(
+"$NODE_BIN" - "$QUEUE_DIR" "$tts_path" <<'NODE'
 const fs = require("node:fs");
 const path = require("node:path");
 
