@@ -13,6 +13,7 @@ readonly POSTS_DIR="${SITE_DIR}/src/content/posts/2026"
 readonly ENQUEUE_SCRIPT="/Users/luizotavio/.codex/automations/daily-paper-llm-roundup/hooks/on-end/tts/enqueue-tts-ready.sh"
 readonly QUEUE_DIR="/Users/luizotavio/.codex/automations/daily-paper-llm-roundup/hooks/on-end/tts"
 readonly NODE_BIN="/Users/luizotavio/.nvm/versions/node/v22.18.0/bin/node"
+readonly GIT_BIN="/usr/bin/git"
 
 usage() {
   printf 'Usage: %s <post-slug>\n' "${0##*/}" >&2
@@ -55,6 +56,36 @@ tts_path="${post_dir}/tts.txt"
   printf 'Node executable not found: %s\n' "$NODE_BIN" >&2
   exit 69
 }
+
+[[ -x "$GIT_BIN" ]] || {
+  printf 'Git executable not found: %s\n' "$GIT_BIN" >&2
+  exit 69
+}
+
+current_branch="$($GIT_BIN -C "$SITE_DIR" branch --show-current)"
+if [[ "$current_branch" != "main" ]]; then
+  printf 'Site checkout must be on main before dispatch; found: %s\n' \
+    "${current_branch:-detached HEAD}" >&2
+  exit 75
+fi
+
+if [[ -n "$($GIT_BIN -C "$SITE_DIR" status --porcelain)" ]]; then
+  printf 'Site checkout has local changes; refusing to pull before dispatch.\n' >&2
+  exit 75
+fi
+
+printf 'Updating local site checkout before TTS dispatch...\n'
+if ! "$GIT_BIN" -C "$SITE_DIR" pull --ff-only origin main; then
+  printf 'Could not fast-forward the local site checkout.\n' >&2
+  exit 75
+fi
+
+local_head="$($GIT_BIN -C "$SITE_DIR" rev-parse HEAD)"
+remote_head="$($GIT_BIN -C "$SITE_DIR" rev-parse refs/remotes/origin/main)"
+if [[ "$local_head" != "$remote_head" ]]; then
+  printf 'Local main does not exactly match origin/main after pull; refusing dispatch.\n' >&2
+  exit 75
+fi
 
 [[ -d "$post_dir" ]] || {
   printf 'Post directory does not exist: %s\n' "$post_dir" >&2
