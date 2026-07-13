@@ -1,0 +1,258 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+readonly ENV_FILE="/Users/luizotavio/.env"
+readonly POSTS_ROOT="/Users/luizotavio/Desktop/tutoriais_e_cursos/otaviomiranda.com.br/src/content/posts"
+readonly AUDIO_PATH="/Users/luizotavio/Desktop/paper/final.opus"
+readonly QUEUE_DIR="/Users/luizotavio/.codex/automations/daily-paper-llm-roundup/hooks/on-end/tts"
+readonly NODE_BIN="/Users/luizotavio/.nvm/versions/node/v22.18.0/bin/node"
+readonly UV_BIN="/Users/luizotavio/.local/bin/uv"
+readonly FFPROBE_BIN="/opt/homebrew/bin/ffprobe"
+
+usage() {
+  printf 'Usage: %s [--check] [--force] <post-slug>\n' "${0##*/}" >&2
+  exit 64
+}
+
+check_only=false
+force=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --check)
+      check_only=true
+      shift
+      ;;
+    --force)
+      force=true
+      shift
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      usage
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+[[ $# -eq 1 ]] || usage
+slug="$1"
+
+if [[ ! "$slug" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+  printf 'Invalid post slug: %s\n' "$slug" >&2
+  exit 64
+fi
+
+[[ -r "$ENV_FILE" ]] || {
+  printf 'Environment file is not readable: %s\n' "$ENV_FILE" >&2
+  exit 66
+}
+
+# shellcheck source=/dev/null
+source "$ENV_FILE"
+
+required_vars=(
+  R2_ACCESS_KEY_ID
+  R2_SECRET_ACCESS_KEY
+  R2_ENDPOINT
+  R2_BUCKET
+  R2_PUBLIC_BASE_URL
+)
+
+for var_name in "${required_vars[@]}"; do
+  if [[ -z "${!var_name:-}" ]]; then
+    printf 'Required R2 variable is empty: %s\n' "$var_name" >&2
+    exit 78
+  fi
+done
+
+[[ -x "$NODE_BIN" ]] || {
+  printf 'Node executable not found: %s\n' "$NODE_BIN" >&2
+  exit 69
+}
+
+[[ -x "$FFPROBE_BIN" ]] || {
+  printf 'ffprobe executable not found: %s\n' "$FFPROBE_BIN" >&2
+  exit 69
+}
+
+shopt -s nullglob
+post_matches=("$POSTS_ROOT"/[0-9][0-9][0-9][0-9]/"$slug")
+shopt -u nullglob
+
+if [[ ${#post_matches[@]} -ne 1 ]]; then
+  printf 'Expected exactly one local post for slug %s; found %s.\n' \
+    "$slug" "${#post_matches[@]}" >&2
+  exit 66
+fi
+
+post_dir="${post_matches[0]}"
+year="$(basename "$(dirname "$post_dir")")"
+tts_path="${post_dir}/tts.txt"
+
+[[ -f "$tts_path" ]] || {
+  printf 'TTS source does not exist: %s\n' "$tts_path" >&2
+  exit 66
+}
+
+[[ -s "$AUDIO_PATH" ]] || {
+  printf 'Final OmniVoice audio does not exist or is empty: %s\n' "$AUDIO_PATH" >&2
+  exit 66
+}
+
+# The OmniVoice output path is shared by every post. Require the newest marker
+# for this slug to have succeeded and require final.opus to belong to that run.
+marker="$($NODE_BIN - "$QUEUE_DIR" "$tts_path" "$AUDIO_PATH" <<'NODE'
+const fs = require("node:fs");
+const path = require("node:path");
+
+const [queueDir, ttsPath, audioPath] = process.argv.slice(2);
+const target = path.resolve(ttsPath);
+const names = fs.readdirSync(queueDir)
+  .filter((name) => /^\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.json$/.test(name))
+  .sort()
+  .reverse();
+
+let latest = null;
+let marker = null;
+
+for (const name of names) {
+  const candidate = path.join(queueDir, name);
+  try {
+    const data = JSON.parse(fs.readFileSync(candidate, "utf8"));
+    if (data.kind === "tts-ready" && path.resolve(data.ttsPath) === target) {
+      latest = data;
+      marker = candidate;
+      break;
+    }
+  } catch {
+    // Ignore malformed/unrelated markers, matching the queue runner.
+  }
+}
+
+if (!latest) {
+  console.error("No TTS marker exists for this post.");
+  process.exit(66);
+}
+
+if (latest.status !== "succeeded" || latest.exitCode !== 0) {
+  console.error(`Latest TTS marker is not successful: ${marker} (${latest.status})`);
+  process.exit(75);
+}
+
+const dispatchedAt = Date.parse(latest.dispatchedAt || "");
+const finishedAt = Date.parse(latest.finishedAt || "");
+const audioMtime = fs.statSync(audioPath).mtimeMs;
+
+if (!Number.isFinite(dispatchedAt) || !Number.isFinite(finishedAt)) {
+  console.error(`Successful marker has invalid timestamps: ${marker}`);
+  process.exit(65);
+}
+
+if (audioMtime + 1000 < dispatchedAt || audioMtime > finishedAt + 300000) {
+  console.error(`final.opus does not belong to the latest successful marker: ${marker}`);
+  process.exit(65);
+}
+
+console.log(marker);
+NODE
+)"
+
+codec="$($FFPROBE_BIN -v error -select_streams a:0 \
+  -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 \
+  "$AUDIO_PATH")"
+
+if [[ "$codec" != "opus" ]]; then
+  printf 'Expected Opus audio, found codec: %s\n' "${codec:-unknown}" >&2
+  exit 65
+fi
+
+object_key="content/posts/${year}/${slug}/final.opus"
+public_url="${R2_PUBLIC_BASE_URL%/}/${object_key}"
+
+if [[ "$check_only" == true ]]; then
+  printf 'Ready to upload.\nmarker=%s\naudio=%s\nobject=%s/%s\nurl=%s\n' \
+    "$marker" "$AUDIO_PATH" "$R2_BUCKET" "$object_key" "$public_url"
+  exit 0
+fi
+
+[[ -x "$UV_BIN" ]] || {
+  printf 'uv executable not found: %s\n' "$UV_BIN" >&2
+  exit 69
+}
+
+force_arg=0
+[[ "$force" == true ]] && force_arg=1
+
+"$UV_BIN" run --quiet --with 'boto3>=1.40,<2' python - \
+  "$R2_ENDPOINT" "$R2_BUCKET" "$object_key" "$AUDIO_PATH" \
+  "$public_url" "$force_arg" <<'PY'
+import hashlib
+import os
+import sys
+
+import boto3
+from botocore.exceptions import ClientError
+
+endpoint, bucket, object_key, audio_path, public_url, force_arg = sys.argv[1:]
+force = force_arg == "1"
+
+digest = hashlib.sha256()
+with open(audio_path, "rb") as audio_file:
+    for chunk in iter(lambda: audio_file.read(1024 * 1024), b""):
+        digest.update(chunk)
+sha256 = digest.hexdigest()
+size = os.path.getsize(audio_path)
+
+s3 = boto3.client(
+    "s3",
+    endpoint_url=endpoint,
+    region_name="auto",
+    aws_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
+    aws_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
+)
+
+existing = None
+try:
+    existing = s3.head_object(Bucket=bucket, Key=object_key)
+except ClientError as error:
+    status = error.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+    if status != 404:
+        raise
+
+if existing:
+    existing_hash = existing.get("Metadata", {}).get("sha256")
+    existing_size = existing.get("ContentLength")
+    if existing_hash == sha256 and existing_size == size:
+        print(f"Audio already uploaded: {public_url}")
+        raise SystemExit(0)
+    if not force:
+        print(
+            "R2 object already exists with different content; use --force to replace it.",
+            file=sys.stderr,
+        )
+        raise SystemExit(73)
+
+with open(audio_path, "rb") as audio_file:
+    result = s3.put_object(
+        Bucket=bucket,
+        Key=object_key,
+        Body=audio_file,
+        ContentType="audio/ogg",
+        Metadata={"sha256": sha256},
+    )
+
+verified = s3.head_object(Bucket=bucket, Key=object_key)
+if verified.get("ContentLength") != size:
+    print("Uploaded object size does not match the local audio.", file=sys.stderr)
+    raise SystemExit(74)
+
+print(f"Uploaded: {public_url}")
+print(f"ETag: {result.get('ETag', 'unknown')}")
+PY

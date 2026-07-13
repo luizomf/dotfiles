@@ -15,7 +15,7 @@
 # --- config -----------------------------------------------------------------
 # Cheap model on the capture->ingest path. Override in the environment to escalate
 # (e.g. NOTES_INGEST_MODEL=claude-opus-4-8 NOTES_INGEST_EFFORT=high).
-: "${NOTES_INGEST_MODEL:=claude-sonnet-5}"
+: "${NOTES_INGEST_MODEL:=sonnet}"
 : "${NOTES_INGEST_EFFORT:=medium}"
 
 NOTES_DIR="${PROJECTS_DIR}/notes"

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+set -u
+
+status=0
+
+pkill -9 -f '[o]mnivoicetts' || true
+
+if ! ssh m4128 "pkill -9 -f '[o]mnivoicetts' || true"; then
+  printf 'Failed to stop OmniVoice on m4128.\n' >&2
+  status=1
+fi
+
+if ! /Users/luizotavio/dotfiles/scripts/clear_omnivoice_cache; then
+  printf 'Failed to clear the local OmniVoice cache.\n' >&2
+  status=1
+fi
+
+if ! ssh m4128 '~/dotfiles/scripts/clear_omnivoice_cache'; then
+  printf 'Failed to clear the OmniVoice cache on m4128.\n' >&2
+  status=1
+fi
+
+exit "$status"

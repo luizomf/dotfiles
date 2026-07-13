@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+
+# Queue the TTS for one Daily Paper post on this Mac.
+#
+# The caller supplies only the post slug. Paths are deliberately fixed here so
+# this can later be exposed through an SSH forced command without accepting
+# arbitrary paths or shell input from the VPS.
+
+set -euo pipefail
+
+readonly SITE_DIR="/Users/luizotavio/Desktop/tutoriais_e_cursos/otaviomiranda.com.br"
+readonly POSTS_DIR="${SITE_DIR}/src/content/posts/2026"
+readonly ENQUEUE_SCRIPT="/Users/luizotavio/.codex/automations/daily-paper-llm-roundup/hooks/on-end/tts/enqueue-tts-ready.sh"
+readonly QUEUE_DIR="/Users/luizotavio/.codex/automations/daily-paper-llm-roundup/hooks/on-end/tts"
+readonly NODE_BIN="/Users/luizotavio/.nvm/versions/node/v22.18.0/bin/node"
+
+usage() {
+  printf 'Usage: %s <post-slug>\n' "${0##*/}" >&2
+  exit 64
+}
+
+if [[ $# -eq 1 && "$1" == "--from-ssh" ]]; then
+  readonly original_command="${SSH_ORIGINAL_COMMAND:-}"
+
+  # This string is data supplied by the SSH client. Match the complete value
+  # and extract only the slug; never pass it to a shell or eval it.
+  if [[ "$original_command" =~ ^dispatch_omnivoice_from_ssh\ ([a-z0-9]+(-[a-z0-9]+)*)$ ]]; then
+    set -- "${BASH_REMATCH[1]}"
+  else
+    printf 'Denied SSH command. Expected: dispatch_omnivoice_from_ssh <post-slug>\n' >&2
+    exit 126
+  fi
+fi
+
+[[ $# -eq 1 ]] || usage
+
+slug="$1"
+
+# A slug is an identity, not a filesystem path. In particular, reject dots,
+# slashes, whitespace, and shell metacharacters.
+if [[ ! "$slug" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+  printf 'Invalid post slug: %s\n' "$slug" >&2
+  exit 64
+fi
+
+post_dir="${POSTS_DIR}/${slug}"
+tts_path="${post_dir}/tts.txt"
+
+[[ -x "$ENQUEUE_SCRIPT" ]] || {
+  printf 'Queue helper is not executable: %s\n' "$ENQUEUE_SCRIPT" >&2
+  exit 69
+}
+
+[[ -x "$NODE_BIN" ]] || {
+  printf 'Node executable not found: %s\n' "$NODE_BIN" >&2
+  exit 69
+}
+
+[[ -d "$post_dir" ]] || {
+  printf 'Post directory does not exist: %s\n' "$post_dir" >&2
+  exit 66
+}
+
+[[ -f "$tts_path" ]] || {
+  printf 'TTS file does not exist: %s\n' "$tts_path" >&2
+  exit 66
+}
+
+# Repeated SSH deliveries must not start concurrent work for the same audio.
+# Terminal markers are history, not locks, so a later explicit dispatch may
+# retry a succeeded or failed job.
+if existing_marker="$("$NODE_BIN" - "$QUEUE_DIR" "$tts_path" <<'NODE'
+const fs = require("node:fs");
+const path = require("node:path");
+
+const [queueDir, ttsPath] = process.argv.slice(2);
+const target = path.resolve(ttsPath);
+const activeStatuses = new Set(["pending", "running"]);
+
+for (const name of fs.readdirSync(queueDir).sort()) {
+  if (!/^\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.json$/.test(name)) continue;
+  const marker = path.join(queueDir, name);
+  try {
+    const data = JSON.parse(fs.readFileSync(marker, "utf8"));
+    if (
+      data.kind === "tts-ready" &&
+      activeStatuses.has(data.status) &&
+      path.resolve(data.ttsPath) === target
+    ) {
+      console.log(marker);
+      process.exit(0);
+    }
+  } catch {
+    // Ignore malformed markers; the queue runner does the same.
+  }
+}
+
+process.exit(1);
+NODE
+)"; then
+  printf 'TTS already queued: %s\n' "$existing_marker"
+  exit 0
+fi
+
+"$ENQUEUE_SCRIPT" "$post_dir" "$tts_path"
