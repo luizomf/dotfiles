@@ -101,6 +101,7 @@ The code style is our objective, not a law. Whenever possible, follow the rules
 below.
 
 - Functions should usually be small and focused.
+
   - Aim for up to 40 lines.
   - Keep Cyclomatic Complexity as low as possible.
   - Longer functions are acceptable when the flow is simple, linear, and easier
@@ -109,13 +110,16 @@ below.
     require deep nesting.
 
 - Files should stay focused.
+
   - Aim to keep files under 500 lines (this helps humans and agents).
   - Larger files are acceptable for generated code, schemas, constants,
     mappings, fixtures, or framework-required structure.
   - Split files by responsibility, not just by line count.
 
 - Each function should do one clear thing.
+
 - Each module should own one clear responsibility.
+
 - Prefer clear domain names over generic names.
 
 Avoid vague names such as (unless for libs and framework conventions):
@@ -330,11 +334,13 @@ test('creates a user session when credentials are valid', () => {});
 - Avoid hidden dependencies through global state.
 - Avoid importing concrete infrastructure directly into domain/business logic.
 - Wrap third-party libraries when:
+
   - they touch business logic;
   - they are hard to test;
   - they may be replaced;
   - they spread complex types through the project;
   - they require project-specific defaults or error handling.
+
 - Do not create wrappers for trivial library calls unless they improve clarity,
   testing, or isolation.
 - Keep wrappers thin and owned by this project.
