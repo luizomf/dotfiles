@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+
+# Shared atomic lock for scripts that update the local site checkout.
+# Source this file, then call site_git_lock_acquire <repo> and arrange for
+# site_git_lock_release to run on exit.
+
+site_git_lock_held=false
+site_git_lock_path=""
+
+site_git_lock_acquire() {
+  local repo="$1"
+  local owner_pid=""
+  local timeout_seconds="${SITE_GIT_LOCK_TIMEOUT_SECONDS:-60}"
+  local shlock_bin="${SITE_GIT_SHLOCK_BIN:-/usr/bin/shlock}"
+  local deadline=0
+
+  if [[ ! "$timeout_seconds" =~ ^[0-9]+$ ]]; then
+    printf 'Invalid site Git lock timeout: %s\n' "$timeout_seconds" >&2
+    return 64
+  fi
+
+  if [[ ! -x "$shlock_bin" ]]; then
+    printf 'shlock executable not found: %s\n' "$shlock_bin" >&2
+    return 69
+  fi
+
+  site_git_lock_path="${repo}/.git/om-site-automation.lock"
+  deadline=$((SECONDS + timeout_seconds))
+
+  while ! "$shlock_bin" -p "$$" -f "$site_git_lock_path"; do
+    owner_pid="$(sed -n '1p' "$site_git_lock_path" 2>/dev/null || true)"
+    if (( SECONDS >= deadline )); then
+      printf 'Timed out waiting for site Git automation owned by PID %s.\n' "${owner_pid:-unknown}" >&2
+      return 75
+    fi
+    sleep 1
+  done
+
+  site_git_lock_held=true
+}
+
+site_git_lock_release() {
+  local owner_pid=""
+
+  [[ "$site_git_lock_held" == true ]] || return 0
+  [[ -r "$site_git_lock_path" ]] && owner_pid="$(<"$site_git_lock_path")"
+
+  if [[ "$owner_pid" == "$$" ]]; then
+    rm -f "$site_git_lock_path"
+  fi
+
+  site_git_lock_held=false
+}

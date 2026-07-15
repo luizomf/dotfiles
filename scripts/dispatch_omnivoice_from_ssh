@@ -14,6 +14,7 @@ readonly ENQUEUE_SCRIPT="/Users/luizotavio/.codex/automations/daily-paper-llm-ro
 readonly QUEUE_DIR="/Users/luizotavio/.codex/automations/daily-paper-llm-roundup/hooks/on-end/tts"
 readonly NODE_BIN="/Users/luizotavio/.nvm/versions/node/v22.18.0/bin/node"
 readonly GIT_BIN="/usr/bin/git"
+readonly LOCK_HELPER="/Users/luizotavio/dotfiles/scripts/site_git_automation_lock"
 
 usage() {
   printf 'Usage: %s <post-slug>\n' "${0##*/}" >&2
@@ -61,6 +62,16 @@ tts_path="${post_dir}/tts.txt"
   printf 'Git executable not found: %s\n' "$GIT_BIN" >&2
   exit 69
 }
+
+[[ -r "$LOCK_HELPER" ]] || {
+  printf 'Site Git lock helper is not readable: %s\n' "$LOCK_HELPER" >&2
+  exit 69
+}
+
+# shellcheck source=/Users/luizotavio/dotfiles/scripts/site_git_automation_lock
+source "$LOCK_HELPER"
+site_git_lock_acquire "$SITE_DIR" || exit $?
+trap site_git_lock_release EXIT
 
 current_branch="$($GIT_BIN -C "$SITE_DIR" branch --show-current)"
 if [[ "$current_branch" != "main" ]]; then
