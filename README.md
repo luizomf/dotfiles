@@ -1,6 +1,6 @@
 # dotfiles
 
-Fiz os testes no Ubuntu 24.04 e no Mac OS Sequoia (ambos ARM). Todos os testes
+Fiz os testes no Ubuntu 24.04 e no macOS Sequoia (ambos ARM). Todos os testes
 foram feitos com uma instalação limpa dos sistemas operacionais.
 
 Não detectei erros até o momento.
