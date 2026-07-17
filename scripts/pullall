@@ -8,7 +8,7 @@ find "${PROJECTS_DIR}" -maxdepth 1 -mindepth 1 -type d   \
   cd {} || exit 1
   git status --porcelain >/dev/null 2>&1
   echo "{}"
-  git pull --ff-only
+  git pull --all --prune --ff-only
   prline
   ' \;
 
