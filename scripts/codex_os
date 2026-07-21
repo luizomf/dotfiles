@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+export MODEL="${MODEL:-'gpt-5.4-mini'}"
+export REASONING="${REASONING:-low}"
+
 #
 # Note: for open source models
 #
@@ -17,9 +20,7 @@ set -euo pipefail
 
 codex \
   --search \
-  --model gpt-5.4-mini \
-  -c model_reasoning_effort=none exec \
-  --ephemeral \
-  --ignore-user-config \
-  --ignore-rules 2>/dev/null
+  --model "${MODEL}" \
+  -c model_reasoning_effort="${REASONING}" exec \
+  --ephemeral
 
