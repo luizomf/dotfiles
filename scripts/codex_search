@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+export MODEL="${MODEL:-gpt-5.4-mini}"
+export REASONING="${REASONING:-low}"
+
+codex \
+  --search \
+  --model "${MODEL}" \
+  -c model_reasoning_effort="${REASONING}" exec \
+  --ephemeral \
+  "$@"
