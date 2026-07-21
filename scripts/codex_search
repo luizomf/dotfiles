@@ -2,12 +2,46 @@
 
 set -euo pipefail
 
-export MODEL="${MODEL:-gpt-5.4-mini}"
-export REASONING="${REASONING:-low}"
+MODEL="${MODEL:-gpt-5.4-mini}"
+REASONING="${REASONING:-low}"
 
-codex \
+usage() {
+  cat <<'EOF'
+Usage:
+  codex_search [codex exec options] [PROMPT]
+  codex_search [codex exec options] - < prompt.md
+
+Defaults to gpt-5.4-mini with low reasoning for search, scraping, extraction,
+and source cleanup. Override MODEL and REASONING only when delegating complete
+research that requires synthesis by a top model.
+
+Examples:
+  codex_search -C /path/to/repo -o /tmp/sources.md - < search-prompt.md
+  MODEL=gpt-5.4 REASONING=high codex_search -o /tmp/research.md - < prompt.md
+EOF
+}
+
+if [[ "${1:-}" == '-h' || "${1:-}" == '--help' ]]; then
+  usage
+  exit 0
+fi
+
+if [[ $# -eq 0 ]]; then
+  usage >&2
+  printf '\n[codex_search] error: provide a prompt argument or pass - to read stdin\n' >&2
+  exit 2
+fi
+
+printf '[codex_search] model=%s reasoning=%s search=enabled ephemeral=true\n' \
+  "$MODEL" "$REASONING" >&2
+
+if ! codex \
   --search \
-  --model "${MODEL}" \
-  -c model_reasoning_effort="${REASONING}" exec \
+  --model "$MODEL" \
+  -c model_reasoning_effort="$REASONING" exec \
   --ephemeral \
   "$@"
+then
+  printf '[codex_search] error: Codex search failed\n' >&2
+  exit 1
+fi
