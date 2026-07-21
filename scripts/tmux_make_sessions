@@ -5,7 +5,7 @@ set -euo pipefail
 trap 'echo "Error on line $LINENO"' ERR
 
 tmux_make_sessions() {
-  projects_dir=${1:-${HOME}/Desktop/tutoriais_e_cursos}
+  projects_dir=${1:-$PROJECTS_DIR}
 
   [[ -d "${projects_dir}" ]] || logerror "'${projects_dir}' is not a directory"
 
@@ -22,7 +22,7 @@ tmux_make_sessions() {
   tmux new -s "dotfiles" -d -n code -c "${HOME}/dotfiles"
   tmux neww -k -S -a -t "dotfiles" -d -n term -c "${HOME}/dotfiles"
 
-  find "${projects_dir}" -mindepth 1 -maxdepth 1 -type d -print0 | while IFS= read -r -d '' dir; do
+  find "${projects_dir}/" -mindepth 1 -maxdepth 1 -type d -print0 | while IFS= read -r -d '' dir; do
     dirname=$(basename "${dir}")
 
     session_name="${dirname//./_}"
@@ -38,4 +38,4 @@ tmux_make_sessions() {
   echo "Done. Now run: 'tmux a'"
 }
 
-tmux_make_sessions
+tmux_make_sessions "${@}"
