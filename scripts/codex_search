@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-MODEL="${MODEL:-gpt-5.4-mini}"
-REASONING="${REASONING:-low}"
+model="${CODEX_SEARCH_MODEL:-gpt-5.4-mini}"
+reasoning="${CODEX_SEARCH_REASONING:-low}"
 
 usage() {
   cat <<'EOF'
@@ -12,12 +12,13 @@ Usage:
   codex_search [codex exec options] - < prompt.md
 
 Defaults to gpt-5.4-mini with low reasoning for search, scraping, extraction,
-and source cleanup. Override MODEL and REASONING only when delegating complete
-research that requires synthesis by a top model.
+and source cleanup. Override CODEX_SEARCH_MODEL and CODEX_SEARCH_REASONING only
+when delegating complete research that requires synthesis by a top model.
 
 Examples:
   codex_search -C /path/to/repo -o /tmp/sources.md - < search-prompt.md
-  MODEL=gpt-5.4 REASONING=high codex_search -o /tmp/research.md - < prompt.md
+  CODEX_SEARCH_MODEL=gpt-5.4 CODEX_SEARCH_REASONING=high \
+    codex_search -o /tmp/research.md - < prompt.md
 EOF
 }
 
@@ -33,12 +34,12 @@ if [[ $# -eq 0 ]]; then
 fi
 
 printf '[codex_search] model=%s reasoning=%s search=enabled ephemeral=true\n' \
-  "$MODEL" "$REASONING" >&2
+  "$model" "$reasoning" >&2
 
 if ! codex \
   --search \
-  --model "$MODEL" \
-  -c model_reasoning_effort="$REASONING" exec \
+  --model "$model" \
+  -c model_reasoning_effort="$reasoning" exec \
   --ephemeral \
   "$@"
 then
