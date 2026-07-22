@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  tmux_slop_nudger [options] MESSAGE...
+
+Periodically types MESSAGE into a tmux pane and presses Enter.
+
+Options:
+  -i, --interval TIME  Delay between messages (default: 30m)
+  -n, --count NUMBER   Number of messages; 0 means forever (default: 0)
+  -t, --target PANE    Target pane (default: $TMUX_PANE)
+      --tag TAG        Prefix tag; an empty value disables it (default: WATCHDOG)
+      --now            Send the first message immediately
+  -h, --help           Show this help
+
+By default, each message is prefixed with [WATCHDOG N] or [WATCHDOG N/TOTAL].
+
+Examples:
+  tmux_slop_nudger -i 30m 'Check the agents.'
+  tmux_slop_nudger -i 1h -n 4 --now -t %3 'Do X.'
+  tmux_slop_nudger -i 10s -n 2 --tag '' "echo 'Hello'"
+
+The command prints its background PID. Stop it with: kill PID
+EOF
+}
+
+interval="30m"
+count=0
+target="${TMUX_PANE:-}"
+tag="WATCHDOG"
+send_now=0
+
+while (( $# )); do
+  case "$1" in
+    -i|--interval)
+      (( $# >= 2 )) || { printf 'Missing value for %s\n' "$1" >&2; exit 2; }
+      interval="$2"
+      shift 2
+      ;;
+    -n|--count)
+      (( $# >= 2 )) || { printf 'Missing value for %s\n' "$1" >&2; exit 2; }
+      count="$2"
+      shift 2
+      ;;
+    -t|--target)
+      (( $# >= 2 )) || { printf 'Missing value for %s\n' "$1" >&2; exit 2; }
+      target="$2"
+      shift 2
+      ;;
+    --tag)
+      (( $# >= 2 )) || { printf 'Missing value for %s\n' "$1" >&2; exit 2; }
+      tag="$2"
+      shift 2
+      ;;
+    --now)
+      send_now=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      printf 'Unknown option: %s\n' "$1" >&2
+      usage >&2
+      exit 2
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+(( $# )) || { printf 'MESSAGE is required.\n' >&2; usage >&2; exit 2; }
+[[ "$count" =~ ^[0-9]+$ ]] || { printf 'COUNT must be a non-negative integer.\n' >&2; exit 2; }
+[[ -n "$target" ]] || { printf 'No target pane. Run inside tmux or use --target.\n' >&2; exit 2; }
+
+target="$(tmux display-message -p -t "$target" '#{pane_id}')" || {
+  printf 'Target pane not found: %s\n' "$target" >&2
+  exit 1
+}
+message="$*"
+
+run_scheduler() {
+  local i=1 counter payload
+
+  while (( count == 0 || i <= count )); do
+    if (( i > 1 || send_now == 0 )); then
+      sleep "$interval"
+    fi
+
+    tmux display-message -p -t "$target" '#{pane_id}' >/dev/null 2>&1 || return 0
+
+    if (( count == 0 )); then
+      counter="$i"
+    else
+      counter="$i/$count"
+    fi
+
+    if [[ -n "$tag" ]]; then
+      payload="[$tag $counter] $message"
+    else
+      payload="$message"
+    fi
+    tmux send-keys -t "$target" -l "$payload"
+    tmux send-keys -t "$target" Enter
+    (( i += 1 ))
+  done
+}
+
+run_scheduler >/dev/null 2>&1 &
+scheduler_pid=$!
+printf 'Slop nudger deployed: PID %d, target %s, interval %s.\n' \
+  "$scheduler_pid" "$target" "$interval"
