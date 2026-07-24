@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if [[ -t 0 ]]; then
+  printf 'Usage: prompt | sannux_agy_stdin [agy arguments]\n' >&2
+  exit 2
+fi
+
+prompt="$(cat)"
+if [[ -z "$prompt" ]]; then
+  printf 'sannux_agy_stdin: stdin prompt is empty\n' >&2
+  exit 2
+fi
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+if [[ "${1:-}" == "agy" ]]; then
+  shift
+fi
+
+exec "$script_dir/sannux_ephemeral" agy "$@" --print "$prompt"
