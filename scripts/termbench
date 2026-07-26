@@ -1,0 +1,394 @@
+#!/usr/bin/env python3.14
+
+"""Animate frames on the terminal and measure how fast it really renders them.
+
+Each scene stresses one rendering path (plain ASCII, block glyphs, braille,
+wide CJK, emoji clusters, SGR churn, scrolling, in-place spinner). By default
+every frame is followed by a Device Status Report (CSI 6n): the terminal can
+only answer it after consuming everything written before, so the round-trip
+time measures actual processing instead of how fast the PTY buffer swallows
+bytes.
+"""
+
+import argparse
+import os
+import random
+import select
+import shutil
+import signal
+import sys
+import termios
+import time
+import tty
+from typing import Callable, Literal, NamedTuple
+
+CursorMode = Literal["hide", "show", "blink", "toggle"]
+
+CURSOR_SEQ: dict[CursorMode, bytes] = {
+    "hide": b"\x1b[?25l",
+    "show": b"\x1b[?25h\x1b[?12l",
+    "blink": b"\x1b[?25h\x1b[?12h",
+    "toggle": b"\x1b[?25h\x1b[?12h",
+}
+
+CURSOR_OFF = b"\x1b[?25l"
+CURSOR_ON = b"\x1b[?25h"
+
+ASCII_POOL = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,-_/\\|"
+BLOCK_POOL = "░▒▓█▄▀▐▌▖▗▘▝▚▞■□▪▫"
+BRAILLE_POOL = "".join(chr(0x2800 + n) for n in range(256))
+CJK_POOL = "漢字日本語中文測試繁體简体你好世界"
+EMOJI_POOL = "😀🚀🔥🌍🎉🧠📦🛠️👩‍💻🧑‍🚀🏳️‍🌈"
+SPINNER_POOL = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+
+# ~20k distinct wide glyphs: far more than any glyph atlas holds, so every
+# frame forces re-rasterization instead of a cache hit.
+THRASH_POOL = "".join(chr(c) for c in range(0x4E00, 0x9FA5))
+ATTR_POOL = ("1", "2", "3", "4", "4:3", "7", "9", "53")
+
+WARMUP_FRAMES = 3
+
+# Generous: a struggling terminal can take hundreds of ms per frame, and a GC
+# pause or an occluded window adds more. Expiring means give up, never speed up.
+STALL_TIMEOUT = 5.0
+
+# Frames are generated up front and cycled, so Python never becomes the
+# bottleneck. Distinct enough that no glyph cache survives the rotation.
+FRAME_POOL = 120
+
+
+class Stats(NamedTuple):
+    scene: str
+    frames: int
+    seconds: float
+    fps: float
+    p50_ms: float
+    p95_ms: float
+    max_ms: float
+    mib_s: float
+
+
+class Args(argparse.Namespace):
+    scenes: list[str]
+    seconds: float
+    fps: float
+    cursor: CursorMode
+    no_rtt: bool
+    list_scenes: bool
+
+
+def build_rows(pool: str, width: int, height: int, rng: random.Random, cells: int = 1) -> bytes:
+    """Full-screen repaint: home cursor, then absolute-position every row."""
+    count = max(1, width // cells)
+    out = [b"\x1b[H"]
+    for y in range(1, height + 1):
+        row = "".join(rng.choice(pool) for _ in range(count))
+        out.append(f"\x1b[{y};1H{row}".encode())
+    return b"".join(out)
+
+
+def scene_ascii(w: int, h: int, i: int, rng: random.Random) -> bytes:
+    return build_rows(ASCII_POOL, w, h, rng)
+
+
+def scene_blocks(w: int, h: int, i: int, rng: random.Random) -> bytes:
+    return build_rows(BLOCK_POOL, w, h, rng)
+
+
+def scene_braille(w: int, h: int, i: int, rng: random.Random) -> bytes:
+    return build_rows(BRAILLE_POOL, w, h, rng)
+
+
+def scene_cjk(w: int, h: int, i: int, rng: random.Random) -> bytes:
+    return build_rows(CJK_POOL, w, h, rng, cells=2)
+
+
+def scene_emoji(w: int, h: int, i: int, rng: random.Random) -> bytes:
+    return build_rows(EMOJI_POOL, w, h, rng, cells=2)
+
+
+def scene_sgr(w: int, h: int, i: int, rng: random.Random) -> bytes:
+    """Same glyph count as `ascii`, but a truecolor SGR pair per cell."""
+    out = [b"\x1b[H"]
+    for y in range(1, h + 1):
+        row = "".join(
+            f"\x1b[38;2;{rng.randrange(256)};{rng.randrange(256)};{rng.randrange(256)}m"
+            f"\x1b[48;2;{rng.randrange(256)};{rng.randrange(256)};{rng.randrange(256)}m"
+            f"{rng.choice(ASCII_POOL)}"
+            for _ in range(w)
+        )
+        out.append(f"\x1b[{y};1H{row}\x1b[0m".encode())
+    return b"".join(out)
+
+
+def scene_attrs(w: int, h: int, i: int, rng: random.Random) -> bytes:
+    """Attribute churn: underline, curly underline and strike take extra render passes."""
+    out = [b"\x1b[H"]
+    for y in range(1, h + 1):
+        row = "".join(
+            f"\x1b[{rng.choice(ATTR_POOL)}m{rng.choice(ASCII_POOL)}\x1b[0m" for _ in range(w)
+        )
+        out.append(f"\x1b[{y};1H{row}".encode())
+    return b"".join(out)
+
+
+def scene_thrash(w: int, h: int, i: int, rng: random.Random) -> bytes:
+    """Worst case: unique wide glyph plus unique truecolor pair in every cell.
+
+    The atlas is keyed on (glyph, fg, bg, attrs), so this guarantees a 100%
+    miss rate and a texture upload per cell per frame.
+    """
+    out = [b"\x1b[H"]
+    count = max(1, w // 2)
+    for y in range(1, h + 1):
+        row = "".join(
+            f"\x1b[38;2;{rng.randrange(256)};{rng.randrange(256)};{rng.randrange(256)}m"
+            f"\x1b[48;2;{rng.randrange(256)};{rng.randrange(256)};{rng.randrange(256)}m"
+            f"\x1b[{rng.choice(ATTR_POOL)}m{rng.choice(THRASH_POOL)}"
+            for _ in range(count)
+        )
+        out.append(f"\x1b[{y};1H{row}\x1b[0m".encode())
+    return b"".join(out)
+
+
+def scene_scroll(w: int, h: int, i: int, rng: random.Random) -> bytes:
+    """No cursor addressing: pure scroll-region churn, one screenful per frame."""
+    lines = ("".join(rng.choice(ASCII_POOL) for _ in range(w - 1)) for _ in range(h))
+    return ("\r\n".join(lines) + "\r\n").encode()
+
+
+def scene_spinner(w: int, h: int, i: int, rng: random.Random) -> bytes:
+    """The harness case: one short line rewritten in place, forever."""
+    frame = SPINNER_POOL[i % len(SPINNER_POOL)]
+    dots = "." * (i % 4)
+    return f"\r\x1b[2K{frame} working{dots}".encode()
+
+
+SCENES: dict[str, Callable[[int, int, int, random.Random], bytes]] = {
+    "ascii": scene_ascii,
+    "blocks": scene_blocks,
+    "braille": scene_braille,
+    "cjk": scene_cjk,
+    "emoji": scene_emoji,
+    "sgr": scene_sgr,
+    "attrs": scene_attrs,
+    "thrash": scene_thrash,
+    "scroll": scene_scroll,
+    "spinner": scene_spinner,
+}
+
+
+def write_all(fd: int, data: bytes) -> None:
+    while data:
+        data = data[os.write(fd, data) :]
+
+
+def read_dsr(fd: int, timeout: float) -> bool:
+    """Drain stdin until the CSI 6n reply arrives. False means the reply never came."""
+    deadline = time.perf_counter() + timeout
+    while True:
+        remaining = deadline - time.perf_counter()
+        if remaining <= 0:
+            return False
+        if not select.select([fd], [], [], remaining)[0]:
+            return False
+        if b"R" in os.read(fd, 64):
+            return True
+
+
+def probe_dsr(out_fd: int, in_fd: int) -> bool:
+    """Ask once whether this terminal answers CSI 6n, so a mute one fails fast."""
+    while select.select([in_fd], [], [], 0)[0]:
+        os.read(in_fd, 1024)
+    write_all(out_fd, b"\x1b[6n")
+    return read_dsr(in_fd, 1.0)
+
+
+def percentile(sorted_values: list[float], q: float) -> float:
+    if not sorted_values:
+        return 0.0
+    index = min(len(sorted_values) - 1, int(q * len(sorted_values)))
+    return sorted_values[index]
+
+
+def run_scene(
+    name: str,
+    out_fd: int,
+    in_fd: int,
+    seconds: float,
+    target_fps: float,
+    use_rtt: bool,
+    cursor: CursorMode,
+) -> tuple[Stats, bool]:
+    render = SCENES[name]
+    width, height = shutil.get_terminal_size()
+    height = max(1, height - 1)
+    rng = random.Random(hash(name) & 0xFFFF)
+
+    frames = [render(width, height, n, rng) for n in range(FRAME_POOL)]
+    if cursor == "toggle":
+        frames = [CURSOR_OFF + frame + CURSOR_ON for frame in frames]
+
+    durations: list[float] = []
+    written = 0
+    interval = 1.0 / target_fps if target_fps > 0 else 0.0
+    aborted = False
+
+    write_all(out_fd, b"\x1b[2J\x1b[H")
+    started = time.perf_counter()
+    next_frame = started
+    i = 0
+
+    while time.perf_counter() - started < seconds:
+        payload = frames[i % FRAME_POOL]
+        frame_start = time.perf_counter()
+        write_all(out_fd, payload)
+        if use_rtt:
+            write_all(out_fd, b"\x1b[6n")
+            if not read_dsr(in_fd, STALL_TIMEOUT):
+                # Never fall back to unthrottled writing: a terminal this far
+                # behind would be buried under megabytes it cannot drain.
+                aborted = True
+                break
+        elapsed = time.perf_counter() - frame_start
+
+        if i >= WARMUP_FRAMES:
+            durations.append(elapsed)
+            written += len(payload)
+        i += 1
+
+        if interval:
+            next_frame += interval
+            slack = next_frame - time.perf_counter()
+            if slack > 0:
+                time.sleep(slack)
+            else:
+                next_frame = time.perf_counter()
+
+    total = sum(durations)
+    ordered = sorted(durations)
+    stats = Stats(
+        scene=name,
+        frames=len(durations),
+        seconds=total,
+        fps=len(durations) / total if total else 0.0,
+        p50_ms=percentile(ordered, 0.50) * 1000,
+        p95_ms=percentile(ordered, 0.95) * 1000,
+        max_ms=(ordered[-1] * 1000) if ordered else 0.0,
+        mib_s=(written / total / 1024 / 1024) if total else 0.0,
+    )
+    return stats, aborted
+
+
+def report(results: list[Stats], rtt_used: bool, cursor: CursorMode, stalled: list[str]) -> None:
+    baseline = next((s.fps for s in results if s.scene == "ascii" and s.fps), None)
+    mode = "CSI 6n round-trip (render time)" if rtt_used else "write() only (buffered, optimistic)"
+    print(f"\nmode: {mode}   cursor: {cursor}   term: {os.environ.get('TERM_PROGRAM', '?')}\n")
+    header = f"{'scene':<9}{'frames':>7}{'fps':>9}{'p50 ms':>9}{'p95 ms':>9}{'max ms':>9}{'MiB/s':>9}{'rel':>7}"
+    print(header)
+    print("-" * len(header))
+    for s in results:
+        rel = f"{s.fps / baseline:.2f}x" if baseline else "-"
+        print(
+            f"{s.scene:<9}{s.frames:>7}{s.fps:>9.1f}{s.p50_ms:>9.2f}"
+            f"{s.p95_ms:>9.2f}{s.max_ms:>9.2f}{s.mib_s:>9.2f}{rel:>7}"
+        )
+    print("\nrel = fps relative to the `ascii` baseline on this same terminal.")
+    if not rtt_used:
+        print("warning: terminal never answered CSI 6n; numbers measure writes, not rendering.")
+    if stalled:
+        print(
+            f"warning: stopped early on {', '.join(stalled)}: no CSI 6n reply within "
+            f"{STALL_TIMEOUT:.0f}s.\n"
+            "         Those rows are cut short; the terminal could not keep up."
+        )
+    if os.environ.get("TMUX"):
+        print(
+            "warning: running inside tmux, which answers CSI 6n from its own screen model.\n"
+            "         These numbers measure tmux, not the terminal underneath it.\n"
+            "         Detach and run in a bare window to compare renderers."
+        )
+
+
+def parse_args() -> Args:
+    parser = argparse.ArgumentParser(
+        description="Benchmark terminal rendering with animated ASCII/Unicode scenes.",
+        epilog=(
+            "cursor flicker test: run `spinner` at --fps 5, 20 and 60. "
+            "If the flicker follows the rate, the blink timer is being restarted by "
+            "cursor movement; if it looks the same at every rate, compare --cursor blink "
+            "against --cursor toggle to confirm a per-frame DECTCEM toggle."
+        ),
+    )
+    parser.add_argument("scenes", nargs="*", default=[], help="scenes to run (default: all)")
+    parser.add_argument("--seconds", type=float, default=3.0, help="duration per scene")
+    parser.add_argument("--fps", type=float, default=0.0, help="target fps (0 = unlimited)")
+    parser.add_argument(
+        "--cursor",
+        choices=["hide", "show", "blink", "toggle"],
+        default="hide",
+        help="cursor state; `toggle` hides and shows it every frame, like a buggy TUI loop",
+    )
+    parser.add_argument(
+        "--no-rtt",
+        action="store_true",
+        help="skip the CSI 6n sync and measure raw write throughput instead",
+    )
+    parser.add_argument("--list", dest="list_scenes", action="store_true", help="list scenes")
+    return parser.parse_args(namespace=Args())
+
+
+def main() -> int:
+    args = parse_args()
+
+    if args.list_scenes:
+        for name in SCENES:
+            print(name)
+        return 0
+
+    selected = args.scenes or list(SCENES)
+    unknown = [name for name in selected if name not in SCENES]
+    if unknown:
+        print(f"unknown scene(s): {', '.join(unknown)}", file=sys.stderr)
+        return 2
+
+    out_fd = sys.stdout.fileno()
+    in_fd = sys.stdin.fileno()
+    if not os.isatty(out_fd) or not os.isatty(in_fd):
+        print("termbench needs an interactive terminal on stdin and stdout.", file=sys.stderr)
+        return 2
+
+    saved = termios.tcgetattr(in_fd)
+    results: list[Stats] = []
+    stalled: list[str] = []
+    rtt_used = not args.no_rtt
+
+    def bail(signum: int, frame: object) -> None:
+        raise KeyboardInterrupt
+
+    signal.signal(signal.SIGINT, bail)
+
+    try:
+        tty.setcbreak(in_fd)
+        write_all(out_fd, b"\x1b[?1049h" + CURSOR_SEQ[args.cursor])
+        rtt_used = rtt_used and probe_dsr(out_fd, in_fd)
+        for name in selected:
+            stats, aborted = run_scene(
+                name, out_fd, in_fd, args.seconds, args.fps, rtt_used, args.cursor
+            )
+            results.append(stats)
+            if aborted:
+                stalled.append(name)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        write_all(out_fd, b"\x1b[?25h\x1b[?12l\x1b[0m\x1b[?1049l")
+        termios.tcsetattr(in_fd, termios.TCSADRAIN, saved)
+
+    if results:
+        report(results, rtt_used, args.cursor, stalled)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
