@@ -8,6 +8,7 @@ superset of what is already on disk.
 
 import os
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
@@ -139,10 +140,19 @@ def read_remote_history(host: str) -> bytes | None:
     return out.stdout
 
 
+def is_local_host(host: str) -> bool:
+    """Every machine shares this host list, so each one finds itself in it."""
+    return host.split(".")[0].lower() == socket.gethostname().split(".")[0].lower()
+
+
 def collect_entries(local_entries: set[ZshHistoryEntry]) -> set[ZshHistoryEntry]:
     all_entries = set(local_entries)
 
     for host in REMOTE_HOSTS:
+        if is_local_host(host):
+            print(f"  {host}: skipped (this machine)")
+            continue
+
         raw_bytes = read_remote_history(host)
         if raw_bytes is None:
             continue

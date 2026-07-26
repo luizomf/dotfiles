@@ -37,11 +37,15 @@ omz update
 echo "Running brew cleanup"
 brew cleanup
 
-echo "Regenerating brew bundle file"
-local brewfile="${HOME}/dotfiles/homebrew/Brewfile"
-brew bundle dump --file="${brewfile}" --force --no-restart --no-npm
-awk '!/^brew "node"$/ && !/^npm / { print }' "${brewfile}" > "${brewfile}.tmp" \
-  && mv "${brewfile}.tmp" "${brewfile}"
+# The Brewfile is shared through git, but brew on Linux resolves a different
+# package set: dumping there replaces the macOS list with a much smaller one.
+if [[ "$(uname)" == "Darwin" ]]; then
+  echo "Regenerating brew bundle file"
+  local brewfile="${HOME}/dotfiles/homebrew/Brewfile"
+  brew bundle dump --file="${brewfile}" --force --no-restart --no-npm
+  awk '!/^brew "node"$/ && !/^npm / { print }' "${brewfile}" > "${brewfile}.tmp" \
+    && mv "${brewfile}.tmp" "${brewfile}"
+fi
 
 echo "Running uv self update"
 uv self update

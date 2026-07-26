@@ -24,7 +24,7 @@ alias s='sudo'     # this is needed to use your aliases with sudo
 # Softwares
 alias nano='nvim' # se vira
 
-alias brewupdate='brew update ; brew upgrade ; omz update ; brew cleanup ; brew bundle dump --file=~/dotfiles/homebrew/Brewfile --describe --force'
+alias brewupdate='brew update ; brew upgrade ; omz update ; brew cleanup ; if [[ "$(uname)" == "Darwin" ]]; then brew bundle dump --file=~/dotfiles/homebrew/Brewfile --describe --force; fi'
 alias killadobe='sudo pkill -9 -f "Adobe" ; sudo pkill -9 -f "ACCFinderSync" ; sudo pkill -9 -f "CCXProcess.app" ; sudo pkill -9 -f "Core Sync.app" ; sudo pkill -9 -f "CCLibrary.app"'
 
 # Mac OS
