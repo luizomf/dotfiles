@@ -39,5 +39,20 @@ rsync -havz --progress --stats "$HOME"/.local/share/tmux/resurrect/ \
 rsync -havz --progress --stats "$HOME"/Desktop/tutoriais_e_cursos/ \
   fedoraair:~/Desktop/tutoriais_e_cursos --delete
 
+# Pi agent all
+echo
+prline
+rsync -havz --omit-dir-times --exclude='agent/trust.json' \
+  --exclude='agent/sessions/' --exclude='agent/extensions/**/node_modules/' \
+  ~/.pi/ fedoraair:~/.pi/
+
+rsync -havz --omit-dir-times --exclude='agent/trust.json' \
+  --exclude='agent/sessions/' --exclude='agent/extensions/**/node_modules/' \
+  ~/.pi/ m4128:~/.pi/
+
+rsync -havz --omit-dir-times --exclude='agent/trust.json' \
+  --exclude='agent/sessions/' --exclude='agent/extensions/**/node_modules/' \
+  ~/.pi/ m132:~/.pi/
+
 echo
 prline
