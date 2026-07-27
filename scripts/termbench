@@ -46,6 +46,10 @@ SPINNER_POOL = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 THRASH_POOL = "".join(chr(c) for c in range(0x4E00, 0x9FA5))
 ATTR_POOL = ("1", "2", "3", "4", "4:3", "7", "9", "53")
 
+# Single-width, always present in any monospace font: if this glyph is missing
+# from a cell, the font cannot be the reason.
+VERIFY_GLYPH = "A"
+
 WARMUP_FRAMES = 3
 
 # Generous: a struggling terminal can take hundreds of ms per frame, and a GC
@@ -74,6 +78,7 @@ class Args(argparse.Namespace):
     fps: float
     cursor: CursorMode
     no_rtt: bool
+    verify: bool
     list_scenes: bool
 
 
@@ -280,6 +285,52 @@ def run_scene(
     return stats, aborted
 
 
+def run_verify(out_fd: int, in_fd: int) -> None:
+    """Draw one static, deterministic frame for comparing renderers by eye.
+
+    Every cell carries the same glyph, so a missing letter can never be blamed
+    on font coverage, and every cell gets its own truecolor pair, which is what
+    a glyph atlas keyed on (glyph, fg, bg, attrs) chokes on. Backgrounds stay
+    under 96 per channel and foregrounds over 160 so the letter is always
+    legible: without that split, a foreground landing near its background reads
+    as a dropped glyph and invents a defect that is not there.
+
+    The frame is drawn once and held, so a screenshot cannot catch a repaint
+    half finished. Identical terminal geometry produces identical output, which
+    is what makes two builds comparable cell by cell.
+    """
+    width, height = shutil.get_terminal_size()
+    rows = max(1, height - 1)
+
+    out = [CURSOR_OFF, b"\x1b[2J\x1b[H"]
+    for y in range(rows):
+        cells = []
+        for x in range(width):
+            # Spatial hash rather than a linear ramp: linear coefficients repeat
+            # across the grid and waste atlas pressure on duplicate keys. These
+            # give one distinct (fg, bg) pair per cell, so every cell is a miss.
+            h1 = (x * 73856093) ^ (y * 19349663)
+            h2 = (x * 83492791) ^ (y * 26947853)
+            br, bg, bb = (h1 >> 3) % 96, (h1 >> 11) % 96, (h1 >> 19) % 96
+            fr, fg, fb = (
+                160 + (h2 >> 3) % 96,
+                160 + (h2 >> 11) % 96,
+                160 + (h2 >> 19) % 96,
+            )
+            cells.append(f"\x1b[38;2;{fr};{fg};{fb}m\x1b[48;2;{br};{bg};{bb}m{VERIFY_GLYPH}")
+        out.append(f"\x1b[{y + 1};1H{''.join(cells)}\x1b[0m".encode())
+
+    status = (
+        f"{width}x{rows} cells, every one is '{VERIFY_GLYPH}' - "
+        "a coloured cell with no letter is a dropped glyph. any key to exit"
+    )
+    out.append(f"\x1b[{height};1H\x1b[0m{status[:width]}".encode())
+    write_all(out_fd, b"".join(out))
+
+    select.select([in_fd], [], [], None)
+    os.read(in_fd, 64)
+
+
 def report(results: list[Stats], rtt_used: bool, cursor: CursorMode, stalled: list[str]) -> None:
     baseline = next((s.fps for s in results if s.scene == "ascii" and s.fps), None)
     mode = "CSI 6n round-trip (render time)" if rtt_used else "write() only (buffered, optimistic)"
@@ -334,6 +385,11 @@ def parse_args() -> Args:
         action="store_true",
         help="skip the CSI 6n sync and measure raw write throughput instead",
     )
+    parser.add_argument(
+        "--verify",
+        action="store_true",
+        help="draw one static deterministic frame and hold it, to compare renderers by eye",
+    )
     parser.add_argument("--list", dest="list_scenes", action="store_true", help="list scenes")
     return parser.parse_args(namespace=Args())
 
@@ -371,19 +427,31 @@ def main() -> int:
     try:
         tty.setcbreak(in_fd)
         write_all(out_fd, b"\x1b[?1049h" + CURSOR_SEQ[args.cursor])
-        rtt_used = rtt_used and probe_dsr(out_fd, in_fd)
-        for name in selected:
-            stats, aborted = run_scene(
-                name, out_fd, in_fd, args.seconds, args.fps, rtt_used, args.cursor
-            )
-            results.append(stats)
-            if aborted:
-                stalled.append(name)
+        if args.verify:
+            run_verify(out_fd, in_fd)
+        else:
+            rtt_used = rtt_used and probe_dsr(out_fd, in_fd)
+            for name in selected:
+                stats, aborted = run_scene(
+                    name, out_fd, in_fd, args.seconds, args.fps, rtt_used, args.cursor
+                )
+                results.append(stats)
+                if aborted:
+                    stalled.append(name)
     except KeyboardInterrupt:
         pass
     finally:
         write_all(out_fd, b"\x1b[?25h\x1b[?12l\x1b[0m\x1b[?1049l")
         termios.tcsetattr(in_fd, termios.TCSADRAIN, saved)
+
+    if args.verify:
+        if os.environ.get("TMUX"):
+            print(
+                "warning: running inside tmux, which redraws from its own screen model.\n"
+                "         You compared tmux against itself, not the two renderers.\n"
+                "         Detach and run in a bare window."
+            )
+        return 0
 
     if results:
         report(results, rtt_used, args.cursor, stalled)
