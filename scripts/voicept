@@ -4,11 +4,15 @@ set -euo pipefail
 
 export PROJECTS_DIR="${PROJECTS_DIR:-$HOME/Desktop/tutoriais_e_cursos}"
 
+if [[ $# -eq 1 && $1 != -* ]]; then
+  set -- -t "$1"
+fi
+
 (
 cd "${HOME}/Desktop/tutoriais_e_cursos/omnivoicetts" || exit 1
 # ./scripts/clear_cache
 # pkill -9 -f '[o]mnivoicetts' || true
-cat | ./scripts/female-pt \
+./scripts/female-pt \
   --offline --player auto \
   --num-step 16 --guidance-scale 2 --t-shift 0.1 \
   --class-temperature 0 --position-temperature 5.0 --layer-penalty-factor 5.0 \

@@ -58,9 +58,10 @@ Execution:
   --                 Separate bq options from the executable and its arguments.
 
   Commands use literal argument vectors without shell evaluation or wholesale
-  inheritance of the submitting shell environment. Personal scripts and
-  PROJECTS_DIR are available. On macOS, commands receive application scheduling
-  policy like an interactive terminal command.
+  inheritance of the submitting shell environment. Personal scripts, common
+  Homebrew locations, and system commands are on PATH; PROJECTS_DIR is exported
+  separately. On macOS, commands receive application scheduling policy like an
+  interactive terminal command.
 
 Examples:
   bq ./script --flag value
@@ -509,8 +510,23 @@ def internal_run() -> NoReturn:
         fail("invalid Trigger input shape")
 
     scripts_directory = str(Path(__file__).resolve().parent)
-    queue_path = os.environ.get("PATH", "/usr/bin:/bin:/usr/sbin:/sbin")
-    os.environ["PATH"] = f"{scripts_directory}:{queue_path}"
+    preferred_path = [
+        scripts_directory,
+        str(Path.home() / ".local" / "bin"),
+        "/opt/homebrew/bin",
+        "/opt/homebrew/sbin",
+        "/home/linuxbrew/.linuxbrew/bin",
+        "/home/linuxbrew/.linuxbrew/sbin",
+        "/usr/local/bin",
+        "/usr/local/sbin",
+        "/usr/bin",
+        "/bin",
+        "/usr/sbin",
+        "/sbin",
+    ]
+    os.environ["PATH"] = os.pathsep.join(
+        entry for entry in preferred_path if Path(entry).is_dir()
+    )
     os.environ["PROJECTS_DIR"] = str(Path.home() / "Desktop" / "tutoriais_e_cursos")
 
     try:
