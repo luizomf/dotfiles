@@ -1,0 +1,266 @@
+#!/usr/bin/env python3
+
+"""Submit an executable and argument vector to the local OMQueue installation."""
+
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import uuid
+from pathlib import Path
+from typing import NoReturn
+
+CONFIG_PATH = Path.home() / ".config" / "bq" / "config.json"
+OMQUEUE = os.environ.get("BQ_OMQUEUE", "omqueue")
+INTERNAL_RUN = "--internal-run"
+
+
+def fail(message: str, status: int = 1) -> NoReturn:
+    print(f"bq: {message}", file=sys.stderr)
+    raise SystemExit(status)
+
+
+def usage(stream=sys.stdout) -> None:
+    print(
+        """Usage:
+  bq --setup
+  bq [--cwd <directory>] [--] <executable> [arguments...]
+
+Submit a command to OMQueue and return after durable Job acceptance.
+The command runs without shell evaluation and without inheriting this shell's
+environment.""",
+        file=stream,
+    )
+
+
+def run_omqueue(arguments: list[str], *, capture: bool = False) -> subprocess.CompletedProcess[str]:
+    executable = shutil.which(OMQUEUE) if os.sep not in OMQUEUE else OMQUEUE
+    if not executable:
+        fail(f"OMQueue CLI not found: {OMQUEUE}")
+
+    return subprocess.run(
+        [executable, *arguments],
+        check=False,
+        text=True,
+        capture_output=capture,
+    )
+
+
+def write_json_document(value: object) -> str:
+    handle = tempfile.NamedTemporaryFile(
+        mode="w", encoding="utf-8", prefix="bq-", suffix=".json", delete=False
+    )
+    try:
+        json.dump(value, handle, ensure_ascii=False, separators=(",", ":"))
+        handle.write("\n")
+        return handle.name
+    finally:
+        handle.close()
+
+
+def load_definition_id() -> str:
+    try:
+        config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+        definition_id = config["definitionId"]
+    except (OSError, json.JSONDecodeError, KeyError, TypeError):
+        fail(f"not configured; run 'bq --setup' (expected {CONFIG_PATH})")
+
+    if not isinstance(definition_id, str) or not definition_id:
+        fail(f"invalid Definition identity in {CONFIG_PATH}")
+    return definition_id
+
+
+def save_definition_id(definition_id: str) -> None:
+    CONFIG_PATH.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    temporary = CONFIG_PATH.with_suffix(f".{os.getpid()}.tmp")
+    temporary.write_text(
+        json.dumps({"definitionId": definition_id}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    temporary.chmod(0o600)
+    temporary.replace(CONFIG_PATH)
+
+
+def definition_document() -> dict[str, object]:
+    script_path = str(Path(__file__).resolve())
+    return {
+        "command": {
+            "executable": script_path,
+            "arguments": [INTERNAL_RUN],
+            "workingDirectory": str(Path.home()),
+        },
+        "triggerInputSchema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {
+                "executable": {"type": "string", "minLength": 1, "pattern": "^/"},
+                "arguments": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
+                "workingDirectory": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^/",
+                },
+            },
+            "required": ["executable", "arguments", "workingDirectory"],
+            "additionalProperties": False,
+        },
+        "resourceLimits": {
+            "triggerInputBytes": 1048576,
+            "attemptOutputBytes": 67108864,
+            "resultArtifactBytes": 16777216,
+        },
+        "retryPolicy": {"maxAttempts": 1},
+    }
+
+
+def setup() -> None:
+    if CONFIG_PATH.exists():
+        definition_id = load_definition_id()
+    else:
+        document_path = write_json_document(definition_document())
+        try:
+            result = run_omqueue(
+                ["definition", "apply", document_path, "--json"], capture=True
+            )
+        finally:
+            os.unlink(document_path)
+
+        if result.returncode != 0:
+            sys.stderr.write(result.stderr)
+            raise SystemExit(result.returncode)
+        try:
+            definition_id = json.loads(result.stdout)["result"]["definitionId"]
+        except (json.JSONDecodeError, KeyError, TypeError):
+            fail("OMQueue returned an invalid Definition response")
+        if not isinstance(definition_id, str) or not definition_id:
+            fail("OMQueue returned an invalid Definition identity")
+        save_definition_id(definition_id)
+
+    enabled = run_omqueue(["definition", "enable", definition_id, "--json"], capture=True)
+    if enabled.returncode != 0:
+        sys.stderr.write(enabled.stderr)
+        raise SystemExit(enabled.returncode)
+    print(f"bq: ready (Definition {definition_id})")
+
+
+def resolve_directory(value: str) -> str:
+    directory = Path(value).expanduser().resolve()
+    if not directory.is_dir():
+        fail(f"working directory does not exist: {value}", 2)
+    return str(directory)
+
+
+def resolve_executable(value: str, working_directory: str) -> str:
+    if os.sep in value:
+        candidate = Path(value).expanduser()
+        if not candidate.is_absolute():
+            candidate = Path(working_directory) / candidate
+        executable = str(candidate.resolve())
+    else:
+        executable = shutil.which(value) or ""
+
+    if not executable or not Path(executable).is_file() or not os.access(executable, os.X_OK):
+        fail(f"executable not found or not executable: {value}", 2)
+    return executable
+
+
+def parse_submission(arguments: list[str]) -> tuple[str, list[str], str]:
+    working_directory = os.getcwd()
+    index = 0
+    if arguments[:1] == ["--cwd"]:
+        if len(arguments) < 3:
+            fail("--cwd requires a directory and an executable", 2)
+        working_directory = resolve_directory(arguments[1])
+        index = 2
+    if arguments[index : index + 1] == ["--"]:
+        index += 1
+    if index >= len(arguments):
+        usage(sys.stderr)
+        fail("missing executable", 2)
+
+    executable = resolve_executable(arguments[index], working_directory)
+    return executable, arguments[index + 1 :], str(Path(working_directory).resolve())
+
+
+def submit(arguments: list[str]) -> None:
+    executable, command_arguments, working_directory = parse_submission(arguments)
+    trigger_input = {
+        "executable": executable,
+        "arguments": command_arguments,
+        "workingDirectory": working_directory,
+    }
+    document_path = write_json_document(trigger_input)
+    try:
+        result = run_omqueue(
+            [
+                "trigger",
+                load_definition_id(),
+                document_path,
+                "--idempotency-key",
+                f"bq-{uuid.uuid4()}",
+                "--json",
+            ],
+            capture=True,
+        )
+    finally:
+        os.unlink(document_path)
+
+    if result.returncode != 0:
+        sys.stderr.write(result.stderr)
+        raise SystemExit(result.returncode)
+    try:
+        job = json.loads(result.stdout)["job"]
+        print(f"bq: accepted Job {job['jobId']} ({job['state']})")
+    except (json.JSONDecodeError, KeyError, TypeError):
+        fail("OMQueue returned an invalid Trigger response")
+
+
+def internal_run() -> NoReturn:
+    try:
+        value = json.load(sys.stdin)
+        executable = value["executable"]
+        arguments = value["arguments"]
+        working_directory = value["workingDirectory"]
+    except (json.JSONDecodeError, KeyError, TypeError) as error:
+        fail(f"invalid Trigger input: {error}")
+
+    if not (
+        isinstance(executable, str)
+        and executable.startswith("/")
+        and isinstance(arguments, list)
+        and all(isinstance(argument, str) for argument in arguments)
+        and isinstance(working_directory, str)
+        and working_directory.startswith("/")
+    ):
+        fail("invalid Trigger input shape")
+
+    try:
+        os.chdir(working_directory)
+        os.execv(executable, [executable, *arguments])
+    except OSError as error:
+        fail(f"cannot execute {executable}: {error}")
+
+
+def main() -> None:
+    arguments = sys.argv[1:]
+    if arguments == [INTERNAL_RUN]:
+        internal_run()
+    if arguments == ["--setup"]:
+        setup()
+        return
+    if arguments in (["-h"], ["--help"]):
+        usage()
+        return
+    if not arguments:
+        usage(sys.stderr)
+        raise SystemExit(2)
+    submit(arguments)
+
+
+if __name__ == "__main__":
+    main()
