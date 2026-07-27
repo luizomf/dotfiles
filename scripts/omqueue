@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+readonly repo="${OMQUEUE_REPO:-${HOME}/Desktop/tutoriais_e_cursos/omqueue}"
+readonly entrypoint="${repo}/dist/src/bin.js"
+
+if [[ ! -f "$entrypoint" ]]; then
+  printf 'omqueue: built entrypoint not found: %s\n' "$entrypoint" >&2
+  printf 'omqueue: build the repository or set OMQUEUE_REPO\n' >&2
+  exit 1
+fi
+
+exec node "$entrypoint" "$@"
