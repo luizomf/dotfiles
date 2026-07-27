@@ -1,0 +1,154 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: pihandoff [--dry-run] <m132|m4128|fedoraair> [session-file]
+
+Send the most recently modified Pi session (or an explicit session file) to
+another host. Run this command from a regular shell after exiting Pi.
+EOF
+}
+
+dry_run=false
+if [[ "${1:-}" == "--dry-run" ]]; then
+  dry_run=true
+  shift
+fi
+
+if [[ $# -lt 1 || $# -gt 2 ]]; then
+  usage >&2
+  exit 2
+fi
+
+if [[ "${PI_CODING_AGENT:-}" == "true" ]]; then
+  printf 'ABORT: exit Pi before handing off its session.\n' >&2
+  exit 1
+fi
+
+target=$1
+case "$target" in
+  m132|m4128|fedoraair) ;;
+  *)
+    printf 'ABORT: unknown target host: %s\n' "$target" >&2
+    exit 2
+    ;;
+esac
+
+local_host=$(hostname -s | tr '[:upper:]' '[:lower:]')
+if [[ "$local_host" == "$target" ]]; then
+  printf 'ABORT: %s is this machine.\n' "$target" >&2
+  exit 1
+fi
+
+session_root=$HOME/.pi/agent/sessions
+if [[ ! -d "$session_root" ]]; then
+  printf 'ABORT: session directory not found: %s\n' "$session_root" >&2
+  exit 1
+fi
+
+session_file=$(python3 - "$session_root" "${2:-}" <<'PY'
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1]).expanduser().resolve()
+requested = sys.argv[2]
+
+if requested:
+    path = Path(requested).expanduser().resolve()
+else:
+    candidates = list(root.rglob("*.jsonl"))
+    if not candidates:
+        raise SystemExit("ABORT: no Pi sessions found")
+    path = max(candidates, key=lambda item: item.stat().st_mtime_ns)
+
+try:
+    path.relative_to(root)
+except ValueError:
+    raise SystemExit(f"ABORT: session is outside {root}") from None
+
+if not path.is_file():
+    raise SystemExit(f"ABORT: session file not found: {path}")
+
+print(path)
+PY
+)
+
+session_id=$(python3 - "$session_file" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+data = path.read_bytes()
+if not data.endswith(b"\n"):
+    raise SystemExit("ABORT: session has an incomplete final line")
+
+header = None
+for number, raw_line in enumerate(data.splitlines(), start=1):
+    try:
+        entry = json.loads(raw_line)
+    except json.JSONDecodeError as error:
+        raise SystemExit(f"ABORT: invalid JSON on session line {number}: {error}") from None
+    if number == 1:
+        header = entry
+
+if not isinstance(header, dict) or header.get("type") != "session" or not header.get("id"):
+    raise SystemExit("ABORT: invalid Pi session header")
+
+print(header["id"])
+PY
+)
+
+relative_path=${session_file#"$session_root"/}
+remote_root=.pi/agent/sessions/
+file_list=$(mktemp)
+trap 'rm -f "$file_list"' EXIT
+printf '%s\0' "$relative_path" > "$file_list"
+
+printf 'Session: %s\n' "$session_id"
+printf 'Source:  %s:%s\n' "$local_host" "$session_file"
+printf 'Target:  %s:~/%s%s\n' "$target" "$remote_root" "$relative_path"
+
+changes=$(rsync -aznciO --from0 --files-from="$file_list" -- \
+  "$session_root/" "$target:~/$remote_root")
+if [[ -z "$changes" ]]; then
+  printf 'Already synchronized.\n'
+  exit 0
+fi
+
+if [[ "$dry_run" == "true" ]]; then
+  printf '%s\n' "$changes"
+  printf '[dry-run] No files changed.\n'
+  exit 0
+fi
+
+stamp=$(date '+%Y%m%d-%H%M%S')
+ssh -T -o BatchMode=yes "$target" /bin/bash -s -- "$relative_path" "$stamp" <<'REMOTE'
+set -euo pipefail
+
+relative_path=$1
+stamp=$2
+session_root=$HOME/.pi/agent/sessions
+destination=$session_root/$relative_path
+
+if [[ -f "$destination" ]]; then
+  backup=$HOME/.pi/agent/session-handoff-backups/$stamp/$relative_path
+  mkdir -p "${backup%/*}"
+  cp -p "$destination" "$backup"
+fi
+REMOTE
+
+rsync -azO --from0 --files-from="$file_list" -- \
+  "$session_root/" "$target:~/$remote_root"
+
+remaining=$(rsync -aznciO --from0 --files-from="$file_list" -- \
+  "$session_root/" "$target:~/$remote_root")
+if [[ -n "$remaining" ]]; then
+  printf 'ABORT: verification failed; source and target still differ.\n' >&2
+  exit 1
+fi
+
+printf 'Handoff complete. On %s, resume with:\n' "$target"
+printf '  pi --session %s\n' "$session_id"
