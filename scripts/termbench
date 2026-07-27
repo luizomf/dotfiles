@@ -11,8 +11,10 @@ bytes.
 """
 
 import argparse
+import codecs
 import os
 import random
+import re
 import select
 import shutil
 import signal
@@ -33,6 +35,15 @@ CURSOR_SEQ: dict[CursorMode, bytes] = {
 
 CURSOR_OFF = b"\x1b[?25l"
 CURSOR_ON = b"\x1b[?25h"
+
+# DECSCUSR, as (blinking, steady). A block is drawn by filling the cell and
+# inverting the glyph under it, a bar is a thin overlay: different enough that
+# a flicker can show up in one shape and not the other.
+CURSOR_SHAPE: dict[str, tuple[int, int]] = {
+    "block": (1, 2),
+    "underline": (3, 4),
+    "bar": (5, 6),
+}
 
 ASCII_POOL = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,-_/\\|"
 BLOCK_POOL = "░▒▓█▄▀▐▌▖▗▘▝▚▞■□▪▫"
@@ -61,6 +72,74 @@ STALL_TIMEOUT = 5.0
 FRAME_POOL = 120
 
 
+# Any CSI sequence, so arrow keys and other replies can be recognised and
+# dropped instead of sitting in the buffer waiting to be mistaken for a DSR.
+CSI_RE = re.compile(rb"\x1b\[[0-9;?]*[A-Za-z]")
+DSR_RE = re.compile(rb"\x1b\[[0-9]+;[0-9]+R")
+
+INPUT_PROMPT = "› "
+
+# Synchronized output (DECSET 2026): the terminal is asked to hold the frame
+# and present it whole. Every modern TUI wraps its redraws in this; xterm.js
+# answers it by buffering row refreshes, which is a different code path from an
+# unsynchronized write and worth exercising on its own.
+SYNC_BEGIN = b"\x1b[?2026h"
+SYNC_END = b"\x1b[?2026l"
+
+
+class TypedLine:
+    """Whatever the user types while a scene animates above the input line.
+
+    stdin carries two interleaved streams here: the terminal's CSI 6n replies
+    and the user's keystrokes. Scanning for a bare "R" would swallow a typed
+    letter and count it as a frame acknowledgement, so escape sequences are
+    matched in full and everything else is treated as input.
+    """
+
+    def __init__(self) -> None:
+        self.pending = bytearray()
+        self.decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+        self.text = ""
+
+    def feed(self, data: bytes) -> bool:
+        """Absorb a stdin chunk. True means a DSR reply was found in it."""
+        self.pending.extend(data)
+        saw_dsr = False
+
+        while True:
+            match = CSI_RE.search(self.pending)
+            if not match:
+                break
+            self._type(bytes(self.pending[: match.start()]))
+            if DSR_RE.fullmatch(match.group()):
+                saw_dsr = True
+            del self.pending[: match.end()]
+
+        # Hold back a partial escape sequence; the rest of it is still in flight.
+        esc = self.pending.rfind(0x1B)
+        cut = esc if esc >= 0 else len(self.pending)
+        self._type(bytes(self.pending[:cut]))
+        del self.pending[:cut]
+        return saw_dsr
+
+    def _type(self, data: bytes) -> None:
+        for byte in data:
+            if byte in (0x7F, 0x08):
+                self.text = self.text[:-1]
+                self.decoder.reset()
+            elif byte in (0x0D, 0x0A):
+                self.text = ""
+                self.decoder.reset()
+            elif byte < 0x20:
+                continue
+            else:
+                self.text += self.decoder.decode(bytes([byte]))
+
+    def render(self, row: int, width: int) -> bytes:
+        room = max(1, width - len(INPUT_PROMPT) - 1)
+        return f"\x1b[{row};1H\x1b[2K{INPUT_PROMPT}{self.text[-room:]}".encode()
+
+
 class Stats(NamedTuple):
     scene: str
     frames: int
@@ -77,8 +156,11 @@ class Args(argparse.Namespace):
     seconds: float
     fps: float
     cursor: CursorMode
+    shape: str
+    sync: bool
     no_rtt: bool
     verify: bool
+    input_line: bool
     list_scenes: bool
 
 
@@ -188,7 +270,7 @@ def write_all(fd: int, data: bytes) -> None:
         data = data[os.write(fd, data) :]
 
 
-def read_dsr(fd: int, timeout: float) -> bool:
+def read_dsr(fd: int, timeout: float, typed: TypedLine | None = None) -> bool:
     """Drain stdin until the CSI 6n reply arrives. False means the reply never came."""
     deadline = time.perf_counter() + timeout
     while True:
@@ -197,7 +279,10 @@ def read_dsr(fd: int, timeout: float) -> bool:
             return False
         if not select.select([fd], [], [], remaining)[0]:
             return False
-        if b"R" in os.read(fd, 64):
+        data = os.read(fd, 1024)
+        # Without an input line nothing else can arrive on stdin, so keep the
+        # cheap scan: it is on the measured path once per frame.
+        if typed.feed(data) if typed is not None else b"R" in data:
             return True
 
 
@@ -224,15 +309,23 @@ def run_scene(
     target_fps: float,
     use_rtt: bool,
     cursor: CursorMode,
+    typed: TypedLine | None = None,
+    sync: bool = False,
 ) -> tuple[Stats, bool]:
     render = SCENES[name]
     width, height = shutil.get_terminal_size()
     height = max(1, height - 1)
+    input_row = height + 1
     rng = random.Random(hash(name) & 0xFFFF)
 
     frames = [render(width, height, n, rng) for n in range(FRAME_POOL)]
-    if cursor == "toggle":
-        frames = [CURSOR_OFF + frame + CURSOR_ON for frame in frames]
+    # With an input line the cursor sequences wrap the input redraw too, so the
+    # payload has to be assembled per frame instead of prebuilt.
+    if typed is None:
+        if cursor == "toggle":
+            frames = [CURSOR_OFF + frame + CURSOR_ON for frame in frames]
+        if sync:
+            frames = [SYNC_BEGIN + frame + SYNC_END for frame in frames]
 
     durations: list[float] = []
     written = 0
@@ -240,21 +333,40 @@ def run_scene(
     aborted = False
 
     write_all(out_fd, b"\x1b[2J\x1b[H")
+    if typed is not None:
+        # Keep the scrolling region above the input line so `scroll` cannot
+        # push it off the screen.
+        write_all(out_fd, f"\x1b[1;{height}r".encode())
     started = time.perf_counter()
     next_frame = started
     i = 0
 
     while time.perf_counter() - started < seconds:
         payload = frames[i % FRAME_POOL]
+        if typed is not None:
+            # Home first: `scroll` and `spinner` draw relative to the cursor,
+            # which the input line left on the bottom row.
+            payload = b"\x1b[H" + payload + typed.render(input_row, width)
+            if cursor == "toggle":
+                payload = CURSOR_OFF + payload + CURSOR_ON
+            if sync:
+                # Outermost, like a real TUI: the whole redraw including the
+                # cursor work is one presented frame.
+                payload = SYNC_BEGIN + payload + SYNC_END
         frame_start = time.perf_counter()
         write_all(out_fd, payload)
         if use_rtt:
             write_all(out_fd, b"\x1b[6n")
-            if not read_dsr(in_fd, STALL_TIMEOUT):
+            if not read_dsr(in_fd, STALL_TIMEOUT, typed):
                 # Never fall back to unthrottled writing: a terminal this far
                 # behind would be buried under megabytes it cannot drain.
                 aborted = True
                 break
+        elif typed is not None:
+            # Without the DSR round trip nothing else drains stdin, so keys
+            # would never reach the input line.
+            while select.select([in_fd], [], [], 0)[0]:
+                typed.feed(os.read(in_fd, 1024))
         elapsed = time.perf_counter() - frame_start
 
         if i >= WARMUP_FRAMES:
@@ -269,6 +381,9 @@ def run_scene(
                 time.sleep(slack)
             else:
                 next_frame = time.perf_counter()
+
+    if typed is not None:
+        write_all(out_fd, b"\x1b[r")
 
     total = sum(durations)
     ordered = sorted(durations)
@@ -386,6 +501,23 @@ def parse_args() -> Args:
         help="skip the CSI 6n sync and measure raw write throughput instead",
     )
     parser.add_argument(
+        "--sync",
+        action="store_true",
+        help="wrap every frame in synchronized output (DECSET 2026), like real TUIs do",
+    )
+    parser.add_argument(
+        "--shape",
+        choices=["keep", "block", "underline", "bar"],
+        default="keep",
+        help="cursor shape; `keep` inherits whatever the shell left behind",
+    )
+    parser.add_argument(
+        "--input",
+        dest="input_line",
+        action="store_true",
+        help="keep a typing line on the bottom row while the scene animates above it",
+    )
+    parser.add_argument(
         "--verify",
         action="store_true",
         help="draw one static deterministic frame and hold it, to compare renderers by eye",
@@ -427,13 +559,25 @@ def main() -> int:
     try:
         tty.setcbreak(in_fd)
         write_all(out_fd, b"\x1b[?1049h" + CURSOR_SEQ[args.cursor])
+        if args.shape != "keep":
+            blinking, steady = CURSOR_SHAPE[args.shape]
+            write_all(out_fd, f"\x1b[{blinking if args.cursor == 'blink' else steady} q".encode())
         if args.verify:
             run_verify(out_fd, in_fd)
         else:
             rtt_used = rtt_used and probe_dsr(out_fd, in_fd)
+            typed = TypedLine() if args.input_line else None
             for name in selected:
                 stats, aborted = run_scene(
-                    name, out_fd, in_fd, args.seconds, args.fps, rtt_used, args.cursor
+                    name,
+                    out_fd,
+                    in_fd,
+                    args.seconds,
+                    args.fps,
+                    rtt_used,
+                    args.cursor,
+                    typed,
+                    args.sync,
                 )
                 results.append(stats)
                 if aborted:
@@ -441,7 +585,9 @@ def main() -> int:
     except KeyboardInterrupt:
         pass
     finally:
-        write_all(out_fd, b"\x1b[?25h\x1b[?12l\x1b[0m\x1b[?1049l")
+        # `CSI 0 SP q` restores the terminal default; zsh's zle hook sets the
+        # shape again on the next prompt anyway.
+        write_all(out_fd, b"\x1b[?25h\x1b[?12l\x1b[0 q\x1b[0m\x1b[?1049l")
         termios.tcsetattr(in_fd, termios.TCSADRAIN, saved)
 
     if args.verify:
@@ -455,6 +601,11 @@ def main() -> int:
 
     if results:
         report(results, rtt_used, args.cursor, stalled)
+        if args.input_line:
+            print(
+                "note: --input adds a cursor move and a line redraw per frame.\n"
+                "      Use these numbers to watch the cursor, not to compare renderers."
+            )
     return 0
 
 
