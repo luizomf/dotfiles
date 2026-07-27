@@ -33,6 +33,13 @@ trap 'rm -rf "$tmp_home"' EXIT
 mkdir -p "$tmp_workspace"
 test -d "$persistent_home"
 
+host_git_name="$(git config --global --get user.name || true)"
+host_git_email="$(git config --global --get user.email || true)"
+if [[ -n "$host_git_name" && -n "$host_git_email" ]]; then
+  git config --file "$tmp_home/.gitconfig" user.name "$host_git_name"
+  git config --file "$tmp_home/.gitconfig" user.email "$host_git_email"
+fi
+
 case $template in
   codex|codex-ollama)
     mkdir -p "${tmp_home}/.codex"

@@ -29,8 +29,9 @@ def usage(stream=sys.stdout) -> None:
   bq [--cwd <directory>] [--] <executable> [arguments...]
 
 Submit a command to OMQueue and return after durable Job acceptance.
-The command runs without shell evaluation and without inheriting this shell's
-environment.""",
+The command runs without shell evaluation or wholesale inheritance of this
+shell's environment. Personal scripts and PROJECTS_DIR are available. On macOS,
+it receives application scheduling policy like an interactive command.""",
         file=stream,
     )
 
@@ -160,7 +161,7 @@ def resolve_executable(value: str, working_directory: str) -> str:
         candidate = Path(value).expanduser()
         if not candidate.is_absolute():
             candidate = Path(working_directory) / candidate
-        executable = str(candidate.resolve())
+        executable = os.path.abspath(candidate)
     else:
         executable = shutil.which(value) or ""
 
@@ -239,8 +240,16 @@ def internal_run() -> NoReturn:
     ):
         fail("invalid Trigger input shape")
 
+    scripts_directory = str(Path(__file__).resolve().parent)
+    queue_path = os.environ.get("PATH", "/usr/bin:/bin:/usr/sbin:/sbin")
+    os.environ["PATH"] = f"{scripts_directory}:{queue_path}"
+    os.environ["PROJECTS_DIR"] = str(Path.home() / "Desktop" / "tutoriais_e_cursos")
+
     try:
         os.chdir(working_directory)
+        if sys.platform == "darwin":
+            taskpolicy = "/usr/sbin/taskpolicy"
+            os.execv(taskpolicy, [taskpolicy, "-a", executable, *arguments])
         os.execv(executable, [executable, *arguments])
     except OSError as error:
         fail(f"cannot execute {executable}: {error}")
