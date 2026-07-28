@@ -2,6 +2,7 @@
 
 """Submit an executable and argument vector to the local OMQueue installation."""
 
+import fcntl
 import json
 import os
 import re
@@ -10,12 +11,15 @@ import subprocess
 import sys
 import tempfile
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import NoReturn, Optional
+from typing import NoReturn
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 CONFIG_PATH = Path.home() / ".config" / "bq" / "config.json"
+CONFIG_LOCK_PATH = CONFIG_PATH.with_name("config.lock")
 OMQUEUE = os.environ.get("BQ_OMQUEUE", "omqueue")
 INTERNAL_RUN = "--internal-run"
 FORWARDED_OLLAMA_ENVIRONMENT = (
@@ -35,10 +39,10 @@ def usage(stream=sys.stdout) -> None:
     print(
         """Usage:
   bq --setup
-  bq [--cwd DIR] [--] EXECUTABLE [ARGUMENTS...]
-  bq [--cwd DIR] --in DURATION [--every DURATION --count N] -- EXECUTABLE [ARGUMENTS...]
-  bq [--cwd DIR] --at DATETIME [--every DURATION --count N] -- EXECUTABLE [ARGUMENTS...]
-  bq [--cwd DIR] --cron EXPRESSION [--tz IANA_ZONE] -- EXECUTABLE [ARGUMENTS...]
+  bq [--cwd DIR] [--concurrency-key KEY] [--] EXECUTABLE [ARGUMENTS...]
+  bq [--cwd DIR] [--concurrency-key KEY] --in DURATION [--every DURATION --count N] -- EXECUTABLE [ARGUMENTS...]
+  bq [--cwd DIR] [--concurrency-key KEY] --at DATETIME [--every DURATION --count N] -- EXECUTABLE [ARGUMENTS...]
+  bq [--cwd DIR] [--concurrency-key KEY] --cron EXPRESSION [--tz IANA_ZONE] -- EXECUTABLE [ARGUMENTS...]
 
 Run now:
   With no timing option, submit one Trigger and return after durable Job
@@ -60,8 +64,13 @@ Timing rules:
   The wrapper never sleeps or runs its own scheduler.
 
 Execution:
-  --cwd DIR         Capture DIR instead of the current working directory.
-  --                 Separate bq options from the executable and its arguments.
+  --cwd DIR             Capture DIR instead of the current working directory.
+  --concurrency-key KEY Serialize commands that use the same non-empty key.
+  --                    Separate bq options from the executable and its arguments.
+
+  Omitting --concurrency-key preserves normal concurrent execution. Each new
+  key lazily provisions one reusable Job Definition; different keys remain
+  independent and are still bounded by the Queue's global capacity.
 
   Commands use literal argument vectors without shell evaluation or wholesale
   inheritance of the submitting shell environment. Personal scripts, common
@@ -72,6 +81,7 @@ Execution:
 Examples:
   bq ./script --flag value
   bq --cwd ~/project -- ./script --flag value
+  bq --concurrency-key audio-playback -- cliplay -l a -t "Hello"
   bq --in 15m -- commit
   bq --at '2026-07-28T09:00:00-03:00' -- ./daily-task
   bq --in 1h --every 30m --count 4 -- ./reminder
@@ -80,7 +90,9 @@ Examples:
     )
 
 
-def run_omqueue(arguments: list[str], *, capture: bool = False) -> subprocess.CompletedProcess[str]:
+def run_omqueue(
+    arguments: list[str], *, capture: bool = False
+) -> subprocess.CompletedProcess[str]:
     executable = shutil.which(OMQUEUE) if os.sep not in OMQUEUE else OMQUEUE
     if not executable:
         fail(f"OMQueue CLI not found: {OMQUEUE}")
@@ -94,43 +106,73 @@ def run_omqueue(arguments: list[str], *, capture: bool = False) -> subprocess.Co
 
 
 def write_json_document(value: object) -> str:
-    handle = tempfile.NamedTemporaryFile(
+    with tempfile.NamedTemporaryFile(
         mode="w", encoding="utf-8", prefix="bq-", suffix=".json", delete=False
-    )
-    try:
+    ) as handle:
         json.dump(value, handle, ensure_ascii=False, separators=(",", ":"))
         handle.write("\n")
         return handle.name
-    finally:
-        handle.close()
+
+
+def load_config() -> dict[str, object]:
+    try:
+        config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, TypeError):
+        fail(f"not configured; run 'bq --setup' (expected {CONFIG_PATH})")
+
+    if not isinstance(config, dict):
+        fail(f"invalid configuration in {CONFIG_PATH}")
+
+    definition_id = config.get("definitionId")
+    if not isinstance(definition_id, str) or not definition_id:
+        fail(f"invalid Definition identity in {CONFIG_PATH}")
+
+    concurrency_definitions = config.get("concurrencyDefinitions", {})
+    if not isinstance(concurrency_definitions, dict) or not all(
+        isinstance(key, str) and key and isinstance(value, str) and value
+        for key, value in concurrency_definitions.items()
+    ):
+        fail(f"invalid concurrency Definition mapping in {CONFIG_PATH}")
+
+    return {
+        "definitionId": definition_id,
+        "concurrencyDefinitions": dict(concurrency_definitions),
+    }
 
 
 def load_definition_id() -> str:
-    try:
-        config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-        definition_id = config["definitionId"]
-    except (OSError, json.JSONDecodeError, KeyError, TypeError):
-        fail(f"not configured; run 'bq --setup' (expected {CONFIG_PATH})")
-
-    if not isinstance(definition_id, str) or not definition_id:
-        fail(f"invalid Definition identity in {CONFIG_PATH}")
-    return definition_id
+    return str(load_config()["definitionId"])
 
 
-def save_definition_id(definition_id: str) -> None:
+def save_config(config: dict[str, object]) -> None:
     CONFIG_PATH.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     temporary = CONFIG_PATH.with_suffix(f".{os.getpid()}.tmp")
     temporary.write_text(
-        json.dumps({"definitionId": definition_id}, indent=2) + "\n",
+        json.dumps(config, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     temporary.chmod(0o600)
     temporary.replace(CONFIG_PATH)
 
 
-def definition_document() -> dict[str, object]:
+@contextmanager
+def config_lock() -> Iterator[None]:
+    CONFIG_PATH.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    descriptor = os.open(CONFIG_LOCK_PATH, os.O_CREAT | os.O_RDWR, 0o600)
+    try:
+        os.fchmod(descriptor, 0o600)
+        fcntl.flock(descriptor, fcntl.LOCK_EX)
+        yield
+    finally:
+        fcntl.flock(descriptor, fcntl.LOCK_UN)
+        os.close(descriptor)
+
+
+def definition_document(
+    concurrency_key: str | None = None,
+) -> dict[str, object]:
     script_path = str(Path(__file__).resolve())
-    return {
+    document: dict[str, object] = {
         "command": {
             "executable": script_path,
             "arguments": [INTERNAL_RUN],
@@ -169,6 +211,9 @@ def definition_document() -> dict[str, object]:
         },
         "retryPolicy": {"maxAttempts": 1},
     }
+    if concurrency_key is not None:
+        document["concurrencyKey"] = concurrency_key
+    return document
 
 
 def current_definition_revision(definition_id: str) -> int:
@@ -187,9 +232,11 @@ def current_definition_revision(definition_id: str) -> int:
     return revision
 
 
-def setup() -> None:
-    document = definition_document()
-    existing_definition_id = load_definition_id() if CONFIG_PATH.exists() else None
+def apply_definition(
+    existing_definition_id: str | None,
+    concurrency_key: str | None = None,
+) -> str:
+    document = definition_document(concurrency_key)
     if existing_definition_id is not None:
         document["definitionId"] = existing_definition_id
         document["baseRevision"] = current_definition_revision(existing_definition_id)
@@ -211,16 +258,72 @@ def setup() -> None:
         fail("OMQueue returned an invalid Definition response")
     if not isinstance(definition_id, str) or not definition_id:
         fail("OMQueue returned an invalid Definition identity")
-    if existing_definition_id is None:
-        save_definition_id(definition_id)
-    elif definition_id != existing_definition_id:
+    if existing_definition_id is not None and definition_id != existing_definition_id:
         fail("OMQueue returned a different Definition identity")
 
-    enabled = run_omqueue(["definition", "enable", definition_id, "--json"], capture=True)
+    return definition_id
+
+
+def enable_definition(definition_id: str) -> None:
+    enabled = run_omqueue(
+        ["definition", "enable", definition_id, "--json"], capture=True
+    )
     if enabled.returncode != 0:
         sys.stderr.write(enabled.stderr)
         raise SystemExit(enabled.returncode)
+
+
+def setup() -> None:
+    with config_lock():
+        config = (
+            load_config() if CONFIG_PATH.exists() else {"concurrencyDefinitions": {}}
+        )
+        existing_definition_id = config.get("definitionId")
+        definition_id = apply_definition(
+            existing_definition_id if isinstance(existing_definition_id, str) else None
+        )
+        concurrency_definitions = config["concurrencyDefinitions"]
+        if not isinstance(concurrency_definitions, dict):
+            fail(f"invalid concurrency Definition mapping in {CONFIG_PATH}")
+        reconciled_definitions = {
+            key: apply_definition(value, key)
+            for key, value in sorted(concurrency_definitions.items())
+            if isinstance(key, str) and isinstance(value, str)
+        }
+        save_config(
+            {
+                "definitionId": definition_id,
+                "concurrencyDefinitions": reconciled_definitions,
+            }
+        )
+        enable_definition(definition_id)
+        for concurrency_definition_id in reconciled_definitions.values():
+            enable_definition(concurrency_definition_id)
     print(f"bq: ready (Definition {definition_id})")
+
+
+def definition_for_concurrency_key(concurrency_key: str | None) -> str:
+    if concurrency_key is None:
+        return load_definition_id()
+
+    with config_lock():
+        config = load_config()
+        concurrency_definitions = config["concurrencyDefinitions"]
+        if not isinstance(concurrency_definitions, dict):
+            fail(f"invalid concurrency Definition mapping in {CONFIG_PATH}")
+        existing = concurrency_definitions.get(concurrency_key)
+        if isinstance(existing, str):
+            return existing
+
+        definition_id = apply_definition(None, concurrency_key)
+        concurrency_definitions[concurrency_key] = definition_id
+        save_config(config)
+        enable_definition(definition_id)
+        print(
+            f"bq: ready concurrency key {concurrency_key!r} "
+            f"(Definition {definition_id})"
+        )
+        return definition_id
 
 
 def resolve_directory(value: str) -> str:
@@ -239,7 +342,11 @@ def resolve_executable(value: str, working_directory: str) -> str:
     else:
         executable = shutil.which(value) or ""
 
-    if not executable or not Path(executable).is_file() or not os.access(executable, os.X_OK):
+    if (
+        not executable
+        or not Path(executable).is_file()
+        or not os.access(executable, os.X_OK)
+    ):
         fail(f"executable not found or not executable: {value}", 2)
     return executable
 
@@ -292,7 +399,7 @@ def format_instant(instant: datetime) -> str:
     return instant.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:00Z")
 
 
-def valid_time_zone(candidates: list[str]) -> Optional[str]:
+def valid_time_zone(candidates: list[str]) -> str | None:
     for candidate in candidates:
         if not candidate or candidate.startswith(":"):
             continue
@@ -335,9 +442,10 @@ def option_value(arguments: list[str], index: int, option: str) -> str:
 
 def parse_submission(
     arguments: list[str],
-) -> tuple[dict[str, object], dict[str, object]]:
+) -> tuple[dict[str, object], dict[str, object], str | None]:
     working_directory = os.getcwd()
     timing: dict[str, object] = {}
+    concurrency_key: str | None = None
     index = 0
 
     while index < len(arguments):
@@ -349,6 +457,12 @@ def parse_submission(
             working_directory = resolve_directory(
                 option_value(arguments, index, option)
             )
+            index += 2
+            continue
+        if option == "--concurrency-key":
+            concurrency_key = option_value(arguments, index, option)
+            if not concurrency_key:
+                fail("--concurrency-key requires a non-empty value", 2)
             index += 2
             continue
         if option in ("--in", "--at", "--cron", "--tz", "--every"):
@@ -398,16 +512,16 @@ def parse_submission(
             if (value := os.environ.get(name))
         },
     }
-    return trigger_input, timing
+    return trigger_input, timing, concurrency_key
 
 
-def submit_now(trigger_input: dict[str, object]) -> None:
+def submit_now(trigger_input: dict[str, object], definition_id: str) -> None:
     document_path = write_json_document(trigger_input)
     try:
         result = run_omqueue(
             [
                 "trigger",
-                load_definition_id(),
+                definition_id,
                 document_path,
                 "--idempotency-key",
                 f"bq-{uuid.uuid4()}",
@@ -447,9 +561,7 @@ def create_schedule(document: dict[str, object]) -> str:
     if not isinstance(schedule_id, str) or not schedule_id:
         fail("OMQueue returned an invalid Schedule identity")
 
-    enabled = run_omqueue(
-        ["schedule", "enable", schedule_id, "--json"], capture=True
-    )
+    enabled = run_omqueue(["schedule", "enable", schedule_id, "--json"], capture=True)
     if enabled.returncode != 0:
         print(
             f"bq: Schedule {schedule_id} was created but could not be enabled",
@@ -461,9 +573,10 @@ def create_schedule(document: dict[str, object]) -> str:
 
 
 def schedule_submission(
-    trigger_input: dict[str, object], timing: dict[str, object]
+    trigger_input: dict[str, object],
+    timing: dict[str, object],
+    definition_id: str,
 ) -> None:
-    definition_id = load_definition_id()
     if "cron" in timing:
         cron = timing["cron"]
         time_zone = timing.get("tz") or system_time_zone()
@@ -493,7 +606,9 @@ def schedule_submission(
         if "every" in timing
         else timedelta(0)
     )
-    count = int(timing.get("count", 1))
+    count = timing.get("count", 1)
+    if not isinstance(count, int) or isinstance(count, bool):
+        fail("invalid internal repetition count")
     instants: list[str] = []
     for occurrence in range(count):
         try:
@@ -524,11 +639,12 @@ def schedule_submission(
 
 
 def submit(arguments: list[str]) -> None:
-    trigger_input, timing = parse_submission(arguments)
+    trigger_input, timing, concurrency_key = parse_submission(arguments)
+    definition_id = definition_for_concurrency_key(concurrency_key)
     if timing:
-        schedule_submission(trigger_input, timing)
+        schedule_submission(trigger_input, timing, definition_id)
     else:
-        submit_now(trigger_input)
+        submit_now(trigger_input, definition_id)
 
 
 def internal_run() -> NoReturn:
