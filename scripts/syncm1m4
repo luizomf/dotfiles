@@ -22,11 +22,23 @@ ls -lah "$HOME"/.local/share/tmux/resurrect
 echo
 prline
 
+project_excludes=(
+  --exclude='node_modules/'
+  --exclude='dist/'
+  --exclude='.venv/'
+  --exclude='venv/'
+  --exclude='__pycache__/'
+  --exclude='.pytest_cache/'
+  --exclude='.mypy_cache/'
+  --exclude='.ruff_cache/'
+)
+
 # m4128
 rsync -havz --progress --stats "$HOME"/.local/share/tmux/resurrect/ \
   m4128:~/.local/share/tmux/resurrect/ --delete
 
-rsync -havz --progress --stats "$HOME"/Desktop/tutoriais_e_cursos/ \
+rsync -havz --progress --stats "${project_excludes[@]}" \
+  "$HOME"/Desktop/tutoriais_e_cursos/ \
   m4128:~/Desktop/tutoriais_e_cursos --delete
 
 echo
@@ -36,7 +48,8 @@ prline
 rsync -havz --progress --stats "$HOME"/.local/share/tmux/resurrect/ \
   fedoraair:~/.local/share/tmux/resurrect/ --delete
 
-rsync -havz --progress --stats "$HOME"/Desktop/tutoriais_e_cursos/ \
+rsync -havz --progress --stats "${project_excludes[@]}" \
+  "$HOME"/Desktop/tutoriais_e_cursos/ \
   fedoraair:~/Desktop/tutoriais_e_cursos --delete
 
 # Pi agent all

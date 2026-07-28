@@ -12,14 +12,23 @@ if [[ ! -f "$entrypoint" ]]; then
 fi
 
 if command -v node >/dev/null 2>&1; then
-  exec node "$entrypoint" "$@"
+  node_major="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || true)"
+  if [[ "$node_major" =~ ^[0-9]+$ ]] && ((node_major >= 24)); then
+    exec node "$entrypoint" "$@"
+  fi
 fi
 
-readonly nvm_exec="${NVM_DIR:-${HOME}/.nvm}/nvm-exec"
-if [[ -x "$nvm_exec" ]]; then
+readonly nvm_dir="${NVM_DIR:-${HOME}/.nvm}"
+readonly nvm_script="${nvm_dir}/nvm.sh"
+if [[ -s "$nvm_script" ]]; then
   export NODE_VERSION="${OMQUEUE_NODE_VERSION:-default}"
-  exec "$nvm_exec" node "$entrypoint" "$@"
+  # shellcheck disable=SC1090
+  . "$nvm_script" --no-use
+  nvm_node="$(nvm which "$NODE_VERSION" 2>/dev/null || true)"
+  if [[ -x "$nvm_node" ]]; then
+    exec "$nvm_node" "$entrypoint" "$@"
+  fi
 fi
 
-printf 'omqueue: node not found on PATH and nvm-exec is unavailable: %s\n' "$nvm_exec" >&2
+printf 'omqueue: Node.js 24+ not found on PATH or through NVM: %s\n' "$nvm_script" >&2
 exit 127
