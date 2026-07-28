@@ -39,10 +39,10 @@ def usage(stream=sys.stdout) -> None:
     print(
         """Usage:
   bq --setup
-  bq [--cwd DIR] [--concurrency-key KEY] [--] EXECUTABLE [ARGUMENTS...]
-  bq [--cwd DIR] [--concurrency-key KEY] --in DURATION [--every DURATION --count N] -- EXECUTABLE [ARGUMENTS...]
-  bq [--cwd DIR] [--concurrency-key KEY] --at DATETIME [--every DURATION --count N] -- EXECUTABLE [ARGUMENTS...]
-  bq [--cwd DIR] [--concurrency-key KEY] --cron EXPRESSION [--tz IANA_ZONE] -- EXECUTABLE [ARGUMENTS...]
+  bq [--cwd DIR] [--concurrency-key KEY] [--stdin] [--json] [--] EXECUTABLE [ARGUMENTS...]
+  bq [--cwd DIR] [--concurrency-key KEY] [--stdin] --in DURATION [--every DURATION --count N] -- EXECUTABLE [ARGUMENTS...]
+  bq [--cwd DIR] [--concurrency-key KEY] [--stdin] --at DATETIME [--every DURATION --count N] -- EXECUTABLE [ARGUMENTS...]
+  bq [--cwd DIR] [--concurrency-key KEY] [--stdin] --cron EXPRESSION [--tz IANA_ZONE] -- EXECUTABLE [ARGUMENTS...]
 
 Run now:
   With no timing option, submit one Trigger and return after durable Job
@@ -66,7 +66,12 @@ Timing rules:
 Execution:
   --cwd DIR             Capture DIR instead of the current working directory.
   --concurrency-key KEY Serialize commands that use the same non-empty key.
+  --stdin               Persist redirected UTF-8 stdin and restore it for the command.
+  --json                Print immediate Job acceptance as one JSON document.
   --                    Separate bq options from the executable and its arguments.
+
+  Content submitted with --stdin becomes durable Queue data. Do not use it for
+  secrets. Interactive terminal input and binary input are not supported.
 
   Omitting --concurrency-key preserves normal concurrent execution. Each new
   key lazily provisions one reusable Job Definition; different keys remain
@@ -81,6 +86,7 @@ Execution:
 Examples:
   bq ./script --flag value
   bq --cwd ~/project -- ./script --flag value
+  printf '%s' 'literal text' | bq --stdin --json -- ./text-reader
   bq --concurrency-key audio-playback -- cliplay -l a -t "Hello"
   bq --in 15m -- commit
   bq --at '2026-07-28T09:00:00-03:00' -- ./daily-task
@@ -192,6 +198,7 @@ def definition_document(
                     "minLength": 1,
                     "pattern": "^/",
                 },
+                "stdin": {"type": "string"},
                 "ollamaEnvironment": {
                     "type": "object",
                     "properties": {
@@ -302,7 +309,9 @@ def setup() -> None:
     print(f"bq: ready (Definition {definition_id})")
 
 
-def definition_for_concurrency_key(concurrency_key: str | None) -> str:
+def definition_for_concurrency_key(
+    concurrency_key: str | None, *, diagnostics_to_stderr: bool = False
+) -> str:
     if concurrency_key is None:
         return load_definition_id()
 
@@ -321,7 +330,8 @@ def definition_for_concurrency_key(concurrency_key: str | None) -> str:
         enable_definition(definition_id)
         print(
             f"bq: ready concurrency key {concurrency_key!r} "
-            f"(Definition {definition_id})"
+            f"(Definition {definition_id})",
+            file=sys.stderr if diagnostics_to_stderr else sys.stdout,
         )
         return definition_id
 
@@ -442,10 +452,12 @@ def option_value(arguments: list[str], index: int, option: str) -> str:
 
 def parse_submission(
     arguments: list[str],
-) -> tuple[dict[str, object], dict[str, object], str | None]:
+) -> tuple[dict[str, object], dict[str, object], str | None, bool]:
     working_directory = os.getcwd()
     timing: dict[str, object] = {}
     concurrency_key: str | None = None
+    capture_stdin = False
+    json_output = False
     index = 0
 
     while index < len(arguments):
@@ -464,6 +476,14 @@ def parse_submission(
             if not concurrency_key:
                 fail("--concurrency-key requires a non-empty value", 2)
             index += 2
+            continue
+        if option == "--stdin":
+            capture_stdin = True
+            index += 1
+            continue
+        if option == "--json":
+            json_output = True
+            index += 1
             continue
         if option in ("--in", "--at", "--cron", "--tz", "--every"):
             timing[option[2:]] = option_value(arguments, index, option)
@@ -500,6 +520,8 @@ def parse_submission(
         count = timing["count"]
         if not isinstance(count, int) or not 2 <= count <= MAX_FINITE_RUNS:
             fail(f"--count must be from 2 through {MAX_FINITE_RUNS}", 2)
+    if json_output and timing:
+        fail("--json is supported only for immediate submissions", 2)
 
     executable = resolve_executable(arguments[index], working_directory)
     trigger_input: dict[str, object] = {
@@ -512,10 +534,19 @@ def parse_submission(
             if (value := os.environ.get(name))
         },
     }
-    return trigger_input, timing, concurrency_key
+    if capture_stdin:
+        if sys.stdin.isatty():
+            fail("--stdin requires piped or redirected UTF-8 input", 2)
+        try:
+            trigger_input["stdin"] = sys.stdin.buffer.read().decode("utf-8")
+        except UnicodeDecodeError:
+            fail("--stdin input is not valid UTF-8", 2)
+    return trigger_input, timing, concurrency_key, json_output
 
 
-def submit_now(trigger_input: dict[str, object], definition_id: str) -> None:
+def submit_now(
+    trigger_input: dict[str, object], definition_id: str, *, json_output: bool = False
+) -> None:
     document_path = write_json_document(trigger_input)
     try:
         result = run_omqueue(
@@ -537,9 +568,16 @@ def submit_now(trigger_input: dict[str, object], definition_id: str) -> None:
         raise SystemExit(result.returncode)
     try:
         job = json.loads(result.stdout)["job"]
-        print(f"bq: accepted Job {job['jobId']} ({job['state']})")
+        job_id = job["jobId"]
+        state = job["state"]
     except (json.JSONDecodeError, KeyError, TypeError):
         fail("OMQueue returned an invalid Trigger response")
+    if not isinstance(job_id, str) or not job_id or not isinstance(state, str):
+        fail("OMQueue returned an invalid Trigger response")
+    if json_output:
+        print(json.dumps({"jobId": job_id, "state": state}, separators=(",", ":")))
+    else:
+        print(f"bq: accepted Job {job_id} ({state})")
 
 
 def create_schedule(document: dict[str, object]) -> str:
@@ -639,12 +677,14 @@ def schedule_submission(
 
 
 def submit(arguments: list[str]) -> None:
-    trigger_input, timing, concurrency_key = parse_submission(arguments)
-    definition_id = definition_for_concurrency_key(concurrency_key)
+    trigger_input, timing, concurrency_key, json_output = parse_submission(arguments)
+    definition_id = definition_for_concurrency_key(
+        concurrency_key, diagnostics_to_stderr=json_output
+    )
     if timing:
         schedule_submission(trigger_input, timing, definition_id)
     else:
-        submit_now(trigger_input, definition_id)
+        submit_now(trigger_input, definition_id, json_output=json_output)
 
 
 def internal_run() -> NoReturn:
@@ -654,6 +694,8 @@ def internal_run() -> NoReturn:
         arguments = value["arguments"]
         working_directory = value["workingDirectory"]
         ollama_environment = value.get("ollamaEnvironment", {})
+        has_stdin = "stdin" in value
+        command_stdin = value.get("stdin")
     except (json.JSONDecodeError, KeyError, TypeError) as error:
         fail(f"invalid Trigger input: {error}")
 
@@ -665,6 +707,7 @@ def internal_run() -> NoReturn:
         and isinstance(working_directory, str)
         and working_directory.startswith("/")
         and isinstance(ollama_environment, dict)
+        and (not has_stdin or isinstance(command_stdin, str))
         and all(
             name in FORWARDED_OLLAMA_ENVIRONMENT
             and isinstance(environment_value, str)
@@ -697,6 +740,11 @@ def internal_run() -> NoReturn:
 
     try:
         os.chdir(working_directory)
+        if has_stdin:
+            with tempfile.TemporaryFile() as stdin_file:
+                stdin_file.write(command_stdin.encode("utf-8"))
+                stdin_file.seek(0)
+                os.dup2(stdin_file.fileno(), 0)
         if sys.platform == "darwin":
             taskpolicy = "/usr/sbin/taskpolicy"
             os.execv(taskpolicy, [taskpolicy, "-a", executable, *arguments])
@@ -709,7 +757,9 @@ def main() -> None:
     arguments = sys.argv[1:]
     if arguments == [INTERNAL_RUN]:
         internal_run()
-    if arguments == ["--setup"]:
+    if arguments and arguments[0] == "--setup":
+        if arguments != ["--setup"]:
+            fail("--setup cannot be combined with other options", 2)
         setup()
         return
     if arguments in (["-h"], ["--help"]):
