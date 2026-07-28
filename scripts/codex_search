@@ -2,23 +2,57 @@
 
 set -euo pipefail
 
-model="${CODEX_SEARCH_MODEL:-gpt-5.4-mini}"
-reasoning="${CODEX_SEARCH_REASONING:-low}"
+profile="quick"
+if [[ "${1:-}" == "--profile" ]]; then
+  if [[ $# -lt 2 ]]; then
+    printf '[codex_search] error: --profile requires quick or research\n' >&2
+    exit 2
+  fi
+  profile="$2"
+  shift 2
+elif [[ "${1:-}" == --profile=* ]]; then
+  profile="${1#--profile=}"
+  shift
+fi
+
+case "$profile" in
+  quick)
+    default_model="${CODEX_SEARCH_QUICK_MODEL:-gpt-5.4-mini}"
+    default_reasoning="${CODEX_SEARCH_QUICK_REASONING:-low}"
+    ;;
+  research)
+    default_model="${CODEX_SEARCH_RESEARCH_MODEL:-gpt-5.6-sol}"
+    default_reasoning="${CODEX_SEARCH_RESEARCH_REASONING:-medium}"
+    ;;
+  *)
+    printf '[codex_search] error: unsupported profile %q; expected quick or research\n' "$profile" >&2
+    exit 2
+    ;;
+esac
+
+model="${CODEX_SEARCH_MODEL:-$default_model}"
+reasoning="${CODEX_SEARCH_REASONING:-$default_reasoning}"
 
 usage() {
   cat <<'EOF'
 Usage:
-  codex_search [codex exec options] [PROMPT]
-  codex_search [codex exec options] - < prompt.md
+  codex_search [--profile quick|research] [codex exec options] [PROMPT]
+  codex_search [--profile quick|research] [codex exec options] - < prompt.md
 
-Defaults to gpt-5.4-mini with low reasoning for search, scraping, extraction,
-and source cleanup. Override CODEX_SEARCH_MODEL and CODEX_SEARCH_REASONING only
-when delegating complete research that requires synthesis by a top model.
+Profiles:
+  quick     Search, scraping, extraction, and source cleanup (default:
+            gpt-5.4-mini with low reasoning).
+  research  Complex source comparison and synthesis (default: gpt-5.6-sol
+            with medium reasoning).
+
+Override profile defaults with CODEX_SEARCH_QUICK_MODEL,
+CODEX_SEARCH_QUICK_REASONING, CODEX_SEARCH_RESEARCH_MODEL, and
+CODEX_SEARCH_RESEARCH_REASONING. CODEX_SEARCH_MODEL and
+CODEX_SEARCH_REASONING remain one-invocation overrides for either profile.
 
 Examples:
-  codex_search -C /path/to/repo -o /tmp/sources.md - < search-prompt.md
-  CODEX_SEARCH_MODEL=gpt-5.4 CODEX_SEARCH_REASONING=high \
-    codex_search -o /tmp/research.md - < prompt.md
+  codex_search --profile quick -C /path/to/repo -o /tmp/sources.md - < search-prompt.md
+  codex_search --profile research -o /tmp/research.md - < prompt.md
 EOF
 }
 
@@ -33,8 +67,8 @@ if [[ $# -eq 0 ]]; then
   exit 2
 fi
 
-printf '[codex_search] model=%s reasoning=%s search=enabled ephemeral=true\n' \
-  "$model" "$reasoning" >&2
+printf '[codex_search] profile=%s model=%s reasoning=%s search=enabled ephemeral=true\n' \
+  "$profile" "$model" "$reasoning" >&2
 
 if ! codex \
   --search \
