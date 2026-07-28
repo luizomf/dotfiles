@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+  printf 'Usage: omqueue_follow <job-id>\n' >&2
+  exit 2
+fi
+
+readonly job_id="$1"
+chunk_file="$(mktemp)"
+readonly chunk_file
+cursor=0
+artifact_id=""
+
+cleanup() {
+  rm -f "$chunk_file"
+}
+
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+
+# The Output artifact exists only after the Queue creates an Attempt.
+while [[ -z "$artifact_id" ]]; do
+  artifact_id="$({
+    omqueue job inspect "$job_id" --json |
+      jq -r '.job.attempts[-1].output.stdout.artifactId // empty'
+  })"
+
+  [[ -n "$artifact_id" ]] || sleep 0.2
+done
+
+while true; do
+  : >"$chunk_file"
+  omqueue output read "$artifact_id" --cursor "$cursor" --raw >"$chunk_file"
+
+  cat "$chunk_file"
+  chunk_bytes="$(wc -c <"$chunk_file")"
+  cursor=$((cursor + chunk_bytes))
+
+  sleep 0.2
+done
