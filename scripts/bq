@@ -18,6 +18,12 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 CONFIG_PATH = Path.home() / ".config" / "bq" / "config.json"
 OMQUEUE = os.environ.get("BQ_OMQUEUE", "omqueue")
 INTERNAL_RUN = "--internal-run"
+FORWARDED_OLLAMA_ENVIRONMENT = (
+    "OLLAMA_HOST",
+    "OLLAMA_TIMEOUT_MS",
+    "OLLAMA_LOAD_TIMEOUT",
+    "OLLAMA_KEEP_ALIVE",
+)
 
 
 def fail(message: str, status: int = 1) -> NoReturn:
@@ -144,6 +150,14 @@ def definition_document() -> dict[str, object]:
                     "minLength": 1,
                     "pattern": "^/",
                 },
+                "ollamaEnvironment": {
+                    "type": "object",
+                    "properties": {
+                        name: {"type": "string", "minLength": 1}
+                        for name in FORWARDED_OLLAMA_ENVIRONMENT
+                    },
+                    "additionalProperties": False,
+                },
             },
             "required": ["executable", "arguments", "workingDirectory"],
             "additionalProperties": False,
@@ -157,28 +171,50 @@ def definition_document() -> dict[str, object]:
     }
 
 
-def setup() -> None:
-    if CONFIG_PATH.exists():
-        definition_id = load_definition_id()
-    else:
-        document_path = write_json_document(definition_document())
-        try:
-            result = run_omqueue(
-                ["definition", "apply", document_path, "--json"], capture=True
-            )
-        finally:
-            os.unlink(document_path)
+def current_definition_revision(definition_id: str) -> int:
+    result = run_omqueue(
+        ["definition", "inspect", definition_id, "--json"], capture=True
+    )
+    if result.returncode != 0:
+        sys.stderr.write(result.stderr)
+        raise SystemExit(result.returncode)
+    try:
+        revision = json.loads(result.stdout)["definition"]["currentRevision"]
+    except (json.JSONDecodeError, KeyError, TypeError):
+        fail("OMQueue returned an invalid Definition inspection")
+    if not isinstance(revision, int) or isinstance(revision, bool) or revision < 1:
+        fail("OMQueue returned an invalid Definition revision")
+    return revision
 
-        if result.returncode != 0:
-            sys.stderr.write(result.stderr)
-            raise SystemExit(result.returncode)
-        try:
-            definition_id = json.loads(result.stdout)["result"]["definitionId"]
-        except (json.JSONDecodeError, KeyError, TypeError):
-            fail("OMQueue returned an invalid Definition response")
-        if not isinstance(definition_id, str) or not definition_id:
-            fail("OMQueue returned an invalid Definition identity")
+
+def setup() -> None:
+    document = definition_document()
+    existing_definition_id = load_definition_id() if CONFIG_PATH.exists() else None
+    if existing_definition_id is not None:
+        document["definitionId"] = existing_definition_id
+        document["baseRevision"] = current_definition_revision(existing_definition_id)
+
+    document_path = write_json_document(document)
+    try:
+        result = run_omqueue(
+            ["definition", "apply", document_path, "--json"], capture=True
+        )
+    finally:
+        os.unlink(document_path)
+
+    if result.returncode != 0:
+        sys.stderr.write(result.stderr)
+        raise SystemExit(result.returncode)
+    try:
+        definition_id = json.loads(result.stdout)["result"]["definitionId"]
+    except (json.JSONDecodeError, KeyError, TypeError):
+        fail("OMQueue returned an invalid Definition response")
+    if not isinstance(definition_id, str) or not definition_id:
+        fail("OMQueue returned an invalid Definition identity")
+    if existing_definition_id is None:
         save_definition_id(definition_id)
+    elif definition_id != existing_definition_id:
+        fail("OMQueue returned a different Definition identity")
 
     enabled = run_omqueue(["definition", "enable", definition_id, "--json"], capture=True)
     if enabled.returncode != 0:
@@ -356,6 +392,11 @@ def parse_submission(
         "executable": executable,
         "arguments": arguments[index + 1 :],
         "workingDirectory": str(Path(working_directory).resolve()),
+        "ollamaEnvironment": {
+            name: value
+            for name in FORWARDED_OLLAMA_ENVIRONMENT
+            if (value := os.environ.get(name))
+        },
     }
     return trigger_input, timing
 
@@ -496,6 +537,7 @@ def internal_run() -> NoReturn:
         executable = value["executable"]
         arguments = value["arguments"]
         working_directory = value["workingDirectory"]
+        ollama_environment = value.get("ollamaEnvironment", {})
     except (json.JSONDecodeError, KeyError, TypeError) as error:
         fail(f"invalid Trigger input: {error}")
 
@@ -506,6 +548,13 @@ def internal_run() -> NoReturn:
         and all(isinstance(argument, str) for argument in arguments)
         and isinstance(working_directory, str)
         and working_directory.startswith("/")
+        and isinstance(ollama_environment, dict)
+        and all(
+            name in FORWARDED_OLLAMA_ENVIRONMENT
+            and isinstance(environment_value, str)
+            and environment_value
+            for name, environment_value in ollama_environment.items()
+        )
     ):
         fail("invalid Trigger input shape")
 
@@ -528,6 +577,7 @@ def internal_run() -> NoReturn:
         entry for entry in preferred_path if Path(entry).is_dir()
     )
     os.environ["PROJECTS_DIR"] = str(Path.home() / "Desktop" / "tutoriais_e_cursos")
+    os.environ.update(ollama_environment)
 
     try:
         os.chdir(working_directory)
