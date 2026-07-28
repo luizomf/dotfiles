@@ -19,6 +19,8 @@ sleep 2
 
 ls -lah "$HOME"/.local/share/tmux/resurrect
 
+pullall
+
 echo
 prline
 
@@ -55,17 +57,33 @@ rsync -havz --progress --stats "${project_excludes[@]}" \
 # Pi agent all
 echo
 prline
-rsync -havz --omit-dir-times --exclude='agent/trust.json' \
-  --exclude='agent/sessions/' --exclude='agent/extensions/**/node_modules/' \
+rsync -havz --progress --stats "${project_excludes[@]}" \
+  --exclude='agent/extensions/**/node_modules/' \
   ~/.pi/ fedoraair:~/.pi/
 
-rsync -havz --omit-dir-times --exclude='agent/trust.json' \
-  --exclude='agent/sessions/' --exclude='agent/extensions/**/node_modules/' \
+rsync -havz --progress --stats "${project_excludes[@]}" \
+  --exclude='agent/extensions/**/node_modules/' \
   ~/.pi/ m4128:~/.pi/
 
-rsync -havz --omit-dir-times --exclude='agent/trust.json' \
-  --exclude='agent/sessions/' --exclude='agent/extensions/**/node_modules/' \
+rsync -havz --progress --stats "${project_excludes[@]}" \
+  --exclude='agent/extensions/**/node_modules/' \
   ~/.pi/ m132:~/.pi/
+
+echo
+prline
+
+# Sannux
+rsync -havz --progress --stats ~/sannux-data/ m4128:~/sannux-data/
+rsync -havz --progress --stats ~/sannux-data/ fedoraair:~/sannux-data/
+rsync -havz --progress --stats ~/sannux-data/ m132:~/sannux-data/
+
+echo
+prline
+
+# Ollama
+rsync -havz --progress --stats ~/.ollama/service/ m4128:~/.ollama/service/
+rsync -havz --progress --stats ~/.ollama/service/ fedoraair:~/.ollama/service/
+rsync -havz --progress --stats ~/.ollama/service/ m132:~/.ollama/service/
 
 echo
 prline
