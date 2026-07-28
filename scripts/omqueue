@@ -11,4 +11,15 @@ if [[ ! -f "$entrypoint" ]]; then
   exit 1
 fi
 
-exec node "$entrypoint" "$@"
+if command -v node >/dev/null 2>&1; then
+  exec node "$entrypoint" "$@"
+fi
+
+readonly nvm_exec="${NVM_DIR:-${HOME}/.nvm}/nvm-exec"
+if [[ -x "$nvm_exec" ]]; then
+  export NODE_VERSION="${OMQUEUE_NODE_VERSION:-default}"
+  exec "$nvm_exec" node "$entrypoint" "$@"
+fi
+
+printf 'omqueue: node not found on PATH and nvm-exec is unavailable: %s\n' "$nvm_exec" >&2
+exit 127
