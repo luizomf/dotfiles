@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+message=${1:-}
+if [[ -z "$message" ]]; then
+  printf 'Action cancelled: commit message is required.\n'
+  exit 0
+fi
+
+readonly dotfiles_dir="${HOME}/dotfiles"
+readonly hosts=(m132 m4128 fedoraair)
+
+cd "$dotfiles_dir"
+git add .
+
+if git diff --cached --quiet; then
+  printf 'No local changes to commit.\n'
+else
+  git commit -m "$message"
+fi
+
+git push
+
+for host in "${hosts[@]}"; do
+  printf 'Updating %s...\n' "$host"
+  ssh -T -o BatchMode=yes "$host" 'git -C ~/dotfiles pull --ff-only'
+done
