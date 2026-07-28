@@ -3,6 +3,11 @@
 set -euo pipefail
 
 export PROJECTS_DIR="${PROJECTS_DIR:-$HOME/Desktop/tutoriais_e_cursos}"
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export PIP_NO_INDEX=1
+export UV_OFFLINE=1
+export UV_NO_SYNC=1
 
 if [[ $# -eq 1 && $1 != -* ]]; then
   set -- -t "$1"

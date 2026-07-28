@@ -2,6 +2,10 @@
 
 set -euo pipefail
 
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export PIP_NO_INDEX=1
+
 "${HOME}"/Desktop/tutoriais_e_cursos/loudterm/.venv/bin/python \
 "${HOME}"/Desktop/tutoriais_e_cursos/loudterm/src/loudterm/backend/kokoro82m/cliplay.py \
 "${@}"
