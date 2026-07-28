@@ -24,6 +24,6 @@ cd "${HOME}/Desktop/tutoriais_e_cursos/omnivoicetts" || exit 1
   --chunk-cache-dir .cache/omnivoice-play/female-pt-br \
   --ref-audio samples/female-pt-br.wav --language pt \
   --instruct "female, middle-aged, moderate pitch, portuguese accent" \
-  "${@}" > /tmp/voiceen.log 2>&1
+  "$@" > /tmp/voiceen.log 2>&1
 )
 

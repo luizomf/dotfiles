@@ -20,6 +20,6 @@ cat | ./scripts/female-en \
   --chunk-cache-dir .cache/omnivoice-play/female-en \
   --ref-audio samples/female.wav --language en \
   --instruct "female, middle-aged, moderate pitch, american accent" \
-  "${@}" > /tmp/voiceen.log 2>&1
+  "$@" > /tmp/voiceen.log 2>&1
 )
 
