@@ -33,6 +33,10 @@ brew "gh"
 brew "glow"
 # Open source programming language to build simple/reliable/efficient software
 brew "go"
+# Command-line interface for SQLite
+brew "sqlite"
+# Client library for huggingface.co hub
+brew "hf"
 # Improved top (interactive process viewer)
 brew "htop"
 # Tools and libraries to manipulate images in select formats
@@ -43,8 +47,6 @@ brew "just"
 brew "lazygit"
 # Text-based web browser
 brew "lynx"
-# Command-line interface for SQLite
-brew "sqlite"
 # Free (GNU) replacement for the Pico text editor
 brew "nano"
 # Incremental parsing library
