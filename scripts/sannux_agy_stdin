@@ -7,10 +7,17 @@ if [[ -t 0 ]]; then
   exit 2
 fi
 
-# Antigravity appends stdin to the non-empty --print prompt. Keep the Omnews
-# prompt on stdin: placing it in argv makes Docker fail for large briefings.
-prompt_file="$(mktemp)"
-trap 'rm -f "$prompt_file"' EXIT
+# Antigravity has no prompt-stdin mode. Sannux mounts the caller workspace at
+# /workspace, so keep large prompts out of argv and let the agent read a file.
+workspace="${CURDIR:-$PWD}"
+if [[ ! -d "$workspace" || ! -w "$workspace" ]]; then
+  printf 'sannux_agy_stdin: workspace is not a writable directory: %s\n' "$workspace" >&2
+  exit 2
+fi
+
+prompt_file="$(mktemp "$workspace/.sannux-agy-prompt.XXXXXX")"
+output_file="$(mktemp)"
+trap 'rm -f "$prompt_file" "$output_file"' EXIT
 cat > "$prompt_file"
 
 if [[ ! -s "$prompt_file" ]]; then
@@ -24,4 +31,27 @@ if [[ "${1:-}" == "agy" ]]; then
   shift
 fi
 
-"$script_dir/sannux_ephemeral" agy "$@" --print 'Follow the instructions supplied through stdin.' < "$prompt_file"
+start_marker='<<<SANNUX_FINAL_RESPONSE>>>'
+end_marker='<<<SANNUX_END_RESPONSE>>>'
+prompt_path="/workspace/$(basename -- "$prompt_file")"
+launcher_prompt="Read and follow the complete task in ${prompt_path}. In your final response, print ${start_marker} on its own line, then the requested answer, then ${end_marker} on its own line. Do not place progress updates inside those markers."
+
+set +e
+"$script_dir/sannux_ephemeral" agy "$@" --print "$launcher_prompt" </dev/null >"$output_file"
+status=$?
+set -e
+
+if (( status != 0 )); then
+  cat "$output_file"
+  exit "$status"
+fi
+
+if ! awk -v start="$start_marker" -v end="$end_marker" '
+  $0 == start { found = 1; next }
+  found && $0 == end { complete = 1; exit }
+  found { print }
+  END { if (!found || !complete) exit 1 }
+' "$output_file"; then
+  printf 'sannux_agy_stdin: Antigravity response did not contain final-response markers\n' >&2
+  exit 1
+fi
