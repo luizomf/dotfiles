@@ -3,6 +3,9 @@
 # Functional prototype for following a Job's live Output.
 # Keep as workflow evidence until a supported OMQueue interface replaces it.
 
+# Otavio's notes
+# This prototype is for OMQueue CLI usage. We are currently testing it.
+
 set -euo pipefail
 
 if [[ $# -ne 1 ]]; then
