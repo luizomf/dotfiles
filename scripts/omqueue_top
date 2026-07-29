@@ -3,6 +3,9 @@
 # Functional prototype for viewing recent Jobs and their latest artifacts.
 # Keep as workflow evidence until a supported OMQueue interface replaces it.
 
+# OTAVIO'S NOTES
+# Watch out for N+1 queries in this script. This needs to be fixed for actual OMQueue usage.
+
 set -euo pipefail
 
 usage() {
