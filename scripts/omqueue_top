@@ -5,15 +5,42 @@
 
 set -euo pipefail
 
-if [[ $# -ne 0 ]]; then
-  printf 'Usage: omqueue_top\n' >&2
-  exit 2
-fi
+usage() {
+  printf 'Usage: omqueue_top [--limit <count>] [-f]\n'
+}
+
+limit=10
+follow=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --limit)
+      if [[ $# -lt 2 || ! "$2" =~ ^[1-9][0-9]*$ || "$2" -gt 200 ]]; then
+        usage >&2
+        exit 2
+      fi
+      limit="$2"
+      shift 2
+      ;;
+    -f | --follow)
+      follow=true
+      shift
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    *)
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
 
 render_jobs() {
   printf 'JOB ID\tSTATE\tATTEMPT\tSTDOUT ARTIFACT\tSTDERR ARTIFACT\tRESULT ARTIFACT\n'
 
-  omqueue job list --limit 10 --json |
+  omqueue job list --limit "$limit" --json |
     jq -r '.jobs[] | [.jobId, .state] | @tsv' |
     while IFS=$'\t' read -r job_id state; do
       omqueue job inspect "$job_id" --json |
@@ -31,6 +58,11 @@ render_jobs() {
         '
     done
 }
+
+if [[ "$follow" == false ]]; then
+  render_jobs | column -t -s $'\t'
+  exit 0
+fi
 
 while true; do
   snapshot="$(render_jobs | column -t -s $'\t')"
