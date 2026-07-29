@@ -84,7 +84,6 @@ main() {
     run
     --nowordwrap
     --think=high
-    --hidethinking
   )
 
   while [[ $# -gt 0 ]]; do
