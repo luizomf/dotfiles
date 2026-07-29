@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+wrapper_path="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/$(basename -- "${BASH_SOURCE[0]}")"
+real_pi=""
+
+while IFS= read -r candidate; do
+  if [[ "$candidate" != "$wrapper_path" ]]; then
+    real_pi="$candidate"
+    break
+  fi
+done < <(type -aP pi)
+
+if [[ -z "$real_pi" ]]; then
+  printf 'pi wrapper: could not find the underlying pi executable\n' >&2
+  exit 127
+fi
+
+exec "$real_pi" --no-skills --skill "${HOME}/.pi/agent/skills" "$@"
