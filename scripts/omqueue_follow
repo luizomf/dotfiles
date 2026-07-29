@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Functional prototype for following a Job's live Output.
+# Keep as workflow evidence until a supported OMQueue interface replaces it.
+
 set -euo pipefail
 
 if [[ $# -ne 1 ]]; then

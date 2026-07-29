@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+# Functional prototype for viewing recent Jobs and their latest artifacts.
+# Keep as workflow evidence until a supported OMQueue interface replaces it.
+
+set -euo pipefail
+
+if [[ $# -ne 0 ]]; then
+  printf 'Usage: omqueue_top\n' >&2
+  exit 2
+fi
+
+render_jobs() {
+  printf 'JOB ID\tSTATE\tATTEMPT\tSTDOUT ARTIFACT\tSTDERR ARTIFACT\tRESULT ARTIFACT\n'
+
+  omqueue job list --limit 10 --json |
+    jq -r '.jobs[] | [.jobId, .state] | @tsv' |
+    while IFS=$'\t' read -r job_id state; do
+      omqueue job inspect "$job_id" --json |
+        jq -r --arg job_id "$job_id" --arg state "$state" '
+          .job.attempts[-1] as $attempt |
+          [
+            $job_id,
+            $state,
+            ($attempt.attemptNumber // "-"),
+            ($attempt.output.stdout.artifactId // "-"),
+            ($attempt.output.stderr.artifactId // "-"),
+            ($attempt.result.artifactId // "-")
+          ] |
+          @tsv
+        '
+    done
+}
+
+while true; do
+  snapshot="$(render_jobs | column -t -s $'\t')"
+  printf '\033[H%s\n\033[J' "$snapshot"
+  sleep 1
+done
