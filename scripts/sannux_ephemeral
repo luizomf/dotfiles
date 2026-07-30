@@ -25,6 +25,7 @@ source .env
 # EPHEMERAL
 tmp_home="$(mktemp -d)"
 persistent_home="${AGENT_HOME_PATH}"
+persistent_home="${persistent_home/#\~/$HOME}"
 tmp_workspace="$CURDIR"
 
 # THE HOME WILL BE REMOVED AFTER DONE
