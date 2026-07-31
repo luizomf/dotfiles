@@ -7,15 +7,106 @@ set -euo pipefail
 # echo "Testing. Please, answer: 'OK'" | sannux_ephemeral codex-ollama exec --ephemeral --yolo 2>/dev/null
 # echo "Testing. Please, answer: 'OK'" | sannux_ephemeral claude-code --no-session-persistence --dangerously-skip-permissions -p - 2>/dev/null
 # echo "Testing. Please, answer: 'OK'" | sannux_ephemeral claude-ollama --no-session-persistence --dangerously-skip-permissions -p - 2>/dev/null
+# sannux_ephemeral --refresh-pi-resources  # Explicitly promote a stable Pi resource snapshot
 
 CURDIR="${CURDIR:-"$(pwd)"}"
 
 : "${PROJECTS_DIR:?Set PROJECTS_DIR before running sannux}"
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+dotfiles_dir="$(cd "${script_dir}/.." && pwd)"
 sannux_dir="${PROJECTS_DIR%/}/sannux"
 
+refresh_pi_resources() (
+  local template_dir="${sannux_dir}/templates/pi"
+  local ompi_dir="${PROJECTS_DIR%/}/ompi"
+  local host_agent_dir="${HOME}/.pi/agent"
+
+  test -d "$template_dir"
+  test -d "$ompi_dir/.git"
+  test -d "$host_agent_dir/skills"
+
+  cd "$template_dir"
+  # shellcheck disable=SC1091
+  source .env
+
+  local persistent_home="${AGENT_HOME_PATH}"
+  persistent_home="${persistent_home/#\~/$HOME}"
+  test -d "$persistent_home"
+  if [[ -z "$persistent_home" || "$persistent_home" == "/" || "$persistent_home" == "$HOME" ]]; then
+    printf 'Unsafe Pi home for resource refresh: %s\n' "$persistent_home" >&2
+    return 1
+  fi
+
+  local stage
+  stage="$(mktemp -d "${persistent_home}/.pi-resources.XXXXXX")"
+  trap 'rm -rf "$stage"' EXIT
+  mkdir -p "$stage/extensions" "$stage/skills"
+
+  git -C "$ompi_dir" archive HEAD -- \
+    extensions/background-tool.ts \
+    extensions/browser-fetch \
+    extensions/codex-search \
+    extensions/managed-process \
+    extensions/subagents \
+    | tar -x -C "$stage"
+
+  local extension
+  for extension in browser-fetch codex-search; do
+    rm "$stage/extensions/$extension/background-tool.ts"
+    cp "$stage/extensions/background-tool.ts" \
+      "$stage/extensions/$extension/background-tool.ts"
+  done
+  rm "$stage/extensions/background-tool.ts"
+
+  rsync -aL --exclude='.omskills-managed-links' "$host_agent_dir/skills/" "$stage/skills/"
+
+  local stage_name="${stage##*/}"
+  docker compose run --rm -T --entrypoint npm agent \
+    ci --prefix "/home/agent/${stage_name}/extensions/browser-fetch" --omit=dev
+
+  local agent_dir="${persistent_home}/.pi/agent"
+  mkdir -p "$agent_dir"
+  local resource
+  for resource in extensions skills; do
+    local target="${agent_dir}/${resource}"
+    local backup="${agent_dir}/.${resource}.previous.$$"
+    if [[ -e "$target" || -L "$target" ]]; then
+      mv "$target" "$backup"
+    fi
+    mv "$stage/$resource" "$target"
+    if [[ -e "$backup" || -L "$backup" ]]; then
+      rm -r "$backup"
+    fi
+  done
+
+  mkdir -p "${persistent_home}/.local/bin" "${persistent_home}/.codex"
+  git -C "$dotfiles_dir" show HEAD:scripts/codex_search \
+    >"${persistent_home}/.local/bin/codex_search"
+  chmod 0755 "${persistent_home}/.local/bin/codex_search"
+  docker compose run --rm -T --entrypoint npm agent \
+    install --prefix /home/agent/.local --omit=dev @openai/codex@0.146.0
+
+  if [[ -f "${HOME}/.codex/auth.json" ]]; then
+    cp "${HOME}/.codex/auth.json" "${persistent_home}/.codex/auth.json"
+    chmod 0600 "${persistent_home}/.codex/auth.json"
+  fi
+
+  local ompi_revision
+  ompi_revision="$(git -C "$ompi_dir" rev-parse HEAD)"
+  printf 'ompi_revision=%s\nrefreshed_at=%s\n' \
+    "$ompi_revision" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    >"${agent_dir}/RESOURCE_SNAPSHOT"
+  printf 'Refreshed stable Pi resources from ompi %s\n' "$ompi_revision"
+)
+
+if [[ "${1:-}" == "--refresh-pi-resources" ]]; then
+  refresh_pi_resources
+  exit $?
+fi
+
 cd "$sannux_dir" || exit 1
-template="${1:?'Usage: sannux_ephemeral <template_name>'}"
+template="${1:?'Usage: sannux_ephemeral <template_name>|--refresh-pi-resources'}"
 
 cd "templates/$template" || exit 1
 
@@ -75,6 +166,11 @@ case $template in
     cp -a "$persistent_home"/. "$tmp_home"/
     shift
     ;;
+  pi)
+    mkdir -p "${tmp_home}"
+    cp -a "$persistent_home"/. "$tmp_home"/
+    shift
+    ;;
   *)
     printf "%b\n" "Template not configured"
     exit 1
@@ -86,6 +182,12 @@ declare -a docker_cmd=(
   -v "$tmp_home:/home/agent"
   --rm
 )
+
+if [[ "$template" == "pi" ]]; then
+  docker_cmd+=(
+    -e 'PATH=/home/agent/.local/bin:/home/agent/.local/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+  )
+fi
 
 # STDIN
 if [[ ! -t 0 ]]; then
