@@ -45,6 +45,7 @@ refresh_pi_resources() (
 
   git -C "$ompi_dir" archive HEAD -- \
     extensions/background-tool.ts \
+    extensions/exit-alias.ts \
     extensions/browser-fetch \
     extensions/codex-search \
     extensions/managed-process \
