@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+
+# Functional prototype for viewing enabled Schedules and what they will run.
+# Keep as workflow evidence until a supported OMQueue interface replaces it.
+
+# OTAVIO'S NOTES
+# This intentionally pays the current list-plus-inspect N+1 cost. A supported
+# Queue summary should eventually provide this bounded operational view.
+# Consider an optional bounded Schedule label for presentation only, not as an
+# identity or required field. It would let this view identify scheduled work
+# without displaying or trying to interpret a large opaque Trigger input.
+
+set -euo pipefail
+
+usage() {
+  printf 'Usage: omqueue_schedule [--limit <count>]\n'
+}
+
+limit=10
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --limit)
+      if [[ $# -lt 2 || ! "$2" =~ ^[1-9][0-9]*$ || "$2" -gt 200 ]]; then
+        usage >&2
+        exit 2
+      fi
+      limit="$2"
+      shift 2
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    *)
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+schedule_ids_file="$(mktemp)"
+schedules_file="$(mktemp)"
+readonly schedule_ids_file schedules_file
+
+cleanup() {
+  rm -f "$schedule_ids_file" "$schedules_file"
+}
+trap cleanup EXIT
+
+cursor=""
+while true; do
+  list_arguments=(schedule list --limit 200 --json)
+  if [[ -n "$cursor" ]]; then
+    list_arguments+=(--cursor "$cursor")
+  fi
+
+  page="$(omqueue "${list_arguments[@]}")"
+  jq -r '
+    .schedules[] |
+    select(.status == "enabled" or .status == "disabled") |
+    .scheduleId
+  ' \
+    <<<"$page" >>"$schedule_ids_file"
+
+  if [[ "$(jq -r '.hasMore' <<<"$page")" != "true" ]]; then
+    break
+  fi
+  cursor="$(jq -r '.nextCursor // empty' <<<"$page")"
+  if [[ -z "$cursor" ]]; then
+    printf 'omqueue_schedule: Queue returned hasMore without nextCursor\n' >&2
+    exit 1
+  fi
+done
+
+while IFS= read -r schedule_id; do
+  [[ -n "$schedule_id" ]] || continue
+  omqueue schedule inspect "$schedule_id" --json >>"$schedules_file"
+  printf '\n' >>"$schedules_file"
+done <"$schedule_ids_file"
+
+{
+  printf 'SCHEDULE ID\tSTATUS\tWHEN\tCOMMAND\n'
+
+  jq -sr --argjson limit "$limit" '
+  def bounded($width):
+    gsub("[\\t\\r\\n]"; " ") |
+    if length > $width then .[0:($width - 3)] + "..." else . end;
+  def command:
+    if (.triggerInput | type) == "object" and
+       (.triggerInput.executable | type) == "string"
+    then
+      ([.triggerInput.executable] +
+       (if (.triggerInput.arguments | type) == "array"
+        then .triggerInput.arguments
+        else []
+        end)) |
+      map(tojson) |
+      join(" ")
+    else
+      "Definition " + .definitionId
+    end;
+  def timing:
+    if .at then .at
+    else "cron " + .cron + " [" + .timeZone + "]"
+    end;
+
+  map(.schedule) |
+  sort_by(if .at then [0, .at, .scheduleId] else [1, .cron, .scheduleId] end) |
+  .[:$limit][] |
+  [.scheduleId, .status, timing, (command | bounded(100))] |
+  @tsv
+' "$schedules_file"
+} | column -t -s $'\t'
