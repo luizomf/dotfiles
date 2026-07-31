@@ -36,8 +36,9 @@ reasoning="${CODEX_SEARCH_REASONING:-$default_reasoning}"
 usage() {
   cat <<'EOF'
 Usage:
-  codex_search [--profile quick|research] [codex exec options] [PROMPT]
-  codex_search [--profile quick|research] [codex exec options] - < prompt.md
+  codex_search [--profile quick|research] [--write|--yolo] [codex exec options] [PROMPT]
+  codex_search [--profile quick|research] [--write|--yolo] [codex exec options] - < prompt.md
+  codex_search --list-models
 
 Profiles:
   quick     Search, scraping, extraction, and source cleanup (default:
@@ -45,14 +46,29 @@ Profiles:
   research  Complex source comparison and synthesis (default: gpt-5.6-sol
             with medium reasoning).
 
+Permissions:
+  default   Read-only Codex sandbox.
+  --write   Use workspace-write; Codex may modify the cwd supplied with --cd/-C.
+  --yolo    Bypass approvals and sandboxing. EXTREMELY DANGEROUS.
+
+The invocation ignores ~/.codex/config.toml while retaining Codex authentication,
+so a fresh logged-in machine gets the same model, reasoning, search, sandbox, and
+ephemeral defaults. Remaining arguments are passed literally to `codex exec`.
+Do not add --json when plain final output is required.
+
+Model catalog:
+  codex_search --list-models       # concise model/reasoning table
+  codex debug models               # complete raw JSON catalog
+
 Override profile defaults with CODEX_SEARCH_QUICK_MODEL,
 CODEX_SEARCH_QUICK_REASONING, CODEX_SEARCH_RESEARCH_MODEL, and
 CODEX_SEARCH_RESEARCH_REASONING. CODEX_SEARCH_MODEL and
 CODEX_SEARCH_REASONING remain one-invocation overrides for either profile.
 
 Examples:
-  codex_search --profile quick -C /path/to/repo -o /tmp/sources.md - < search-prompt.md
-  codex_search --profile research -o /tmp/research.md - < prompt.md
+  codex_search --profile quick --cd /path/to/repo - < search-prompt.md
+  codex_search --profile research - < research-prompt.md
+  codex_search --profile research --write --cd /path/to/output - < image-prompt.md
 EOF
 }
 
@@ -60,22 +76,57 @@ if [[ "${1:-}" == '-h' || "${1:-}" == '--help' ]]; then
   usage
   exit 0
 fi
+if [[ "${1:-}" == '--list-models' ]]; then
+  if command -v jq >/dev/null 2>&1; then
+    printf 'MODEL\tREASONING\n'
+    codex debug models | jq -r \
+      '.models[] | [.slug, ([.supported_reasoning_levels[].effort] | join(","))] | @tsv'
+    exit
+  fi
+  exec codex debug models
+fi
 
-if [[ $# -eq 0 ]]; then
+sandbox="read-only"
+yolo=false
+codex_args=()
+for arg in "$@"; do
+  case "$arg" in
+    --write)
+      sandbox="workspace-write"
+      ;;
+    --yolo)
+      yolo=true
+      ;;
+    *)
+      codex_args+=("$arg")
+      ;;
+  esac
+done
+
+if [[ ${#codex_args[@]} -eq 0 ]]; then
   usage >&2
   printf '\n[codex_search] error: provide a prompt argument or pass - to read stdin\n' >&2
   exit 2
 fi
 
-printf '[codex_search] profile=%s model=%s reasoning=%s search=enabled ephemeral=true\n' \
-  "$profile" "$model" "$reasoning" >&2
+permission_args=(--sandbox "$sandbox")
+permission="$sandbox"
+if [[ "$yolo" == true ]]; then
+  permission_args=(--dangerously-bypass-approvals-and-sandbox)
+  permission="yolo"
+fi
+
+printf '[codex_search] profile=%s model=%s reasoning=%s permission=%s search=enabled ephemeral=true user_config=ignored\n' \
+  "$profile" "$model" "$reasoning" "$permission" >&2
 
 if ! codex \
   --search \
   --model "$model" \
   -c model_reasoning_effort="$reasoning" exec \
   --ephemeral \
-  "$@"
+  --ignore-user-config \
+  "${permission_args[@]}" \
+  "${codex_args[@]}"
 then
   printf '[codex_search] error: Codex search failed\n' >&2
   exit 1
