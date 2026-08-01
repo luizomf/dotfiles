@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+os="$(uname -s)"
+audio="${audio:-1}"
+alert="${alert:-1}"
+
+if [[ "${os}" == "Darwin" ]]; then
+  if [[ "${audio}" == 1 ]]; then
+    (
+      for _ in {1..10}; do
+        afplay -v 1 /System/Library/Sounds/Glass.aiff & sleep 0.5  >/dev/null
+      done
+    ) &
+  fi
+
+  now="$(date '+%Y-%m-%d %H:%M')"
+  msg="${msg:-You should write a message}"
+
+  if [[ "${alert}" == 1 ]]; then
+    osascript \
+      -e "display dialog \"${msg} - ${now}\"¬" \
+      -e 'with title "Alert"¬' \
+      -e 'with icon stop¬' \
+      -e 'buttons {"OK"}¬' \
+      -e 'default button "OK"' >/dev/null
+  fi
+fi
