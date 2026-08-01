@@ -132,3 +132,15 @@ path=("${HOME}/dotfiles/scripts" "${HOME}/.local/bin" "${path[@]}")
 typeset -gU path
 
 export PATH
+
+# Generate OMQueue completion only when it is first requested.
+if (( $+commands[omqueue] && $+functions[compdef] )); then
+  _omqueue_lazy_completion() {
+    local completion_script
+    completion_script="$(omqueue completion zsh)" || return
+    eval "$completion_script"
+    unfunction _omqueue_lazy_completion
+    _omqueue_zsh "$@"
+  }
+  compdef _omqueue_lazy_completion omqueue
+fi
