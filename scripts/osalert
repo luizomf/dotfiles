@@ -20,7 +20,7 @@ if [[ "${os}" == "Darwin" ]]; then
 
   if [[ "${alert}" == 1 ]]; then
     osascript \
-      -e "display dialog \"${msg} - ${now}\"¬" \
+      -e "display dialog \"${msg}\n\n${now}\"¬" \
       -e 'with title "Alert"¬' \
       -e 'with icon stop¬' \
       -e 'buttons {"OK"}¬' \
