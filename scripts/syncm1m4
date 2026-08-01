@@ -73,17 +73,29 @@ echo
 prline
 
 # Sannux
-rsync -havz --progress --stats ~/sannux-data/ m4128:~/sannux-data/
-rsync -havz --progress --stats ~/sannux-data/ fedoraair:~/sannux-data/
 rsync -havz --progress --stats ~/sannux-data/ m132:~/sannux-data/
+rsync -havz --progress --stats ~/sannux-data/ m4128:~/sannux-data/
+rsync -havz --progress --stats m4128:~/sannux-data/ ~/sannux-data/
+rsync -havz --progress --stats ~/sannux-data/ fedoraair:~/sannux-data/
 
 echo
 prline
 
 # Ollama
-rsync -havz --progress --stats ~/.ollama/service/ m4128:~/.ollama/service/
-rsync -havz --progress --stats ~/.ollama/service/ fedoraair:~/.ollama/service/
 rsync -havz --progress --stats ~/.ollama/service/ m132:~/.ollama/service/
+rsync -havz --progress --stats ~/.ollama/service/ m4128:~/.ollama/service/
+rsync -havz --progress --stats m4128:~/.ollama/service/ ~/.ollama/service/
+rsync -havz --progress --stats ~/.ollama/service/ fedoraair:~/.ollama/service/
+
+echo
+prline
+
+
+# Omxterm
+rsync -havz --progress --stats ~/.config/omxterm/ m132:~/.config/omxterm/
+rsync -havz --progress --stats ~/.config/omxterm/ m4128:~/.config/omxterm/
+rsync -havz --progress --stats m4128:~/.config/omxterm/ ~/.config/omxterm/
+rsync -havz --progress --stats ~/.config/omxterm/ fedoraair:~/.config/omxterm/
 
 echo
 prline
