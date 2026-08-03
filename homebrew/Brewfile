@@ -47,6 +47,8 @@ brew "just"
 brew "lazygit"
 # Text-based web browser
 brew "lynx"
+# Deep clean and optimize your Mac
+brew "mole"
 # Free (GNU) replacement for the Pico text editor
 brew "nano"
 # Incremental parsing library
