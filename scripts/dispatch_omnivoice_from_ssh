@@ -15,6 +15,9 @@ readonly QUEUE_DIR="/Users/luizotavio/.codex/automations/daily-paper-llm-roundup
 readonly NODE_BIN="/Users/luizotavio/.nvm/versions/node/v22.18.0/bin/node"
 readonly GIT_BIN="/usr/bin/git"
 readonly LOCK_HELPER="/Users/luizotavio/dotfiles/scripts/site_git_automation_lock"
+readonly BQ_BIN="/Users/luizotavio/dotfiles/scripts/bq"
+readonly TTS_RUNNER="/Users/luizotavio/.codex/automations/daily-paper-llm-roundup/hooks/on-end/tts/run-pending-tts.sh"
+readonly CONCURRENCY_KEY="daily-paper-automation"
 
 usage() {
   printf 'Usage: %s <post-slug>\n' "${0##*/}" >&2
@@ -67,6 +70,13 @@ tts_path="${post_dir}/tts.txt"
   printf 'Site Git lock helper is not readable: %s\n' "$LOCK_HELPER" >&2
   exit 69
 }
+
+for executable in "$BQ_BIN" "$TTS_RUNNER"; do
+  [[ -x "$executable" ]] || {
+    printf 'Required Queue executable not found: %s\n' "$executable" >&2
+    exit 69
+  }
+done
 
 # shellcheck source=/Users/luizotavio/dotfiles/scripts/site_git_automation_lock
 source "$LOCK_HELPER"
@@ -146,3 +156,15 @@ NODE
 fi
 
 "$ENQUEUE_SCRIPT" "$post_dir" "$tts_path"
+
+# Queue acceptance is the ownership handoff. The SSH caller never receives bq
+# access and cannot choose the consumer, cwd, concurrency key, or host paths.
+if ! "$BQ_BIN" \
+  --concurrency-key "$CONCURRENCY_KEY" \
+  --cwd "$SITE_DIR" \
+  -- \
+  "$TTS_RUNNER"; then
+  printf '%s\n' \
+    'Queue submission failed or acceptance is unknown; marker retained for inspection.' >&2
+  exit 75
+fi
