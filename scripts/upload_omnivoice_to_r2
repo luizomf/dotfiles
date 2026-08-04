@@ -2,13 +2,16 @@
 
 set -euo pipefail
 
-readonly ENV_FILE="/Users/luizotavio/.env"
-readonly POSTS_ROOT="/Users/luizotavio/Desktop/tutoriais_e_cursos/otaviomiranda.com.br/src/content/posts"
-readonly AUDIO_PATH="/Users/luizotavio/Desktop/paper/final.opus"
-readonly QUEUE_DIR="/Users/luizotavio/.codex/automations/daily-paper-llm-roundup/hooks/on-end/tts"
-readonly NODE_BIN="/Users/luizotavio/.nvm/versions/node/v22.18.0/bin/node"
-readonly UV_BIN="/Users/luizotavio/.local/bin/uv"
-readonly FFPROBE_BIN="/opt/homebrew/bin/ffprobe"
+readonly ENV_FILE="${OMNIVOICE_ENV_FILE:-/Users/luizotavio/.env}"
+readonly PROJECTS_DIR="${PROJECTS_DIR:-/Users/luizotavio/Desktop/tutoriais_e_cursos}"
+readonly POSTS_ROOT="${POSTS_ROOT:-$PROJECTS_DIR/otaviomiranda.com.br/src/content/posts}"
+readonly OMNIVOICE_DIR="${OMNIVOICE_DIR:-$PROJECTS_DIR/omnivoicetts}"
+readonly AUDIO_PATH="${OMNIVOICE_AUDIO_PATH:-$OMNIVOICE_DIR/outputs/daily-paper/final.opus}"
+readonly QUEUE_DIR="${QUEUE_DIR:-/Users/luizotavio/.codex/automations/daily-paper-llm-roundup/hooks/on-end/tts}"
+readonly MARKER_PATH="${OMNIVOICE_MARKER:-}"
+readonly NODE_BIN="${NODE_BIN:-/Users/luizotavio/.nvm/versions/node/v22.18.0/bin/node}"
+readonly UV_BIN="${UV_BIN:-/Users/luizotavio/.local/bin/uv}"
+readonly FFPROBE_BIN="${FFPROBE_BIN:-/opt/homebrew/bin/ffprobe}"
 
 usage() {
   printf 'Usage: %s [--check] [--force] <post-slug>\n' "${0##*/}" >&2
@@ -107,32 +110,53 @@ tts_path="${post_dir}/tts.txt"
 }
 
 # The OmniVoice output path is shared by every post. Require the newest marker
-# for this slug to have succeeded and require final.opus to belong to that run.
-marker="$($NODE_BIN - "$QUEUE_DIR" "$tts_path" "$AUDIO_PATH" <<'NODE'
+# for this slug to own the exact final.opus bytes through its recorded identity.
+identity_json="$($NODE_BIN - "$QUEUE_DIR" "$tts_path" "$AUDIO_PATH" "$MARKER_PATH" <<'NODE'
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const [queueDir, ttsPath, audioPath] = process.argv.slice(2);
+const [queueDir, ttsPath, audioPath, requestedMarker] = process.argv.slice(2);
+const resolvedQueue = path.resolve(queueDir);
 const target = path.resolve(ttsPath);
-const names = fs.readdirSync(queueDir)
-  .filter((name) => /^\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.json$/.test(name))
-  .sort()
-  .reverse();
+const resolvedAudio = path.resolve(audioPath);
+const markerNamePattern = /^\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.json$/;
 
 let latest = null;
 let marker = null;
 
-for (const name of names) {
-  const candidate = path.join(queueDir, name);
+if (requestedMarker) {
+  const candidate = path.resolve(requestedMarker);
+  if (path.dirname(candidate) !== resolvedQueue || !markerNamePattern.test(path.basename(candidate))) {
+    console.error(`Requested marker is outside the trusted queue: ${requestedMarker}`);
+    process.exit(65);
+  }
   try {
     const data = JSON.parse(fs.readFileSync(candidate, "utf8"));
     if (data.kind === "tts-ready" && path.resolve(data.ttsPath) === target) {
       latest = data;
       marker = candidate;
-      break;
     }
   } catch {
-    // Ignore malformed/unrelated markers, matching the queue runner.
+    // The missing/invalid marker is reported by the common check below.
+  }
+} else {
+  const names = fs.readdirSync(resolvedQueue)
+    .filter((name) => markerNamePattern.test(name))
+    .sort()
+    .reverse();
+  for (const name of names) {
+    const candidate = path.join(resolvedQueue, name);
+    try {
+      const data = JSON.parse(fs.readFileSync(candidate, "utf8"));
+      if (data.kind === "tts-ready" && path.resolve(data.ttsPath) === target) {
+        latest = data;
+        marker = candidate;
+        break;
+      }
+    } catch {
+      // Ignore malformed/unrelated markers, matching the queue runner.
+    }
   }
 }
 
@@ -146,23 +170,28 @@ if (latest.status !== "succeeded" || latest.exitCode !== 0) {
   process.exit(75);
 }
 
-const dispatchedAt = Date.parse(latest.dispatchedAt || "");
-const finishedAt = Date.parse(latest.finishedAt || "");
-const audioMtime = fs.statSync(audioPath).mtimeMs;
-
-if (!Number.isFinite(dispatchedAt) || !Number.isFinite(finishedAt)) {
-  console.error(`Successful marker has invalid timestamps: ${marker}`);
+if (
+  typeof latest.audioPath !== "string" || path.resolve(latest.audioPath) !== resolvedAudio ||
+  !Number.isSafeInteger(latest.audioSize) || latest.audioSize <= 0 ||
+  typeof latest.audioSha256 !== "string" || !/^[a-f0-9]{64}$/.test(latest.audioSha256)
+) {
+  console.error(`Successful marker has no valid audio identity: ${marker}`);
   process.exit(65);
 }
 
-if (audioMtime + 1000 < dispatchedAt || audioMtime > finishedAt + 300000) {
-  console.error(`final.opus does not belong to the latest successful marker: ${marker}`);
+const audio = fs.readFileSync(resolvedAudio);
+const sha256 = crypto.createHash("sha256").update(audio).digest("hex");
+if (audio.length !== latest.audioSize || sha256 !== latest.audioSha256) {
+  console.error(`final.opus does not match the successful marker: ${marker}`);
   process.exit(65);
 }
 
-console.log(marker);
+console.log(JSON.stringify({ marker, audioSize: latest.audioSize, audioSha256: latest.audioSha256 }));
 NODE
 )"
+marker="$($NODE_BIN -e 'console.log(JSON.parse(process.argv[1]).marker)' "$identity_json")"
+audio_size="$($NODE_BIN -e 'console.log(JSON.parse(process.argv[1]).audioSize)' "$identity_json")"
+audio_sha256="$($NODE_BIN -e 'console.log(JSON.parse(process.argv[1]).audioSha256)' "$identity_json")"
 
 codec="$($FFPROBE_BIN -v error -select_streams a:0 \
   -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 \
@@ -192,23 +221,62 @@ force_arg=0
 
 "$UV_BIN" run --quiet --with 'boto3>=1.40,<2' python - \
   "$R2_ENDPOINT" "$R2_BUCKET" "$object_key" "$AUDIO_PATH" \
-  "$public_url" "$force_arg" <<'PY'
+  "$public_url" "$force_arg" "$audio_sha256" "$audio_size" <<'PY'
 import hashlib
 import os
 import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
 
 import boto3
 from botocore.exceptions import ClientError
 
-endpoint, bucket, object_key, audio_path, public_url, force_arg = sys.argv[1:]
+(
+    endpoint,
+    bucket,
+    object_key,
+    audio_path,
+    public_url,
+    force_arg,
+    expected_sha256,
+    expected_size_arg,
+) = sys.argv[1:]
 force = force_arg == "1"
+expected_size = int(expected_size_arg)
 
-digest = hashlib.sha256()
 with open(audio_path, "rb") as audio_file:
-    for chunk in iter(lambda: audio_file.read(1024 * 1024), b""):
-        digest.update(chunk)
-sha256 = digest.hexdigest()
-size = os.path.getsize(audio_path)
+    audio = audio_file.read()
+sha256 = hashlib.sha256(audio).hexdigest()
+size = len(audio)
+if sha256 != expected_sha256 or size != expected_size:
+    print("final.opus changed after marker validation.", file=sys.stderr)
+    raise SystemExit(65)
+
+def verify_public_audio():
+    separator = "&" if "?" in public_url else "?"
+    verification_url = (
+        f"{public_url}{separator}sha256={urllib.parse.quote(sha256)}"
+    )
+    last_error = None
+    for attempt in range(5):
+        try:
+            request = urllib.request.Request(
+                verification_url,
+                headers={"Cache-Control": "no-cache"},
+            )
+            with urllib.request.urlopen(request, timeout=30) as response:
+                public_audio = response.read()
+            if len(public_audio) == size and hashlib.sha256(public_audio).hexdigest() == sha256:
+                return
+            last_error = RuntimeError("public object content does not match uploaded audio")
+        except (OSError, urllib.error.URLError) as error:
+            last_error = error
+        if attempt < 4:
+            time.sleep(2)
+    print(f"Canonical public audio verification failed: {last_error}", file=sys.stderr)
+    raise SystemExit(74)
 
 s3 = boto3.client(
     "s3",
@@ -230,6 +298,7 @@ if existing:
     existing_hash = existing.get("Metadata", {}).get("sha256")
     existing_size = existing.get("ContentLength")
     if existing_hash == sha256 and existing_size == size:
+        verify_public_audio()
         print(f"Audio already uploaded: {public_url}")
         raise SystemExit(0)
     if not force:
@@ -239,20 +308,23 @@ if existing:
         )
         raise SystemExit(73)
 
-with open(audio_path, "rb") as audio_file:
-    result = s3.put_object(
-        Bucket=bucket,
-        Key=object_key,
-        Body=audio_file,
-        ContentType="audio/ogg",
-        Metadata={"sha256": sha256},
-    )
+result = s3.put_object(
+    Bucket=bucket,
+    Key=object_key,
+    Body=audio,
+    ContentType="audio/ogg",
+    Metadata={"sha256": sha256},
+)
 
 verified = s3.head_object(Bucket=bucket, Key=object_key)
-if verified.get("ContentLength") != size:
-    print("Uploaded object size does not match the local audio.", file=sys.stderr)
+if (
+    verified.get("ContentLength") != size or
+    verified.get("Metadata", {}).get("sha256") != sha256
+):
+    print("Uploaded object identity does not match the local audio.", file=sys.stderr)
     raise SystemExit(74)
 
+verify_public_audio()
 print(f"Uploaded: {public_url}")
 print(f"ETag: {result.get('ETag', 'unknown')}")
 PY

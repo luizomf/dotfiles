@@ -9,4 +9,3 @@ export OMNIVOICE_DIR="${PROJECTS_DIR}/omnivoicetts"
   cd "${OMNIVOICE_DIR}/" || (echo "Directory not found: ${OMNIVOICE_DIR}" ; exit 1)
   ./scripts/clear_cache
 )
-

@@ -2,9 +2,14 @@
 
 set -euo pipefail
 
+if (( $# < 1 || $# > 4 )); then
+  echo "Uso: $0 arquivo [diretório-de-saída] [prefixo] [percentual-da-primeira-parte]" >&2
+  exit 2
+fi
+
 file="$1"
-outdir="${2:-$HOME/Desktop}"
-prefix="${3:-metade}"
+outdir="${2:-$PWD/outputs}"
+prefix="${3:-half}"
 first_share="${4:-50}"
 
 if [[ ! "$first_share" =~ ^[0-9]+$ ]] || (( first_share < 1 || first_share > 99 )); then
@@ -19,13 +24,16 @@ fi
 
 mkdir -p "$outdir"
 
+half_1="$outdir/${prefix}-1.txt"
+half_2="$outdir/${prefix}-2.txt"
+
 declare lines first_lines
 lines=$(wc -l < "$file")
 first_lines=$(( (lines * first_share + 99) / 100 ))
 
-head -n "$first_lines" "$file" > "$outdir/${prefix}-1.txt"
-tail -n +"$((first_lines + 1))" "$file" > "$outdir/${prefix}-2.txt"
+head -n "$first_lines" "$file" > "$half_1"
+tail -n +"$((first_lines + 1))" "$file" > "$half_2"
 
 echo "Criado:"
-echo "$outdir/${prefix}-1.txt"
-echo "$outdir/${prefix}-2.txt"
+echo "$half_1"
+echo "$half_2"
