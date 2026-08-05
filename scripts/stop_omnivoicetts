@@ -4,7 +4,7 @@ set -u
 
 status=0
 
-pkill -9 -f '[o]mnivoicetts' || true
+pkill -9 -f '[o]mnivoicetts' >/dev/null 2>&1 || true
 
 if ! ssh m4128 "pkill -9 -f '[o]mnivoicetts' || true"; then
   printf 'Failed to stop OmniVoice on m4128.\n' >&2
