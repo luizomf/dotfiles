@@ -21,6 +21,17 @@ cd ~/dotfiles
 
 **⚠️ Vai sobrescrever teus arquivos. Tamo junto.**
 
+## Pi Coding Agent
+
+The installer links the static configuration under `pi/agent/` into
+`~/.pi/agent/` with relative targets that assume this repository is cloned at
+`~/dotfiles`. Credentials, sessions, trust decisions, generated model state,
+and machine-specific model configuration remain local.
+
+Skills and extensions are maintained separately in
+[omskills](https://github.com/luizomf/omskills) and
+[ompi](https://github.com/luizomf/ompi).
+
 ---
 
 Feito com ódio, café e um toque de amor.

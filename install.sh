@@ -211,8 +211,22 @@ read -p "Ao terminar as tarefas acima, pressione qualquer tecla para continuar..
 # --- Criação de Symlinks ---
 loginfo "🔗 Criando symlinks para os arquivos de configuração..."
 
-# Cria o diretório ~/.config se não existir
-mkdir -p "$HOME/.config"
+# Cria os diretórios de configuração se não existirem
+mkdir -p "$HOME/.config" "$HOME/.pi/agent/themes"
+
+# Pi Coding Agent
+# Relative targets remain portable when this repository is cloned at ~/dotfiles.
+rm -f "$HOME/.pi/agent/AGENTS.md"
+ln -s "../../dotfiles/pi/agent/AGENTS.md" "$HOME/.pi/agent/AGENTS.md"
+
+rm -f "$HOME/.pi/agent/RTK.md"
+ln -s "../../dotfiles/pi/agent/RTK.md" "$HOME/.pi/agent/RTK.md"
+
+rm -f "$HOME/.pi/agent/settings.json"
+ln -s "../../dotfiles/pi/agent/settings.json" "$HOME/.pi/agent/settings.json"
+
+rm -f "$HOME/.pi/agent/themes/omtheme.json"
+ln -s "../../../dotfiles/pi/agent/themes/omtheme.json" "$HOME/.pi/agent/themes/omtheme.json"
 
 # Zsh
 rm -Rf "$HOME/.zshrc"
