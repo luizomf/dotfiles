@@ -12,12 +12,9 @@ export FZF_DEFAULT_OPTS=${FZF_DEFAULT_OPTS:-}"
   --padding=\"0\" --margin=\"0\" --prompt=\"> \" --marker=\">\"
   --pointer=\"◆\" --separator=\"─\" --scrollbar=\"│\" --layout=\"reverse\""
 
-SELECTED="$(tmux list-window \
-  -a -F "#S:#I #W #P #D" | \
-  fzf --sync \
-  --sort --algo=v2 --tiebreak=length \
-  --tmux center,50%,50%
-)"
+LIST="$(tmux list-window -a -F "#S:#I #W #P #D #{pane_current_path}")"
+FZF_TMUX_CMD="fzf --sync --sort --algo=v2 --tiebreak=length --tmux center,70%,60%"
+SELECTED="$(printf '%b\n' "${LIST}" | $FZF_TMUX_CMD)"
 
 [[ -z $SELECTED ]] && exit 0
 
