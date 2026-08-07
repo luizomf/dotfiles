@@ -2,15 +2,18 @@
 
 set -euo pipefail
 
-readonly ENV_FILE="${OMNIVOICE_ENV_FILE:-/Users/luizotavio/.env}"
-readonly PROJECTS_DIR="${PROJECTS_DIR:-/Users/luizotavio/Desktop/tutoriais_e_cursos}"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+# shellcheck source=/dev/null
+source "${OM_PATHS_FILE:-${script_dir}/../config/paths.sh}"
+readonly AUTOMATION_ROOT="${AUTOMATION_ROOT:-${HOME}/.codex/automations/daily-paper-llm-roundup}"
+readonly ENV_FILE="${OMNIVOICE_ENV_FILE:-${HOME}/.env}"
 readonly POSTS_ROOT="${POSTS_ROOT:-$PROJECTS_DIR/otaviomiranda.com.br/src/content/posts}"
 readonly OMNIVOICE_DIR="${OMNIVOICE_DIR:-$PROJECTS_DIR/omnivoicetts}"
 readonly AUDIO_PATH="${OMNIVOICE_AUDIO_PATH:-$OMNIVOICE_DIR/outputs/daily-paper/final.opus}"
-readonly QUEUE_DIR="${QUEUE_DIR:-/Users/luizotavio/.codex/automations/daily-paper-llm-roundup/hooks/on-end/tts}"
+readonly QUEUE_DIR="${QUEUE_DIR:-${AUTOMATION_ROOT}/hooks/on-end/tts}"
 readonly MARKER_PATH="${OMNIVOICE_MARKER:-}"
-readonly NODE_BIN="${NODE_BIN:-/Users/luizotavio/.nvm/versions/node/v22.18.0/bin/node}"
-readonly UV_BIN="${UV_BIN:-/Users/luizotavio/.local/bin/uv}"
+readonly NODE_BIN="${NODE_BIN:-${HOME}/.nvm/versions/node/v22.18.0/bin/node}"
+readonly UV_BIN="${UV_BIN:-${HOME}/.local/bin/uv}"
 readonly FFPROBE_BIN="${FFPROBE_BIN:-/opt/homebrew/bin/ffprobe}"
 
 usage() {

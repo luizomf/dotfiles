@@ -4,13 +4,16 @@ set -euo pipefail
 
 INPUT_FILE="${1:?'Missing input file path.'}"
 
-export PROJECTS_DIR="${PROJECTS_DIR:-$HOME/Desktop/tutoriais_e_cursos}"
-export OMNIVOICE_DIR="${PROJECTS_DIR}/omnivoicetts"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+# shellcheck source=/dev/null
+source "${OM_PATHS_FILE:-${script_dir}/../config/paths.sh}"
+export OMNIVOICE_DIR="${OMNIVOICE_DIR:-${PROJECTS_DIR}/omnivoicetts}"
+export OMNIVOICE_REMOTE_APP="${OMNIVOICE_REMOTE_APP:-$OMNIVOICE_DIR}"
 
 kill_omnivoice
 
 rsync -havz --progress --stats "${OMNIVOICE_DIR}/" \
-m4128:"${OMNIVOICE_DIR}/" --delete --exclude '.cache'
+m4128:"${OMNIVOICE_REMOTE_APP}/" --delete --exclude '.cache'
 
 "${OMNIVOICE_DIR}"/scripts/male-pt-m4128-half \
 "${INPUT_FILE}"

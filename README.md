@@ -21,6 +21,14 @@ cd ~/dotfiles
 
 **⚠️ Vai sobrescrever teus arquivos. Tamo junto.**
 
+## Shared host paths
+
+`config/paths.sh` is the source of truth for host paths needed by interactive
+shells and unattended scripts. It currently defines `PROJECTS_DIR`. Supported
+callers may select a machine-specific replacement with `OM_PATHS_FILE`.
+`omnivoice_m4128_half` also accepts `OMNIVOICE_REMOTE_APP` when the remote
+checkout differs from the local one.
+
 ## Pi Coding Agent
 
 The installer links the static configuration under `pi/agent/` into

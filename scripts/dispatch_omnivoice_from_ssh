@@ -8,15 +8,20 @@
 
 set -euo pipefail
 
-readonly SITE_DIR="/Users/luizotavio/Desktop/tutoriais_e_cursos/otaviomiranda.com.br"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+# Use the trusted repository config directly: forced SSH input cannot override it.
+# shellcheck source=/dev/null
+source "${script_dir}/../config/paths.sh"
+readonly AUTOMATION_ROOT="${HOME}/.codex/automations/daily-paper-llm-roundup"
+readonly SITE_DIR="${PROJECTS_DIR}/otaviomiranda.com.br"
 readonly POSTS_DIR="${SITE_DIR}/src/content/posts/2026"
-readonly ENQUEUE_SCRIPT="/Users/luizotavio/.codex/automations/daily-paper-llm-roundup/hooks/on-end/tts/enqueue-tts-ready.sh"
-readonly QUEUE_DIR="/Users/luizotavio/.codex/automations/daily-paper-llm-roundup/hooks/on-end/tts"
-readonly NODE_BIN="/Users/luizotavio/.nvm/versions/node/v22.18.0/bin/node"
+readonly ENQUEUE_SCRIPT="${AUTOMATION_ROOT}/hooks/on-end/tts/enqueue-tts-ready.sh"
+readonly QUEUE_DIR="${AUTOMATION_ROOT}/hooks/on-end/tts"
+readonly NODE_BIN="${HOME}/.nvm/versions/node/v22.18.0/bin/node"
 readonly GIT_BIN="/usr/bin/git"
-readonly LOCK_HELPER="/Users/luizotavio/dotfiles/scripts/site_git_automation_lock"
-readonly BQ_BIN="/Users/luizotavio/dotfiles/scripts/bq"
-readonly TTS_RUNNER="/Users/luizotavio/.codex/automations/daily-paper-llm-roundup/hooks/on-end/tts/run-pending-tts.sh"
+readonly LOCK_HELPER="${HOME}/dotfiles/scripts/site_git_automation_lock"
+readonly BQ_BIN="${HOME}/dotfiles/scripts/bq"
+readonly TTS_RUNNER="${AUTOMATION_ROOT}/hooks/on-end/tts/run-pending-tts.sh"
 readonly CONCURRENCY_KEY="daily-paper-automation"
 
 usage() {
@@ -78,7 +83,7 @@ for executable in "$BQ_BIN" "$TTS_RUNNER"; do
   }
 done
 
-# shellcheck source=/Users/luizotavio/dotfiles/scripts/site_git_automation_lock
+# shellcheck source=/dev/null
 source "$LOCK_HELPER"
 site_git_lock_acquire "$SITE_DIR" || exit $?
 trap site_git_lock_release EXIT
