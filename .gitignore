@@ -1,7 +1,81 @@
-# LOCALS
+# OS and editor artifacts
 .DS_Store
+*.swp
+*.swo
+*~
 
+# Caches and generated output
 __pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+outputs/
+nohup.out
+*.log
 
-# keepwarm runtime log
-scripts/keepwarm.log
+# Environment files and local overrides
+.env
+.env.*
+*.env
+*.env.*
+.envrc
+.direnv/
+*.local.json
+*.local.toml
+*.local.yaml
+*.local.yml
+*.local.sh
+
+# Credentials and private keys
+.aws/
+.azure/
+.gcloud/
+.gnupg/
+.ssh/
+.netrc
+.npmrc
+.pypirc
+auth.json
+credentials
+credentials.*
+secrets
+secrets.*
+*.token
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.kdbx
+id_rsa
+id_rsa.*
+id_dsa
+id_dsa.*
+id_ecdsa
+id_ecdsa.*
+id_ed25519
+id_ed25519.*
+
+# Agent state, sessions, and temporary prompts
+.pi/
+.codex/
+.claude/
+.gemini/
+sessions/
+*.session
+Session.vim
+.sannux-agy-prompt.*
+
+# Shell and REPL history
+.bash_history
+.zsh_history
+.python_history
+.node_repl_history
+
+# Local databases and backups
+*.sqlite
+*.sqlite3
+*.db
+*.bak
+*.orig

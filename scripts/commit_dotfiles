@@ -14,6 +14,24 @@ readonly hosts=(m132 m4128 fedoraair)
 cd "$dotfiles_dir"
 git add .
 
+# Defense in depth: ignored files normally cannot be staged by `git add`, but
+# an already tracked or force-added sensitive file can. Refuse to publish any
+# staged path covered by the repository's ignore policy.
+declare -a ignored_staged=()
+while IFS= read -r -d '' path; do
+  ignored_staged+=("$path")
+done < <(
+  git diff --cached --name-only --diff-filter=ACMR -z |
+    git check-ignore --no-index --stdin -z 2>/dev/null || true
+)
+
+if (( ${#ignored_staged[@]} > 0 )); then
+  printf 'Action cancelled: sensitive or local-only paths are staged:\n' >&2
+  printf '  %q\n' "${ignored_staged[@]}" >&2
+  git reset -q -- "${ignored_staged[@]}"
+  exit 1
+fi
+
 if git diff --cached --quiet; then
   printf 'No local changes to commit.\n'
 else
