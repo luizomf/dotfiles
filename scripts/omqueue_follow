@@ -1,60 +1,7 @@
 #!/usr/bin/env bash
 
-# Functional prototype for following a Job's live Output.
-# Keep as workflow evidence until a supported OMQueue interface replaces it.
-
-# Otavio's notes
-# This prototype is for OMQueue CLI usage. We are currently testing it.
+# Compatibility shortcut for OMQueue's supported Output-follow command.
 
 set -euo pipefail
 
-if [[ $# -ne 1 ]]; then
-  printf 'Usage: omqueue_follow <job-id>\n' >&2
-  exit 2
-fi
-
-readonly job_id="$1"
-chunk_file="$(mktemp)"
-readonly chunk_file
-stdout_cursor=0
-stderr_cursor=0
-stdout_artifact_id=""
-stderr_artifact_id=""
-
-cleanup() {
-  rm -f "$chunk_file"
-}
-
-trap cleanup EXIT
-trap 'exit 130' INT TERM
-
-# Output artifacts exist only after the Queue creates an Attempt.
-while true; do
-  if [[ -z "$stdout_artifact_id" || -z "$stderr_artifact_id" ]]; then
-    inspect_json="$(omqueue job inspect "$job_id" --json)"
-    stdout_artifact_id="${stdout_artifact_id:-$(
-      jq -r '.job.attempts[-1].output.stdout.artifactId // empty' <<<"$inspect_json"
-    )}"
-    stderr_artifact_id="${stderr_artifact_id:-$(
-      jq -r '.job.attempts[-1].output.stderr.artifactId // empty' <<<"$inspect_json"
-    )}"
-  fi
-
-  if [[ -n "$stderr_artifact_id" ]]; then
-    : >"$chunk_file"
-    omqueue output read "$stderr_artifact_id" --cursor "$stderr_cursor" --raw >"$chunk_file"
-    cat "$chunk_file" >&2
-    chunk_bytes="$(wc -c <"$chunk_file")"
-    stderr_cursor=$((stderr_cursor + chunk_bytes))
-  fi
-
-  if [[ -n "$stdout_artifact_id" ]]; then
-    : >"$chunk_file"
-    omqueue output read "$stdout_artifact_id" --cursor "$stdout_cursor" --raw >"$chunk_file"
-    cat "$chunk_file"
-    chunk_bytes="$(wc -c <"$chunk_file")"
-    stdout_cursor=$((stdout_cursor + chunk_bytes))
-  fi
-
-  sleep 0.2
-done
+exec omqueue output follow "$@"

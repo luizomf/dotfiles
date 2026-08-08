@@ -39,10 +39,10 @@ def usage(stream=sys.stdout) -> None:
     print(
         """Usage:
   bq --setup
-  bq [--cwd DIR] [--concurrency-key KEY] [--stdin] [--json] [--] EXECUTABLE [ARGUMENTS...]
-  bq [--cwd DIR] [--concurrency-key KEY] [--stdin] --in DURATION [--every DURATION --count N] -- EXECUTABLE [ARGUMENTS...]
-  bq [--cwd DIR] [--concurrency-key KEY] [--stdin] --at DATETIME [--every DURATION --count N] -- EXECUTABLE [ARGUMENTS...]
-  bq [--cwd DIR] [--concurrency-key KEY] [--stdin] --cron EXPRESSION [--tz IANA_ZONE] -- EXECUTABLE [ARGUMENTS...]
+  bq [--cwd DIR] [--concurrency-key KEY] [--label LABEL] [--stdin] [--json] [--] EXECUTABLE [ARGUMENTS...]
+  bq [--cwd DIR] [--concurrency-key KEY] [--label LABEL] [--stdin] --in DURATION [--every DURATION --count N] -- EXECUTABLE [ARGUMENTS...]
+  bq [--cwd DIR] [--concurrency-key KEY] [--label LABEL] [--stdin] --at DATETIME [--every DURATION --count N] -- EXECUTABLE [ARGUMENTS...]
+  bq [--cwd DIR] [--concurrency-key KEY] [--label LABEL] [--stdin] --cron EXPRESSION [--tz IANA_ZONE] -- EXECUTABLE [ARGUMENTS...]
 
 Run now:
   With no timing option, submit one Trigger and return after durable Job
@@ -66,6 +66,7 @@ Timing rules:
 Execution:
   --cwd DIR             Capture DIR instead of the current working directory.
   --concurrency-key KEY Serialize commands that use the same non-empty key.
+  --label LABEL         Add an optional presentation name to the Job or Schedule.
   --stdin               Persist redirected UTF-8 stdin and restore it for the command.
   --json                Print immediate Job acceptance as one JSON document.
   --                    Separate bq options from the executable and its arguments.
@@ -77,6 +78,9 @@ Execution:
   key lazily provisions one reusable Job Definition; different keys remain
   independent and are still bounded by the Queue's global capacity.
 
+  Labels are preserved exactly, are not identities, and do not affect execution.
+  A finite repetition applies the same Label to each independent Schedule.
+
   Commands use literal argument vectors without shell evaluation or wholesale
   inheritance of the submitting shell environment. Personal scripts, common
   Homebrew locations, and system commands are on PATH; PROJECTS_DIR is exported
@@ -85,7 +89,7 @@ Execution:
 
 Examples:
   bq ./script --flag value
-  bq --cwd ~/project -- ./script --flag value
+  bq --label 'daily report' --cwd ~/project -- ./script --flag value
   printf '%s' 'literal text' | bq --stdin --json -- ./text-reader
   bq --concurrency-key audio-playback -- cliplay -l a -t "Hello"
   bq --in 15m -- commit
@@ -452,10 +456,12 @@ def option_value(arguments: list[str], index: int, option: str) -> str:
 
 def parse_submission(
     arguments: list[str],
-) -> tuple[dict[str, object], dict[str, object], str | None, bool]:
+) -> tuple[dict[str, object], dict[str, object], str | None, str | None, bool]:
     working_directory = os.getcwd()
     timing: dict[str, object] = {}
     concurrency_key: str | None = None
+    label: str | None = None
+    label_supplied = False
     capture_stdin = False
     json_output = False
     index = 0
@@ -475,6 +481,13 @@ def parse_submission(
             concurrency_key = option_value(arguments, index, option)
             if not concurrency_key:
                 fail("--concurrency-key requires a non-empty value", 2)
+            index += 2
+            continue
+        if option == "--label":
+            if label_supplied:
+                fail("--label may be supplied only once", 2)
+            label = option_value(arguments, index, option)
+            label_supplied = True
             index += 2
             continue
         if option == "--stdin":
@@ -541,25 +554,29 @@ def parse_submission(
             trigger_input["stdin"] = sys.stdin.buffer.read().decode("utf-8")
         except UnicodeDecodeError:
             fail("--stdin input is not valid UTF-8", 2)
-    return trigger_input, timing, concurrency_key, json_output
+    return trigger_input, timing, concurrency_key, label, json_output
 
 
 def submit_now(
-    trigger_input: dict[str, object], definition_id: str, *, json_output: bool = False
+    trigger_input: dict[str, object],
+    definition_id: str,
+    label: str | None,
+    *,
+    json_output: bool = False,
 ) -> None:
     document_path = write_json_document(trigger_input)
     try:
-        result = run_omqueue(
-            [
-                "trigger",
-                definition_id,
-                document_path,
-                "--idempotency-key",
-                f"bq-{uuid.uuid4()}",
-                "--json",
-            ],
-            capture=True,
-        )
+        arguments = [
+            "trigger",
+            definition_id,
+            document_path,
+            "--idempotency-key",
+            f"bq-{uuid.uuid4()}",
+        ]
+        if label is not None:
+            arguments.extend(["--label", label])
+        arguments.append("--json")
+        result = run_omqueue(arguments, capture=True)
     finally:
         os.unlink(document_path)
 
@@ -614,19 +631,21 @@ def schedule_submission(
     trigger_input: dict[str, object],
     timing: dict[str, object],
     definition_id: str,
+    label: str | None,
 ) -> None:
     if "cron" in timing:
         cron = timing["cron"]
         time_zone = timing.get("tz") or system_time_zone()
-        schedule_id = create_schedule(
-            {
-                "definitionId": definition_id,
-                "triggerInput": trigger_input,
-                "timeZone": time_zone,
-                "cron": cron,
-                "latePolicy": "fire_once",
-            }
-        )
+        document: dict[str, object] = {
+            "definitionId": definition_id,
+            "triggerInput": trigger_input,
+            "timeZone": time_zone,
+            "cron": cron,
+            "latePolicy": "fire_once",
+        }
+        if label is not None:
+            document["label"] = label
+        schedule_id = create_schedule(document)
         print(f"bq: scheduled {schedule_id} cron={cron!r} timeZone={time_zone}")
         return
 
@@ -656,15 +675,16 @@ def schedule_submission(
 
     scheduled: list[tuple[str, str]] = []
     for occurrence, at in enumerate(instants):
-        schedule_id = create_schedule(
-            {
-                "definitionId": definition_id,
-                "triggerInput": trigger_input,
-                "timeZone": "UTC",
-                "at": at,
-                "latePolicy": "fire_once",
-            }
-        )
+        document = {
+            "definitionId": definition_id,
+            "triggerInput": trigger_input,
+            "timeZone": "UTC",
+            "at": at,
+            "latePolicy": "fire_once",
+        }
+        if label is not None:
+            document["label"] = label
+        schedule_id = create_schedule(document)
         scheduled.append((schedule_id, at))
         if count > 1:
             print(f"bq: scheduled {occurrence + 1}/{count} at={at} {schedule_id}")
@@ -677,14 +697,16 @@ def schedule_submission(
 
 
 def submit(arguments: list[str]) -> None:
-    trigger_input, timing, concurrency_key, json_output = parse_submission(arguments)
+    trigger_input, timing, concurrency_key, label, json_output = parse_submission(
+        arguments
+    )
     definition_id = definition_for_concurrency_key(
         concurrency_key, diagnostics_to_stderr=json_output
     )
     if timing:
-        schedule_submission(trigger_input, timing, definition_id)
+        schedule_submission(trigger_input, timing, definition_id, label)
     else:
-        submit_now(trigger_input, definition_id, json_output=json_output)
+        submit_now(trigger_input, definition_id, label, json_output=json_output)
 
 
 def internal_run() -> NoReturn:

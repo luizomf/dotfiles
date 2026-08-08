@@ -3,8 +3,7 @@
 # Functional prototype for viewing recent Jobs and their latest artifacts.
 # Keep as workflow evidence until a supported OMQueue interface replaces it.
 
-# OTAVIO'S NOTES
-# Watch out for N+1 queries in this script. This needs to be fixed for actual OMQueue usage.
+# Uses the bounded Job-list operational view; no per-Job inspection is needed.
 
 set -euo pipefail
 
@@ -41,25 +40,29 @@ while [[ $# -gt 0 ]]; do
 done
 
 render_jobs() {
-  printf 'JOB ID\tSTATE\tATTEMPT\tSTDOUT ARTIFACT\tSTDERR ARTIFACT\tRESULT ARTIFACT\n'
+  printf 'JOB ID\tNAME\tSTATE\tATTEMPT\tSTDOUT ARTIFACT\tSTDERR ARTIFACT\tRESULT ARTIFACT\n'
 
   omqueue job list --limit "$limit" --json |
-    jq -r '.jobs[] | [.jobId, .state] | @tsv' |
-    while IFS=$'\t' read -r job_id state; do
-      omqueue job inspect "$job_id" --json |
-        jq -r --arg job_id "$job_id" --arg state "$state" '
-          .job.attempts[-1] as $attempt |
-          [
-            $job_id,
-            $state,
-            ($attempt.attemptNumber // "-"),
-            ($attempt.output.stdout.artifactId // "-"),
-            ($attempt.output.stderr.artifactId // "-"),
-            ($attempt.result.artifactId // "-")
-          ] |
-          @tsv
-        '
-    done
+    jq -r '
+      def bounded($width):
+        if length > $width then .[0:($width - 3)] + "..." else . end;
+      def name:
+        if .label == null then "(unnamed)"
+        else (.label | tojson | bounded(40))
+        end;
+      .jobs[] |
+      .latestAttempt as $attempt |
+      [
+        .jobId,
+        name,
+        .state,
+        ($attempt.attemptNumber // "-"),
+        ($attempt.stdoutArtifactId // "-"),
+        ($attempt.stderrArtifactId // "-"),
+        ($attempt.resultArtifactId // "-")
+      ] |
+      @tsv
+    '
 }
 
 if [[ "$follow" == false ]]; then
