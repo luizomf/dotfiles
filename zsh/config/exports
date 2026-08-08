@@ -75,7 +75,8 @@ fi
 export PYENV_ROOT="${HOME}/.pyenv"
 PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:${PATH}"
 if [[ "$(command -v pyenv)" ]]; then
-  [[ -z "$PYENV_ROOT" ]] || eval "$(pyenv init -)"
+  # Avoid racing pyenv's global rehash lock when tmux restores many shells.
+  [[ -z "$PYENV_ROOT" ]] || eval "$(pyenv init - --no-rehash)"
 fi
 
 . "$HOME/.local/bin/env"
