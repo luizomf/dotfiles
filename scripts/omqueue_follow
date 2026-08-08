@@ -1,7 +1,97 @@
 #!/usr/bin/env bash
 
 # Compatibility shortcut for OMQueue's supported Output-follow command.
+# Result artifacts are opaque references and are not part of Output follow.
 
 set -euo pipefail
 
-exec omqueue output follow "$@"
+usage() {
+  cat <<'EOF'
+Usage: omqueue_follow <job-id> [--json | --raw]
+       omqueue_follow --job-id <job-id> [--json | --raw]
+       omqueue_follow --label <label> [--state <state[,state...]>] [--json | --raw]
+
+--label follows the newest exact-label match. --state further restricts that
+lookup. A Job ID is already an exact selector and cannot use lookup filters.
+EOF
+}
+
+job_id=""
+label=""
+state=""
+format=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --job-id)
+      if [[ $# -lt 2 || -z "$2" ]]; then
+        usage >&2
+        exit 2
+      fi
+      job_id="$2"
+      shift 2
+      ;;
+    --label)
+      if [[ $# -lt 2 || -z "$2" ]]; then
+        usage >&2
+        exit 2
+      fi
+      label="$2"
+      shift 2
+      ;;
+    --state)
+      if [[ $# -lt 2 || -z "$2" ]]; then
+        usage >&2
+        exit 2
+      fi
+      state="$2"
+      shift 2
+      ;;
+    --json | --raw)
+      if [[ -n "$format" ]]; then
+        usage >&2
+        exit 2
+      fi
+      format="$1"
+      shift
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    -*)
+      usage >&2
+      exit 2
+      ;;
+    *)
+      if [[ -n "$job_id" ]]; then
+        usage >&2
+        exit 2
+      fi
+      job_id="$1"
+      shift
+      ;;
+  esac
+done
+
+if [[ -n "$job_id" ]]; then
+  if [[ -n "$label" || -n "$state" ]]; then
+    usage >&2
+    exit 2
+  fi
+elif [[ -n "$label" ]]; then
+  list_arguments=(job list --label "$label" --limit 1 --json)
+  [[ -z "$state" ]] || list_arguments+=(--state "$state")
+  job_id="$(omqueue "${list_arguments[@]}" | jq -r '.jobs[0].jobId // empty')"
+  if [[ -z "$job_id" ]]; then
+    printf 'omqueue_follow: no Job matches the exact filters\n' >&2
+    exit 1
+  fi
+else
+  usage >&2
+  exit 2
+fi
+
+follow_arguments=(output follow "$job_id")
+[[ -z "$format" ]] || follow_arguments+=("$format")
+exec omqueue "${follow_arguments[@]}"

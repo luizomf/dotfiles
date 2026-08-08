@@ -8,10 +8,19 @@
 set -euo pipefail
 
 usage() {
-  printf 'Usage: omqueue_top [--limit <count>] [-f]\n'
+  cat <<'EOF'
+Usage: omqueue_top [--limit <count>] [--state <state[,state...]>]
+                   [--label <label>] [--job-id <job-id>] [-f]
+
+Filters are exact and may be combined. --job-id uses direct Job inspection;
+--limit has no effect when it is present.
+EOF
 }
 
 limit=10
+state=""
+label=""
+job_id=""
 follow=false
 
 while [[ $# -gt 0 ]]; do
@@ -22,6 +31,30 @@ while [[ $# -gt 0 ]]; do
         exit 2
       fi
       limit="$2"
+      shift 2
+      ;;
+    --state)
+      if [[ $# -lt 2 || -z "$2" ]]; then
+        usage >&2
+        exit 2
+      fi
+      state="$2"
+      shift 2
+      ;;
+    --label)
+      if [[ $# -lt 2 || -z "$2" ]]; then
+        usage >&2
+        exit 2
+      fi
+      label="$2"
+      shift 2
+      ;;
+    --job-id)
+      if [[ $# -lt 2 || -z "$2" ]]; then
+        usage >&2
+        exit 2
+      fi
+      job_id="$2"
       shift 2
       ;;
     -f | --follow)
@@ -39,10 +72,55 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -n "$job_id" && -n "$state" ]]; then
+  valid_state='queued|running|retry_wait|succeeded|failed|cancel_requested|cancelled|unknown'
+  if [[ ! "$state" =~ ^(${valid_state})(,(${valid_state}))*$ ]]; then
+    printf 'omqueue_top: invalid Job state filter: %s\n' "$state" >&2
+    exit 2
+  fi
+fi
+
+fetch_jobs() {
+  if [[ -z "$job_id" ]]; then
+    local -a arguments=(job list --limit "$limit" --json)
+    [[ -z "$state" ]] || arguments+=(--state "$state")
+    [[ -z "$label" ]] || arguments+=(--label "$label")
+    omqueue "${arguments[@]}"
+    return
+  fi
+
+  omqueue job inspect "$job_id" --json |
+    jq --arg state "$state" --arg label "$label" '
+      .job as $inspection |
+      $inspection.job as $job |
+      ($inspection.attempts | max_by(.attemptNumber)) as $attempt |
+      select(
+        ($state == "" or ($state | split(",") | index($job.state))) and
+        ($label == "" or $job.label == $label)
+      ) |
+      {
+        jobs: [
+          $job + {
+            latestAttempt: (
+              if $attempt == null then null
+              else {
+                attemptNumber: $attempt.attemptNumber,
+                stdoutArtifactId: $attempt.output.stdout.artifactId,
+                stderrArtifactId: $attempt.output.stderr.artifactId,
+                resultArtifactId: $attempt.result.artifactId
+              }
+              end
+            )
+          }
+        ]
+      }
+    '
+}
+
 render_jobs() {
   printf 'JOB ID\tNAME\tSTATE\tATTEMPT\tSTDOUT ARTIFACT\tSTDERR ARTIFACT\tRESULT ARTIFACT\n'
 
-  omqueue job list --limit "$limit" --json |
+  fetch_jobs |
     jq -r '
       def bounded($width):
         if length > $width then .[0:($width - 3)] + "..." else . end;

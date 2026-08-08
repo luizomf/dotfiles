@@ -5,15 +5,23 @@
 
 # OTAVIO'S NOTES
 # One inspection per displayed Schedule is still required to show its opaque
-# command. The Schedule Label is used only as a presentation name.
+# command because schedule list deliberately excludes Trigger input. Server-side
+# filters reduce the candidate set but cannot remove that N+1 query.
 
 set -euo pipefail
 
 usage() {
-  printf 'Usage: omqueue_schedule [--limit <count>]\n'
+  cat <<'EOF'
+Usage: omqueue_schedule [--limit <count>] [--status <status[,status...]>]
+                        [--label <label>]
+
+Status defaults to enabled,disabled. Filters are exact and may be combined.
+EOF
 }
 
 limit=10
+status="enabled,disabled"
+label=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -23,6 +31,22 @@ while [[ $# -gt 0 ]]; do
         exit 2
       fi
       limit="$2"
+      shift 2
+      ;;
+    --status)
+      if [[ $# -lt 2 || -z "$2" ]]; then
+        usage >&2
+        exit 2
+      fi
+      status="$2"
+      shift 2
+      ;;
+    --label)
+      if [[ $# -lt 2 || -z "$2" ]]; then
+        usage >&2
+        exit 2
+      fi
+      label="$2"
       shift 2
       ;;
     -h | --help)
@@ -48,7 +72,10 @@ trap cleanup EXIT
 
 cursor=""
 while true; do
-  list_arguments=(schedule list --limit 200 --status "enabled,disabled" --json)
+  list_arguments=(schedule list --limit 200 --status "$status" --json)
+  if [[ -n "$label" ]]; then
+    list_arguments+=(--label "$label")
+  fi
   if [[ -n "$cursor" ]]; then
     list_arguments+=(--cursor "$cursor")
   fi
