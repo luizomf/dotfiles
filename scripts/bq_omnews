@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+bq --label omnews_audio "${@}"
