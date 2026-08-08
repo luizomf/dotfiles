@@ -73,8 +73,8 @@ elif [ "$(uname -s)" = "Darwin" ]; then
 fi
 
 export PYENV_ROOT="${HOME}/.pyenv"
+PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:${PATH}"
 if [[ "$(command -v pyenv)" ]]; then
-  PATH="${PYENV_ROOT}/bin:${PYENV_ROOT}/shims:${PATH}"
   [[ -z "$PYENV_ROOT" ]] || eval "$(pyenv init -)"
 fi
 
