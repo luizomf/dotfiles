@@ -1,21 +1,40 @@
 #!/usr/bin/env bash
 
-export FZF_DEFAULT_COMMAND='fd --type f --strip-cwd-prefix --hidden --follow --exclude .git'
-export FZF_DEFAULT_OPTS=${FZF_DEFAULT_OPTS:-}"
-  --color=fg:#eae8ff,fg+:#6bccff,bg:#0f0f14,bg+:#202026
-  --color=hl:#f0f0ff,hl+:#ffffff,info:#6bccff,marker:#6bccff
-  --color=prompt:#f0f0ff,spinner:#6bccff,pointer:#6bccff,header:#6bccff
-  --color=gutter:#202026,border:#202026,separator:#202026,scrollbar:#6bccff
-  --color=label:#6bccff,query:#ffffff
-  --border=\"rounded\" --border-label=\"tmux\" --border-label-pos=\"0\" 
-  --preview-window=\"border-rounded\"
-  --padding=\"0\" --margin=\"0\" --prompt=\"> \" --marker=\">\"
-  --pointer=\"◆\" --separator=\"─\" --scrollbar=\"│\" --layout=\"reverse\""
+# The target and path remain searchable, but only fields 2–5 are displayed.
+LIST="$(tmux list-window -a -F $'#S:#I\t#{?window_active,◆, }\t#S:#I\t#W\t#{window_panes} #{?#{==:#{window_panes},1},pane,panes}\t#{pane_current_path}')"
+WINDOW_COUNT="$(printf '%s\n' "$LIST" | wc -l | tr -d ' ')"
+POPUP_HEIGHT=$((WINDOW_COUNT + 5))
+((POPUP_HEIGHT > 20)) && POPUP_HEIGHT=20
 
-LIST="$(tmux list-window -a -F "#S:#I #W #P #D #{pane_current_path}")"
-FZF_TMUX_CMD="fzf --sync --sort --algo=v2 --tiebreak=length --tmux center,70%,60%"
-SELECTED="$(printf '%b\n' "${LIST}" | $FZF_TMUX_CMD)"
+LIST_FILE="$(mktemp "${TMPDIR:-/tmp}/tmux-windows.XXXXXX")"
+trap 'rm -f "$LIST_FILE"' EXIT
+printf '%s\n' "$LIST" >"$LIST_FILE"
 
+FZF_TMUX_CMD=(
+  fzf
+  '--color=fg:#eae8ff,fg+:#6bccff,bg:#0f0f14,bg+:#202026,hl:#f0f0ff,hl+:#ffffff,info:#6bccff,marker:#6bccff,prompt:#f0f0ff,spinner:#6bccff,pointer:#6bccff,header:#6bccff,gutter:#202026,border:#202026,separator:#202026,scrollbar:#6bccff,label:#6bccff,query:#ffffff'
+  --border=rounded
+  '--border-label= windows '
+  --border-label-pos=0
+  --padding=0
+  --margin=0
+  '--prompt=> '
+  '--marker=>'
+  --pointer=◆
+  --separator=─
+  --scrollbar=│
+  --layout=reverse
+  --disabled
+  --no-sort
+  --delimiter=$'\t'
+  --with-nth=2..5
+  --bind="change:reload(fzf --filter={q} --algo=v2 --tiebreak=length < '$LIST_FILE' || true)"
+  --header='Enter: switch · Esc: close'
+  --tmux="center,70%,${POPUP_HEIGHT}"
+)
+
+SELECTED="$(printf '%s\n' "$LIST" | "${FZF_TMUX_CMD[@]}")"
 [[ -z $SELECTED ]] && exit 0
 
-tmux switch-client -t "$(echo "$SELECTED" | awk "{print \$1}")"
+TARGET="${SELECTED%%$'\t'*}"
+tmux switch-client -t "$TARGET"
