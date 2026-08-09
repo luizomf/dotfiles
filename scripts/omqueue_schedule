@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Functional prototype for viewing enabled Schedules and what they will run.
+# Functional prototype for viewing Schedules and what they will run.
 # Keep as workflow evidence until a supported OMQueue interface replaces it.
 
 # OTAVIO'S NOTES
@@ -15,7 +15,8 @@ usage() {
 Usage: omqueue_schedule [--limit <count>] [--status <status[,status...]>]
                         [--label <label>]
 
-Status defaults to enabled,disabled. Filters are exact and may be combined.
+Status defaults to enabled,disabled. Results are newest first. Filters are
+exact and may be combined; use --status completed for fired one-time Schedules.
 EOF
 }
 
@@ -94,7 +95,8 @@ while true; do
 done
 
 jq -sr --argjson limit "$limit" '
-  sort_by(if .at then [0, .at, .scheduleId] else [1, .cron, .scheduleId] end) |
+  sort_by([(.at // .createdAt // ""), .scheduleId]) |
+  reverse |
   .[:$limit][].scheduleId
 ' "$schedule_rows_file" >"$schedule_ids_file"
 
@@ -135,7 +137,8 @@ done <"$schedule_ids_file"
     end;
 
   map(.schedule) |
-  sort_by(if .at then [0, .at, .scheduleId] else [1, .cron, .scheduleId] end) |
+  sort_by([(.at // .createdAt // ""), .scheduleId]) |
+  reverse |
   .[:$limit][] |
   [.scheduleId, name, .status, timing, (command | bounded(100))] |
   @tsv
