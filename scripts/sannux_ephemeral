@@ -17,6 +17,17 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 dotfiles_dir="$(cd "${script_dir}/.." && pwd)"
 sannux_dir="${PROJECTS_DIR%/}/sannux"
 
+resolve_agent_home() (
+  local template="${1:?Set the Sannux template name}"
+  cd "${sannux_dir}/templates/${template}"
+  # shellcheck disable=SC1091
+  source .env
+
+  local agent_home="${AGENT_HOME_PATH}"
+  agent_home="${agent_home/#\~/$HOME}"
+  printf '%s\n' "$agent_home"
+)
+
 refresh_pi_resources() (
   local template_dir="${sannux_dir}/templates/pi"
   local ompi_dir="${PROJECTS_DIR%/}/ompi"
@@ -88,9 +99,12 @@ refresh_pi_resources() (
   docker compose run --rm -T --entrypoint npm agent \
     install --prefix /home/agent/.local --omit=dev @openai/codex@0.146.0
 
-  if [[ -f "${HOME}/.codex/auth.json" ]]; then
-    cp "${HOME}/.codex/auth.json" "${persistent_home}/.codex/auth.json"
-    chmod 0600 "${persistent_home}/.codex/auth.json"
+  local sannux_codex_home
+  sannux_codex_home="$(resolve_agent_home codex)"
+  if [[ -f "${sannux_codex_home}/.codex/auth.json" ]]; then
+    install -m 0600 \
+      "${sannux_codex_home}/.codex/auth.json" \
+      "${persistent_home}/.codex/auth.json"
   fi
 
   local ompi_revision
@@ -170,6 +184,18 @@ case $template in
   pi)
     mkdir -p "${tmp_home}"
     cp -a "$persistent_home"/. "$tmp_home"/
+
+    # Nested Codex calls in Pi use the same current authentication as the
+    # persistent Sannux Codex runner, never the host Codex session.
+    sannux_codex_home="$(resolve_agent_home codex)"
+    rm -f "${tmp_home}/.codex/auth.json"
+    if [[ -f "${sannux_codex_home}/.codex/auth.json" ]]; then
+      mkdir -p "${tmp_home}/.codex"
+      install -m 0600 \
+        "${sannux_codex_home}/.codex/auth.json" \
+        "${tmp_home}/.codex/auth.json"
+    fi
+
     shift
     ;;
   *)
