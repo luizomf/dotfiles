@@ -1,6 +1,8 @@
 tap "docker/tap", trusted: true
 # Cryptography and SSL/TLS Toolkit
 brew "openssl@3"
+# General-purpose data compression with high compression ratio
+brew "xz"
 # Play, record, convert, and stream select audio and video codecs
 brew "ffmpeg"
 # Effort free video editing!
@@ -13,8 +15,6 @@ brew "bash-completion@2"
 brew "bat"
 # Resource monitor. C++ version and continuation of bashtop and bpytop
 brew "btop"
-# General-purpose data compression with high compression ratio
-brew "xz"
 # Versatile and fast Unicode/ASCII/ANSI graphics renderer
 brew "chafa"
 # Cross-platform make
