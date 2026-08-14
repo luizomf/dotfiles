@@ -71,6 +71,8 @@ brew "ripgrep"
 brew "rtk"
 # Static analysis and lint tool, for (ba)sh scripts
 brew "shellcheck"
+# Prints a steam locomotive if you type sl instead of ls
+brew "sl"
 # SOund eXchange: universal sound sample translator
 brew "sox"
 # Tool Command Language
@@ -125,6 +127,7 @@ cask "vlc"
 cask "whatsapp"
 # Video communication and virtual meeting platform
 cask "zoom"
+uv "edgetts", source: "file:///Users/luizotavio/Desktop/tutoriais_e_cursos/edgetts"
 uv "langgraph-cli[inmem]"
 uv "mypy"
 uv "pyright"
