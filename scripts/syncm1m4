@@ -36,10 +36,10 @@ project_excludes=(
 )
 
 # m4128
-rsync -havz --progress --stats "$HOME"/.local/share/tmux/resurrect/ \
+rsync -havzu --progress --stats "$HOME"/.local/share/tmux/resurrect/ \
   m4128:~/.local/share/tmux/resurrect/ --delete
 
-rsync -havz --progress --stats "${project_excludes[@]}" \
+rsync -havzu --progress --stats "${project_excludes[@]}" \
   "$HOME"/Desktop/tutoriais_e_cursos/ \
   m4128:~/Desktop/tutoriais_e_cursos --delete
 
@@ -47,25 +47,25 @@ echo
 prline
 
 # fedoraair
-rsync -havz --progress --stats "$HOME"/.local/share/tmux/resurrect/ \
+rsync -havzu --progress --stats "$HOME"/.local/share/tmux/resurrect/ \
   fedoraair:~/.local/share/tmux/resurrect/ --delete
 
-rsync -havz --progress --stats "${project_excludes[@]}" \
+rsync -havzu --progress --stats "${project_excludes[@]}" \
   "$HOME"/Desktop/tutoriais_e_cursos/ \
   fedoraair:~/Desktop/tutoriais_e_cursos --delete
 
 # Pi agent all
 echo
 prline
-rsync -havz --progress --stats "${project_excludes[@]}" \
+rsync -havzu --progress --stats "${project_excludes[@]}" \
   --exclude='agent/extensions/**/node_modules/' \
   ~/.pi/ fedoraair:~/.pi/
 
-rsync -havz --progress --stats "${project_excludes[@]}" \
+rsync -havzu --progress --stats "${project_excludes[@]}" \
   --exclude='agent/extensions/**/node_modules/' \
   ~/.pi/ m4128:~/.pi/
 
-rsync -havz --progress --stats "${project_excludes[@]}" \
+rsync -havzu --progress --stats "${project_excludes[@]}" \
   --exclude='agent/extensions/**/node_modules/' \
   ~/.pi/ m132:~/.pi/
 
@@ -73,29 +73,29 @@ echo
 prline
 
 # Sannux
-rsync -havz --progress --stats ~/sannux-data/ m132:~/sannux-data/
-rsync -havz --progress --stats ~/sannux-data/ m4128:~/sannux-data/
-rsync -havz --progress --stats m4128:~/sannux-data/ ~/sannux-data/
-rsync -havz --progress --stats ~/sannux-data/ fedoraair:~/sannux-data/
+rsync -havzu --progress --stats ~/sannux-data/ m132:~/sannux-data/
+rsync -havzu --progress --stats ~/sannux-data/ m4128:~/sannux-data/
+rsync -havzu --progress --stats m4128:~/sannux-data/ ~/sannux-data/
+rsync -havzu --progress --stats ~/sannux-data/ fedoraair:~/sannux-data/
 
 echo
 prline
 
 # Ollama
-rsync -havz --progress --stats ~/.ollama/service/ m132:~/.ollama/service/
-rsync -havz --progress --stats ~/.ollama/service/ m4128:~/.ollama/service/
-rsync -havz --progress --stats m4128:~/.ollama/service/ ~/.ollama/service/
-rsync -havz --progress --stats ~/.ollama/service/ fedoraair:~/.ollama/service/
+rsync -havzu --progress --stats ~/.ollama/service/ m132:~/.ollama/service/
+rsync -havzu --progress --stats ~/.ollama/service/ m4128:~/.ollama/service/
+rsync -havzu --progress --stats m4128:~/.ollama/service/ ~/.ollama/service/
+rsync -havzu --progress --stats ~/.ollama/service/ fedoraair:~/.ollama/service/
 
 echo
 prline
 
 
 # Omxterm
-rsync -havz --progress --stats ~/.config/omxterm/ m132:~/.config/omxterm/
-rsync -havz --progress --stats ~/.config/omxterm/ m4128:~/.config/omxterm/
-rsync -havz --progress --stats m4128:~/.config/omxterm/ ~/.config/omxterm/
-rsync -havz --progress --stats ~/.config/omxterm/ fedoraair:~/.config/omxterm/
+rsync -havzu --progress --stats ~/.config/omxterm/ m132:~/.config/omxterm/
+rsync -havzu --progress --stats ~/.config/omxterm/ m4128:~/.config/omxterm/
+rsync -havzu --progress --stats m4128:~/.config/omxterm/ ~/.config/omxterm/
+rsync -havzu --progress --stats ~/.config/omxterm/ fedoraair:~/.config/omxterm/
 
 echo
 prline
