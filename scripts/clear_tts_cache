@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+export PROJECTS_DIR="${PROJECTS_DIR:-$HOME/Desktop/tutoriais_e_cursos}"
+LOUDTERM_OUTPUT_DIR="${LOUDTERM_OUTPUT_DIR:-$PROJECTS_DIR/loudterm/output}"
+EDGETTS_DIR="${EDGETTS_DIR:-$PROJECTS_DIR/edgetts}"
+OMNIVOICE_CLEAR_BIN="${OMNIVOICE_CLEAR_BIN:-$HOME/dotfiles/scripts/clear_omnivoice_cache}"
+
+"$OMNIVOICE_CLEAR_BIN"
+
+if [[ -d "$LOUDTERM_OUTPUT_DIR" ]]; then
+  find "$LOUDTERM_OUTPUT_DIR" -maxdepth 1 -type f \
+    \( -name '*_full.wav' -o -name '*_part*.wav' \) -delete
+fi
+
+edgetts_bin="${EDGETTS_BIN:-}"
+if [[ -z "$edgetts_bin" && -x "$HOME/.local/bin/edgetts" ]]; then
+  edgetts_bin="$HOME/.local/bin/edgetts"
+elif [[ -z "$edgetts_bin" && -x "$EDGETTS_DIR/.venv/bin/edgetts" ]]; then
+  edgetts_bin="$EDGETTS_DIR/.venv/bin/edgetts"
+elif [[ -z "$edgetts_bin" ]]; then
+  edgetts_bin="$(command -v edgetts || true)"
+fi
+
+if [[ -n "$edgetts_bin" ]]; then
+  "$edgetts_bin" --cache-dir "$EDGETTS_DIR/.cache/edgetts" --clear-cache
+elif [[ -d "$EDGETTS_DIR/.cache/edgetts" ]]; then
+  printf 'Cannot clear EdgeTTS cache: edgetts executable not found.\n' >&2
+  exit 1
+fi
