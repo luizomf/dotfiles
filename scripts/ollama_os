@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-# MODEL=${MODEL:-qwen3.6:35b-a3b-mlx-bf16}
-MODEL=${MODEL:-qwen3.6:35b-a3b-mlx-bf16}
+# MODEL=${MODEL:-qwen3.8:27b-mlx}
+MODEL=${MODEL:-qwen3.8:27b-mlx}
 
 # ollama launch claude --model "${MODEL}" -- \
 #   --strict-mcp-config --setting-sources user \

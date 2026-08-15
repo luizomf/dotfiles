@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-# MODEL="qwen3.6:35b-a3b-mlx-bf16"
-# MODEL=${MODEL:-qwen3.6:35b-a3b-mlx-bf16}
+# MODEL="qwen3.8:27b-mlx"
+MODEL=${MODEL:-qwen3.8:27b-mlx}
 
 # printf "Current Directory: %b\n" "$(pwd)"
 # printf "Model: %b\n" "${MODEL}"
@@ -17,4 +17,4 @@ PROMPT+="Do not touch, edit, or delete files. Your only task is to document what
 PROMPT+="and confirm the changes. Be careful about expanding bash and zsh commands in your messages."
 
 # MODEL="${MODEL}" printf "%b" "${PROMPT}\n" | ollama_os
-printf "%b" "${PROMPT}\n" | sannux_ephemeral codex-ollama exec --ephemeral --yolo "${@:-}"
+printf "%b" "${PROMPT}\n" | sannux_ephemeral codex-ollama --model "${MODEL}" -c model_effort_reasoning=max  exec --ephemeral --yolo "${@:-}"
