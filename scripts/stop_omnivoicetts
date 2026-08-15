@@ -4,15 +4,15 @@ set -u
 
 status=0
 
+if ! /Users/luizotavio/dotfiles/scripts/clear_tts_cache; then
+  printf 'Failed to clear the local TTS caches.\n' >&2
+  status=1
+fi
+
 pkill -9 -f '[o]mnivoicetts' >/dev/null 2>&1 || true
 
 if ! ssh m4128 "pkill -9 -f '[o]mnivoicetts' || true"; then
   printf 'Failed to stop OmniVoice on m4128.\n' >&2
-  status=1
-fi
-
-if ! /Users/luizotavio/dotfiles/scripts/clear_tts_cache; then
-  printf 'Failed to clear the local TTS caches.\n' >&2
   status=1
 fi
 
