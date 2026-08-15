@@ -155,7 +155,7 @@ M.set_groups = function()
   -- ┌─────────────────────────────────────────────┐
   -- │  Syntax: General                            │
   -- └─────────────────────────────────────────────┘
-  hl("Comment", { italic = true, fg = p.comment })
+  hl("Comment", { italic = false, fg = p.comment })
   hl("String", { fg = p.green })
   hl("Character", { fg = p.green })
   hl("Constant", { fg = p.orange })
@@ -201,7 +201,7 @@ M.set_groups = function()
   -- ┌─────────────────────────────────────────────┐
   -- │  Treesitter: Comments                       │
   -- └─────────────────────────────────────────────┘
-  hl("@comment", { italic = true, fg = p.comment })
+  hl("@comment", { italic = false, fg = p.comment })
   hl("@comment.error", { fg = p.red })
   hl("@comment.warning", { fg = p.yellow })
   hl("@comment.note", { fg = p.blue_light })
