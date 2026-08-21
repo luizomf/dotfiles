@@ -18,7 +18,7 @@ function zle-line-init zle-keymap-select {
     VIM_PROMPT_FG_COLOR="%F{9}"
     VIM_PROMPT_BG_COLOR=""
   else
-    echo -ne '\e[6 q'  # Linha (INSERT)
+    echo -ne '\e[2 q'  # Linha (INSERT)
     VIM_PROMPT_SYMBOL="❯"
     VIM_PROMPT_FG_COLOR="%F{10}"
     VIM_PROMPT_BG_COLOR=""

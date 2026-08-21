@@ -31,6 +31,17 @@ logerror() {
   printf "🔴 ${RED}%s${RESET}\n" "$1"
 }
 
+# OMXTerm supports synchronized output, but its generic TERM identity cannot
+# advertise that capability to tmux. Scope the hint to this client only.
+tmux() {
+  if [[ -z "${TMUX:-}" && "${TERM_PROGRAM:-}" == "OMXTerm" ]]; then
+    command tmux -T sync "$@"
+    return
+  fi
+
+  command tmux "$@"
+}
+
 
 dtouch() {
   mkdir -p "$(dirname "$1")"
