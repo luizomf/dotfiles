@@ -7,7 +7,7 @@ set -euo pipefail
 # shellcheck disable=SC1091
 . "${HOME}/dotfiles/zsh/config/aliases"
 
-MODEL="${MODEL:-gpt-oss:120b}"
+MODEL="${MODEL:?'Variable $MODEL not found'}"
 
 FILE_PATH="${1:-}"
 

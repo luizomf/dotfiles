@@ -50,7 +50,7 @@ main() {
   # shellcheck disable=SC1091
   . "${HOME}/dotfiles/zsh/config/aliases"
 
-  local model="${MODEL:-qwen3.6:35b-a3b-mxfp8}"
+  local model="${MODEL:?'Variable $MODEL not found'}"
   local prompt=""
   local editor=0
   local tts_lang="a"

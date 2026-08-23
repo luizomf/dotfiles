@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-MODEL="${MODEL:-qwen3.6:35b-a3b-mxfp8}"
+MODEL="${MODEL:?'Variable $MODEL not found'}"
 
 main () {
   local prompt=''

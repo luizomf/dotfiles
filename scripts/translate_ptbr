@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-MODEL="${MODEL:-gpt-oss:120b}"
+MODEL="${MODEL:?'Variable $MODEL not found'}"
 
 main () {
   local prompt=''
