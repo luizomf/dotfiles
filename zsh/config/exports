@@ -15,11 +15,6 @@ ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=red,bold'
 
 export MANPAGER='nvim +Man!'
 
-export OLLAMA_HOST=192.168.0.109:11434
-export OLLAMA_TIMEOUT_MS=10000
-export OLLAMA_LOAD_TIMEOUT='10m'
-export OLLAMA_KEEP_ALIVE='10m'
-
 export KOKORO_VOICES_PT='pf_dora,af_heart,if_sara,ff_siwis,ef_dora,pm_santa'
 export KOKORO_VOICES_EN='bf_emma,af_heart,af_bella,bf_isabella,ff_siwis,if_sara'
 
