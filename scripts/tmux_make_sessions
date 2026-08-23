@@ -16,21 +16,36 @@ tmux_make_sessions() {
 
   rm -Rf ~/.local/share/tmux/resurrect/*.*
 
-  tmux new -s "HOME" -d -n code -c "${HOME}"
-  tmux neww -k -S -a -t "HOME" -d -n term -c "${HOME}"
+  home_session="HOME"
+  home_path="${HOME}"
+  other_windows=("term" "pi")
 
-  tmux new -s "dotfiles" -d -n code -c "${HOME}/dotfiles"
-  tmux neww -k -S -a -t "dotfiles" -d -n term -c "${HOME}/dotfiles"
+  tmux new -s "${home_session}" -d -n code -c "${home_path}"
+
+  for how in "${other_windows[@]}"; do
+    tmux neww -k -S -a -t "${home_session}" -d -n "${how}" -c "${home_path}"
+  done
+
+  dotfiles_session="dotfiles"
+  dotfiles_path="${home_path}/dotfiles"
+
+  tmux new -s "${dotfiles_session}" -d -n code -c "${dotfiles_path}"
+
+  for dow in "${other_windows[@]}"; do
+    tmux neww -k -S -a -t "${dotfiles_session}" -d -n "${dow}" -c "${dotfiles_path}"
+  done
 
   find "${projects_dir}/" -mindepth 1 -maxdepth 1 -type d -print0 | while IFS= read -r -d '' dir; do
     dirname=$(basename "${dir}")
 
     session_name="${dirname//./_}"
     first_window_name="code"
-    second_window_name="term"
 
     tmux new -s "${session_name}" -d -n "${first_window_name}" -c "${dir}"
-    tmux neww -d -k -S -a -n "${second_window_name}" -t "${session_name}" -c "${dir}"
+
+    for ow in "${other_windows[@]}"; do
+      tmux neww -d -k -S -a -n "${ow}" -t "${session_name}" -c "${dir}"
+    done
   done
 
   ~/.tmux/plugins/tmux-resurrect/scripts/save.sh
