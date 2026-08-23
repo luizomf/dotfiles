@@ -26,6 +26,7 @@ prline
 
 project_excludes=(
   --exclude='node_modules/'
+  --exclude='.omnews-data/'
   --exclude='dist/'
   --exclude='.venv/'
   --exclude='venv/'
@@ -37,7 +38,7 @@ project_excludes=(
 
 # m4128
 rsync -havzu --progress --stats "${project_excludes[@]}" "$HOME"/.local/share/tmux/resurrect/ \
-  m4128:~/.local/share/tmux/resurrect/
+  m4128:~/.local/share/tmux/resurrect/ --delete
 
 rsync -havzu --progress --stats "${project_excludes[@]}" \
   "$HOME"/Desktop/tutoriais_e_cursos/ \
@@ -46,17 +47,28 @@ rsync -havzu --progress --stats "${project_excludes[@]}" \
 echo
 prline
 
+# m132
+rsync -havzu --progress --stats "$HOME"/.local/share/tmux/resurrect/ \
+  fedoraair:~/.local/share/tmux/resurrect/ --delete
+
+rsync -havzu --progress --stats "${project_excludes[@]}" \
+  m4128:~/Desktop/tutoriais_e_cursos \
+  "$HOME"/Desktop/tutoriais_e_cursos/
+echo
+prline
+
 # fedoraair
 rsync -havzu --progress --stats "$HOME"/.local/share/tmux/resurrect/ \
-  fedoraair:~/.local/share/tmux/resurrect/
+  fedoraair:~/.local/share/tmux/resurrect/ --delete
 
 rsync -havzu --progress --stats "${project_excludes[@]}" \
   "$HOME"/Desktop/tutoriais_e_cursos/ \
   fedoraair:~/Desktop/tutoriais_e_cursos
 
-# Pi agent all
 echo
 prline
+
+# Pi agent all
 rsync -havzu --progress --stats "${project_excludes[@]}" \
   --exclude='agent/extensions/**/node_modules/' \
   ~/.pi/ fedoraair:~/.pi/
