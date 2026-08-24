@@ -22,7 +22,7 @@
     "-../../.codex/skills/",
     "-../../.claude/skills/"
   ],
-  "lastChangelogVersion": "0.84.2",
+  "lastChangelogVersion": "0.84.3",
   "outputPad": 1,
   "steeringMode": "one-at-a-time",
   "enableSkillCommands": true,
