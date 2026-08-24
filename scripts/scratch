@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+open -na Ghostty --args \
+  -e "$SHELL" -lc \
+  "nvim -n -i NONE \
+  -c 'setlocal buftype=nofile bufhidden=wipe noswapfile noundofile' \
+  -c 'startinsert'"
