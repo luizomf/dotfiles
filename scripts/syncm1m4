@@ -41,6 +41,7 @@ rsync -havzu --progress --stats "${project_excludes[@]}" "$HOME"/.local/share/tm
   m4128:~/.local/share/tmux/resurrect/ --delete
 
 rsync -havzu --progress --stats "${project_excludes[@]}" \
+  --exclude='tutoriais_e_cursos/' \
   "$HOME"/Desktop/tutoriais_e_cursos/ \
   m4128:~/Desktop/tutoriais_e_cursos
 
@@ -52,7 +53,8 @@ rsync -havzu --progress --stats "$HOME"/.local/share/tmux/resurrect/ \
   fedoraair:~/.local/share/tmux/resurrect/ --delete
 
 rsync -havzu --progress --stats "${project_excludes[@]}" \
-  m4128:~/Desktop/tutoriais_e_cursos \
+  --exclude='tutoriais_e_cursos/' \
+  m4128:~/Desktop/tutoriais_e_cursos/ \
   "$HOME"/Desktop/tutoriais_e_cursos/
 echo
 prline
@@ -62,6 +64,7 @@ rsync -havzu --progress --stats "$HOME"/.local/share/tmux/resurrect/ \
   fedoraair:~/.local/share/tmux/resurrect/ --delete
 
 rsync -havzu --progress --stats "${project_excludes[@]}" \
+  --exclude='tutoriais_e_cursos/' \
   "$HOME"/Desktop/tutoriais_e_cursos/ \
   fedoraair:~/Desktop/tutoriais_e_cursos
 
