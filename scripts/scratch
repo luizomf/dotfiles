@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-open -na Ghostty --args \
+open -na OMXterm --args \
   -e "$SHELL" -lc \
   "nvim -n -i NONE \
   -c 'setlocal buftype=nofile bufhidden=wipe noswapfile noundofile' \
