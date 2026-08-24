@@ -19,16 +19,15 @@ export KOKORO_VOICES_PT='pf_dora,af_heart,if_sara,ff_siwis,ef_dora,pm_santa'
 export KOKORO_VOICES_EN='bf_emma,af_heart,af_bella,bf_isabella,ff_siwis,if_sara'
 
 export FZF_DEFAULT_COMMAND='fd --type f --strip-cwd-prefix --hidden --follow --exclude .git'
-export FZF_DEFAULT_OPTS=${FZF_DEFAULT_OPTS:-}"
-  --color=fg:#eae8ff,fg+:#6bccff,bg:#000000,bg+:#151520
-  --color=hl:#6bccff,hl+:#ffffff,info:#6bccff,marker:#6bccff
-  --color=prompt:#eeeeff,spinner:#6bccff,pointer:#6bccff,header:#6bccff
-  --color=gutter:#151520,border:#151520,separator:#151520,scrollbar:#6bccff
-  --color=label:#6bccff,query:#ccccee
-  --border=\"rounded\" --border-label=\"tmux\" --border-label-pos=\"0\" 
-  --preview-window=\"border-rounded\"
-  --padding=\"0\" --margin=\"0\" --prompt=\"> \" --marker=\">\"
-  --pointer=\"◆\" --separator=\"─\" --scrollbar=\"│\" --layout=\"reverse\""
+export FZF_DEFAULT_OPTS='--color=fg:#eae8ff,fg+:#6bccff,bg:#141418,bg+:#242428
+  --color=hl:#f0f0ff,hl+:#ffffff,info:#6bccff,marker:#6bccff
+  --color=prompt:#f0f0ff,spinner:#6bccff,pointer:#6bccff,header:#6bccff
+  --color=gutter:#1c1c1f,border:#2c2c2f,separator:#2c2c2f,scrollbar:#6bccff
+  --color=label:#6bccff,query:#ffffff
+  --border="rounded" --border-label="tmux" --border-label-pos="0"
+  --preview-window="border-rounded"
+  --padding="0" --margin="0" --prompt="> " --marker="> "
+  --pointer="◆" --separator="─" --scrollbar="│" --layout="reverse"'
 
 export FZF_FILE_LIMIT=1000
 export FZF_FILE_DEPTH=8
