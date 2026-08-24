@@ -33,7 +33,7 @@ M.set_groups = function()
   hl("Normal", { fg = p.gray_22, bg = "NONE" })
   hl("NormalNC", { fg = p.gray_22, bg = "NONE" })
   hl("NormalSB", { fg = p.gray_24, bg = "NONE" })
-  hl("LineNr", { fg = p.comment, bg = "NONE" })
+  hl("LineNr", { fg = p.gray_10, bg = "NONE" })
   hl("@markup.heading.1.delimiter.vimdoc", {
     underdouble = true,
     nocombine = true,
@@ -57,17 +57,17 @@ M.set_groups = function()
   hl("Cursor", { fg = p.gray_01, bg = p.gray_22 })
   hl("lCursor", { fg = p.gray_01, bg = p.gray_22 })
   hl("CursorIM", { fg = p.gray_01, bg = p.gray_22 })
-  hl("MsgArea", { fg = p.gray_19 })
+  hl("MsgArea", { fg = p.gray_16 })
   hl("Conceal", { fg = p.gray_10 })
   hl("Directory", { fg = p.blue_light })
 
   -- ┌─────────────────────────────────────────────┐
   -- │  Cursor / Line / Column                     │
   -- └─────────────────────────────────────────────┘
-  hl("CursorLine", { bg = p.gray_02 })
-  hl("CursorColumn", { bg = p.gray_02 })
-  hl("CursorLineNr", { bold = false, bg = p.gray_02, fg = p.cyan })
-  hl("ColorColumn", { bg = p.gray_02 })
+  hl("CursorLine", { bg = "NONE" }) -- old bg = p.gray_02
+  hl("CursorColumn", { bg = "NONE" }) -- old bg = p.gray_02
+  hl("CursorLineNr", { bold = false, bg = "NONE", fg = p.cyan }) -- old bg = p.gray_02
+  hl("ColorColumn", { bg = "NONE" }) -- old bg = p.gray_02
   hl("VirtColumn", { link = "ColorColumn" })
   hl("SignColumn", { fg = p.gray_08 })
   hl("SignColumnSB", { fg = p.gray_06, bg = p.gray_01 })
@@ -86,8 +86,8 @@ M.set_groups = function()
   -- ┌─────────────────────────────────────────────┐
   -- │  Status / Window / Tab                      │
   -- └─────────────────────────────────────────────┘
-  hl("StatusLine", { fg = p.gray_24, bg = p.gray_01 })
-  hl("StatusLineNC", { fg = p.gray_06, bg = p.gray_01 })
+  hl("StatusLine", { fg = p.gray_10, bg = "NONE" }) -- old fg = p.gray_24, bg = gray_01
+  hl("StatusLineNC", { fg = p.gray_06, bg = "NONE" }) -- old fg = p.gray_06, bg = gray_01
   hl("WinSeparator", { bold = true, fg = p.gray_02 })
   hl("VertSplit", { fg = p.gray_02 })
   hl("TabLine", { fg = p.gray_06, bg = p.gray_01 })
@@ -102,7 +102,7 @@ M.set_groups = function()
   hl("ErrorMsg", { fg = p.red })
   hl("WarningMsg", { fg = p.yellow })
   hl("MoreMsg", { fg = p.blue_light })
-  hl("ModeMsg", { bold = true, fg = p.gray_19 })
+  hl("ModeMsg", { bold = true, fg = p.gray_16 })
   hl("Question", { fg = p.blue_light })
 
   -- ┌─────────────────────────────────────────────┐
@@ -285,8 +285,8 @@ M.set_groups = function()
   hl("TelescopePromptTitle", { fg = p.white, bg = p.gray_01 })
   hl("TelescopePromptBorder", { fg = p.gray_06, bg = p.gray_01 })
   hl("TelescopeResultsComment", { fg = p.white })
-  hl("TelescopeSelection", { fg = p.cyan, bg = p.gray_02 })
-  hl("TelescopeMatching", { fg = p.cyan, bg = p.gray_02 })
+  hl("TelescopeSelection", { fg = p.cyan, bg = p.gray_03 })
+  hl("TelescopeMatching", { fg = p.cyan, bg = p.gray_03 })
 
   -- ┌─────────────────────────────────────────────┐
   -- │  Cmp (Completion)                           │
