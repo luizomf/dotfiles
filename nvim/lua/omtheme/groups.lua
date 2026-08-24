@@ -285,8 +285,8 @@ M.set_groups = function()
   hl("TelescopePromptTitle", { fg = p.white, bg = p.gray_01 })
   hl("TelescopePromptBorder", { fg = p.gray_06, bg = p.gray_01 })
   hl("TelescopeResultsComment", { fg = p.white })
-  hl("TelescopeSelection", { fg = p.cyan, bg = p.gray_03 })
-  hl("TelescopeMatching", { fg = p.cyan, bg = p.gray_03 })
+  hl("TelescopeSelection", { fg = p.cyan, bg = p.gray_04 })
+  hl("TelescopeMatching", { fg = p.cyan, bg = p.gray_04 })
 
   -- ┌─────────────────────────────────────────────┐
   -- │  Cmp (Completion)                           │
