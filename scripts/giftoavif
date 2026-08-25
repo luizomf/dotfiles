@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+input='' output=''
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -i|--input)
+      input="${2:?"-i or --input needs a value"}"
+      shift 2
+    ;;
+    -o|--output)
+      output="${2:?"-o or --output needs a value"}"
+      shift 2
+    ;;
+    *)
+      echo "Unknown: $1" >&2 
+      exit 1
+    ;;
+  esac
+done
+
+if [[ ! -f "${input}" ]]; then
+  echo "input '${input}' is not a file"
+  exit 1
+fi
+
+if [[ -z "${output}" ]]; then
+  echo "output must be informed"
+  exit 1
+fi
+
+outputdir="$(dirname "$output")"
+
+if [[ ! -d "${outputdir}" ]]; then
+  echo "output directory '${outputdir}' does not exist"
+  exit 1
+fi
+
+
+ffmpeg -i "${input}" -c:v libsvtav1 -crf 40 -b:v 0 -cpu-used 12 -pix_fmt yuv420p "${output}"
