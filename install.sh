@@ -96,7 +96,7 @@ elif [[ "$OP_SYSTEM" == "ubuntu" ]]; then
   sudo apt install lua5.4 liblua5.4-dev unzip make build-essential luarocks ripgrep tree-sitter-cli
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-  brew install gcc fastfetch
+  brew install gcc fastfetch font-fira-code-nerd-font
 
   # Infelizmente vamos ter que buildar o neovim do zero
   # não achei uma versão recente para Ubuntu

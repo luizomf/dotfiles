@@ -108,6 +108,7 @@ cask "codex"
 # App to build and share containerised applications and microservices
 cask "docker-desktop"
 cask "font-fira-code"
+cask "font-fira-code-nerd-font"
 cask "font-jetbrains-mono"
 # Terminal emulator that uses platform-native UI and GPU acceleration
 cask "ghostty"
