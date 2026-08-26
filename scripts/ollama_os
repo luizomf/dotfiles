@@ -12,7 +12,6 @@ MODEL_REASONING="${LOCAL_MODEL_REASONING:?'Variable $LOCAL_MODEL_REASONING not f
 #   --tools "WebSearch" "Bash" \
 #   --verbose --no-session-persistence --effort high -p -
 
-ollama launch codex --model "${MODEL}" -- \
-  --search --yolo -c model_reasoning_effort="${MODEL_REASONING}" \
-  exec --ephemeral
+exec pi --no-session -p \
+  --model "ollama/${MODEL}:${MODEL_REASONING}"
 
