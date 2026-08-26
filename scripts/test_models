@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+mkdir -p ~/Desktop/tmp
+cd ~/Desktop/tmp || exit 1
+
+# shellcheck disable=SC1090
+. ~/dotfiles/zsh/config/aliases
+# shellcheck disable=SC1090
+. ~/dotfiles/zsh/config/functions
+
+(
+
+TESTING_='Testing. Reply with OK'
+sannux_ephemeral --refresh-pi-resources
+prline
+
+echo "CODEX:"
+sannux_ephemeral codex --model gpt-5.4-mini -c model_reasoning_effort=low \
+  exec --skip-git-repo-check --ephemeral <<< "$TESTING_"
+prline
+
+echo "CODEX (NOT EPHEMERAL):"
+sannux_ephemeral codex --model gpt-5.4-mini -c model_reasoning_effort=low exec \
+  --skip-git-repo-check --ephemeral <<< "$TESTING_"
+prline
+
+echo "CODEX OLLAMA:"
+sannux_ephemeral codex-ollama --model qwen3.8:27b-mlx -c \
+  model_reasoning_effort=low exec --skip-git-repo-check --ephemeral <<< "$TESTING_"
+prline
+
+echo "PI:"
+sannux_ephemeral pi --no-session -p <<< "$TESTING_"
+prline
+
+echo "PI (NOT EPHEMERAL):"
+sannux run pi -p --no-session --model openai-codex/gpt-5.6-sol:high <<< "$TESTING_"
+prline
+
+echo "AGY:"
+sannux_agy_stdin --model "Gemini 3.7 Flash (High)" \
+  --dangerously-skip-permissions <<< "$TESTING_"
+prline
+
+echo 'Local Pi'
+pi --no-session -p <<< \
+  "$TESTING_"
+prline
+
+echo 'CODEX codex:'
+codex --model gpt-5.6-sol -c model_reasoning_effort=low --yolo exec --ephemeral \
+  2>/dev/null <<< "$TESTING_"
+prline
+
+echo "PI (Ephemeral):"
+sannux_ephemeral pi --no-session -p --model \
+  ollama/qwen3.8:27b-mlx:medium <<< "$TESTING_"
+prline
+
+) || true
+
+cd -
+rm -r ~/Desktop/tmp
