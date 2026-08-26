@@ -3,9 +3,7 @@
 set -euo pipefail
 
 MODEL="${MODEL:?'Variable $MODEL not found'}"
-
-# printf "Current Directory: %b\n" "$(pwd)"
-# printf "Model: %b\n" "${MODEL}"
+MODEL_REASONING="${LOCAL_MODEL_REASONING:?'Variable $LOCAL_MODEL_REASONING not found'}"
 
 declare PROMPT
 PROMPT="Verify the modified files in the current directory using Git. "
@@ -15,5 +13,6 @@ PROMPT+="Use the message body for longer messages, if necessary. The language is
 PROMPT+="Do not touch, edit, or delete files. Your only task is to document what was done "
 PROMPT+="and confirm the changes. Be careful about expanding bash and zsh commands in your messages."
 
-# MODEL="${MODEL}" printf "%b" "${PROMPT}\n" | ollama_os
-printf "%b" "${PROMPT}\n" | sannux_ephemeral codex-ollama --model "${MODEL}" -c model_effort_reasoning=max  exec --ephemeral --yolo "${@:-}"
+# printf "%b" "${PROMPT}\n" | sannux_ephemeral pi --model "${MODEL}" -c model_reasoning_effort="${MODEL_REASONING}" exec --ephemeral --yolo "${@:-}
+printf "%b" "${PROMPT}\n" | sannux_ephemeral pi --model "ollama/${MODEL}:${MODEL_REASONING}" --no-session -p "${@:-}"
+
