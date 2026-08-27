@@ -140,6 +140,10 @@ trap 'rm -rf "$tmp_home"' EXIT
 mkdir -p "$tmp_workspace"
 test -d "$persistent_home"
 
+# The host-owned bind mount may not match the container user's UID. Trust only
+# the fixed container workspace through the ephemeral Git configuration.
+git config --file "$tmp_home/.gitconfig" --add safe.directory /workspace
+
 host_git_name="$(git config --global --get user.name || true)"
 host_git_email="$(git config --global --get user.email || true)"
 if [[ -n "$host_git_name" && -n "$host_git_email" ]]; then
