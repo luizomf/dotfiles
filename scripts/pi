@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+t="${t:-}"
+
 wrapper_path="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/$(basename -- "${BASH_SOURCE[0]}")"
 real_pi=""
 
@@ -17,4 +19,13 @@ if [[ -z "$real_pi" ]]; then
   exit 127
 fi
 
-exec "$real_pi" --no-skills --skill "${HOME}/.pi/agent/skills" "$@"
+declare -a pi_cmd=(
+  "$real_pi" --no-skills --skill "${HOME}/.pi/agent/skills"
+)
+
+if [[ -n "$t" ]]; then
+  title "$t"
+  exec "${pi_cmd[@]}" --name "$t" "$@"
+else
+  exec "${pi_cmd[@]}" "$@"
+fi
