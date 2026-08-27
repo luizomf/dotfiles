@@ -40,5 +40,9 @@ setopt GLOB_DOTS                 # Include dotfiles when globbing.
 export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME="omtheme"
 plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
+
+# Keep terminal titles under the explicit scripts/title command.
+DISABLE_AUTO_TITLE=true
 source $ZSH/oh-my-zsh.sh
+unfunction title 2>/dev/null || true
 

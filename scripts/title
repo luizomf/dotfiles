@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+  printf 'Usage: title <text>\n' >&2
+}
+
+if [[ ${1:-} == "-h" || ${1:-} == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+if [[ ${1:-} == "--" ]]; then
+  shift
+fi
+
+if (($# == 0)); then
+  usage
+  exit 2
+fi
+
+TITLE="$(printf '%s' "$*" | tr -d '\000-\037\177')"
+if [[ -z $TITLE ]]; then
+  printf 'title: text must contain printable characters\n' >&2
+  exit 2
+fi
+
+if [[ -n ${TMUX:-} && -n ${TMUX_PANE:-} ]] && command -v tmux >/dev/null 2>&1; then
+  if tmux select-pane -t "$TMUX_PANE" -T "$TITLE"; then
+    exit 0
+  fi
+fi
+
+if [[ -t 1 && ${TERM:-} != "dumb" ]]; then
+  # OSC 2 is understood by most terminal emulators as the window title.
+  printf '\033]2;%s\007' "$TITLE"
+  exit 0
+fi
+
+printf 'title: no supported terminal was detected\n' >&2
+exit 1
