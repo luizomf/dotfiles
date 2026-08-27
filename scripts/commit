@@ -7,11 +7,18 @@ MODEL_REASONING="${LOCAL_MODEL_REASONING:?'Variable $LOCAL_MODEL_REASONING not f
 
 declare PROMPT
 PROMPT="Verify the modified files in the current directory using Git. "
-PROMPT+="Create organized and well-documented commit messages, using the " 
-PROMPT+="conventional commit style, and commit the files with clear commit messages. " 
-PROMPT+="Use the message body for longer messages, if necessary. The language is English. " 
-PROMPT+="Do not touch, edit, or delete files. Your only task is to document what was done "
-PROMPT+="and confirm the changes. Be careful about expanding bash and zsh commands in your messages."
+PROMPT+="Create organized and well-documented commit messages, following the " 
+PROMPT+="*Conventional Commits* standard, and commit the files with clear, concise messages. " 
+PROMPT+="DO NOT BROWSE OTHER FILES OR COMMITS; YOUR ONLY TASK IS TO PROVIDE A CONCISE MESSAGE "
+PROMPT+="FOR THE MODIFIED FILES. "
+PROMPT+="Use the message body for longer text if necessary. The language must be English. " 
+PROMPT+="Do not alter, edit, or delete files. Your only task is to document what was done and "
+PROMPT+="commit the changes. Be careful when including bash or zsh commands in the messages and "
+PROMPT+="bash/zsh expansion. "
+
+  
+
+printf "%b" "${PROMPT}\n" 
 
 # printf "%b" "${PROMPT}\n" | sannux_ephemeral pi --model "${MODEL}" -c model_reasoning_effort="${MODEL_REASONING}" exec --ephemeral --yolo "${@:-}
 printf "%b" "${PROMPT}\n" | sannux_ephemeral pi --model "ollama/${MODEL}:${MODEL_REASONING}" --no-session -p "${@:-}"
