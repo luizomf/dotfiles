@@ -5,6 +5,22 @@ return {
     lazy = false,
     build = ":TSUpdate",
     config = function()
+      -- tmux is no longer bundled on the main branch, but remains maintained.
+      vim.api.nvim_create_autocmd("User", {
+        pattern = "TSUpdate",
+        callback = function()
+          require("nvim-treesitter.parsers").tmux = {
+            install_info = {
+              url = "https://github.com/Freed-Wu/tree-sitter-tmux",
+              revision = "58147321fa1f00daec15dd4d371bc9e2e9373459",
+              generate = true,
+              generate_from_json = false,
+              queries = "queries",
+            },
+          }
+        end,
+      })
+
       require("nvim-treesitter").setup()
 
       -- Install parsers
