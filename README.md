@@ -1,25 +1,58 @@
-# dotfiles
+# Dotfiles
 
-Fiz os testes no Ubuntu 24.04 e no macOS Sequoia (ambos ARM). Todos os testes
-foram feitos com uma instalação limpa dos sistemas operacionais.
+Personal development environment for macOS and Ubuntu.
 
-Não detectei erros até o momento.
+## Tested systems
 
-Mesmo assim, recomendo que você abra o arquivo `install.sh` e execute os
-comandos linha a linha observando o que cada linha vai fazer. Se você executar
-esse script no seu sistema, ele vai rodar direto e não para mais, então ele
-sairá sobrescrevendo, apagando, criando e instalando tudo de uma vez (pra mim é
-mais fácil assim).
+Clean-install testing has been performed only on:
 
-Se mesmo com o aviso ainda quer rodar, faça isso com o git instalado:
+- Ubuntu 24.04 on ARM
+- Ubuntu 26.04 on ARM
+- macOS Sequoia on Apple Silicon
+
+Other Ubuntu and macOS versions may work, but are not supported until tested.
+The installer intentionally rejects other Linux distributions.
+
+## Before installing
+
+`install.sh` installs system packages and replaces existing configuration with
+symbolic links into this repository. Existing targets are moved to a timestamped
+backup under `~/.dotfiles-backups/` before links are created.
+
+The repository must be cloned at `~/dotfiles`; deployed shell configuration and
+shared scripts rely on that location.
+
+Review the script before running it. In particular, it:
+
+- installs packages with Homebrew or APT without upgrading the whole OS;
+- downloads installers and source code from third-party projects;
+- installs the current stable Neovim formula with Homebrew;
+- configures the UTF-8 locale and changes the default shell to Zsh on Ubuntu;
+- installs Vim, Neovim, and Tmux plugin managers and plugins;
+- installs shell, editor, terminal, Git, and Pi configuration.
+
+Do not run it on a machine whose current configuration has not been backed up.
+
+## Installation
+
+Install Git first, then run:
 
 ```bash
-git clone git@github.com:luizomf/dotfiles.git ~/dotfiles
+git clone https://github.com/luizomf/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 ./install.sh
 ```
 
-**⚠️ Vai sobrescrever teus arquivos. Tamo junto.**
+The script asks for confirmation before making changes. For disposable automated
+test environments only, set `OM_INSTALL_ASSUME_YES=1` to skip that confirmation.
+
+By default, the installer also configures the latest Python 3.14 available to
+pyenv, the current Node.js LTS, Python and Node developer tools, and Neovim and
+Tmux plugins. Set `OM_PYTHON_VERSION` to select a specific Python release.
+Disposable test runs may skip these slower stages with
+`OM_INSTALL_SKIP_TOOLCHAINS=1` or `OM_INSTALL_SKIP_PLUGINS=1`.
+
+Start a new login shell after installation.
 
 ## Shared host paths
 
@@ -32,16 +65,13 @@ checkout differs from the local one.
 ## Pi Coding Agent
 
 The installer links the static configuration under `pi/agent/` into
-`~/.pi/agent/` with relative targets that assume this repository is cloned at
-`~/dotfiles`. Credentials, sessions, trust decisions, generated model state,
+`~/.pi/agent/`. Credentials, sessions, trust decisions, generated model state,
 and machine-specific model configuration remain local.
 
 Skills and extensions are maintained separately in
 [omskills](https://github.com/luizomf/omskills) and
 [ompi](https://github.com/luizomf/ompi).
 
----
+## License
 
-Feito com ódio, café e um toque de amor.
-
----
+See [LICENSE](LICENSE).

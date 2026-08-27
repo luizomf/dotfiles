@@ -1,8 +1,3 @@
-" Download plug.vim to ~/.vim/autoload
-"
-" curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
-"   https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-"
 call plug#begin('~/.vim/plugged')
 " fzf
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }

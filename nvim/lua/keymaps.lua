@@ -41,8 +41,15 @@ map({ "n", "v" }, "<leader>f", function()
   require("conform").format({ async = false, lsp_fallback = true })
 end, { desc = "Format file or range (conform)" })
 
--- Telescope
-local builtin = require("telescope.builtin")
+-- Defer Telescope loading so a clean install can evaluate keymaps before the
+-- plugin has been downloaded.
+local builtin = setmetatable({}, {
+  __index = function(_, picker)
+    return function(...)
+      return require("telescope.builtin")[picker](...)
+    end
+  end,
+})
 map("n", "<leader>fre", builtin.registers, { desc = "Find in registers" })
 map("n", "<leader>ff", builtin.find_files, { desc = "Find files" })
 map("n", "<leader>fg", function()

@@ -1,4 +1,4 @@
-#!/usr/env/bin bash
+#!/usr/bin/env bash
 # vim: set filetype=sh :
 # shellcheck disable=SC1091,SC2154
 
@@ -73,7 +73,7 @@ if [[ "$(command -v pyenv)" ]]; then
   [[ -z "$PYENV_ROOT" ]] || eval "$(pyenv init - --no-rehash)"
 fi
 
-. "$HOME/.local/bin/env"
+[[ -f "$HOME/.local/bin/env" ]] && . "$HOME/.local/bin/env"
 [ -f ~/.fzf.zsh ] && . "${HOME}/.fzf.zsh"
 
 if [[ "$(uname -s)" == "Linux" ]]; then

@@ -18,6 +18,3 @@
 # Git ignora silenciosamente este include se o arquivo não existir.
 [include]
 	path = ~/.gitconfig.local
-[user]
-	email = luizomf@gmail.com
-	name = Otávio Miranda
