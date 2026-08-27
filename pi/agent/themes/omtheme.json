@@ -14,9 +14,9 @@
     "selection": "#3b4fa6",
     "surface": "#15151f",
     "surfaceAlt": "#1c1c29",
-    "successBg": "#10271f",
-    "errorBg": "#2b161d",
-    "warningBg": "#292415"
+    "successBg": "#161e21",
+    "errorBg": "#22151e",
+    "warningBg": "#28201a"
   },
   "colors": {
     "accent": "cyan",
