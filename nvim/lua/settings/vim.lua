@@ -4,6 +4,12 @@ vim.opt.relativenumber = true
 -- vim.opt.timeoutlen = 300
 -- vim.opt.ttimeoutlen = 30
 
+-- Enable modifying the terminal/window title
+vim.opt.title = true
+
+-- Set the title format
+vim.opt.titlestring = "%f - nvim"
+
 vim.opt.cursorline = true
 -- vim.opt.colorcolumn = { 80 }
 
