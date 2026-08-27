@@ -38,3 +38,6 @@ for f in "${ZSH_CONFIG_FILES[@]}"; do
   fi
 done
 
+if [[ -f "${HOME}"/dotfiles/scripts/title ]]; then
+  "${HOME}"/dotfiles/scripts/title "$(whoami)@$(hostname -s)"
+fi
