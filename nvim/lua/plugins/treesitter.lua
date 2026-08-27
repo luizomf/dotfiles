@@ -1,3 +1,5 @@
+local tooling = require("settings.tooling")
+
 return {
   {
     "nvim-treesitter/nvim-treesitter",
@@ -23,43 +25,11 @@ return {
 
       require("nvim-treesitter").setup()
 
-      -- Install parsers
-      require("nvim-treesitter").install({
-        "c",
-        "cpp",
-        "go",
-        "rust",
-        "just",
-        "cmake",
-        "bash",
-        "tmux",
-        "zsh",
-        "ssh_config",
-        "dockerfile",
-        "editorconfig",
-        "lua",
-        "vim",
-        "vimdoc",
-        "html",
-        "xml",
-        "css",
-        "scss",
-        "styled",
-        "javascript",
-        "typescript",
-        "tsx",
-        "jsx",
-        "json",
-        "yaml",
-        "toml",
-        "htmldjango",
-        "passwd",
-        "terraform",
-        "markdown",
-        "markdown_inline",
-        "python",
-        "astro",
-      })
+      -- Interactive sessions install missing parsers asynchronously. The
+      -- installer uses settings.tooling.bootstrap() and waits for completion.
+      if #vim.api.nvim_list_uis() > 0 then
+        require("nvim-treesitter").install(tooling.treesitter_parsers)
+      end
 
       -- Enable treesitter highlighting and indentation for all filetypes
       vim.api.nvim_create_autocmd("FileType", {

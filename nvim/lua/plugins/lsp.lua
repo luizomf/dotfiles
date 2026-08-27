@@ -1,3 +1,5 @@
+local tooling = require("settings.tooling")
+
 return {
   {
     "neovim/nvim-lspconfig",
@@ -17,26 +19,8 @@ return {
     config = function()
       require("mason-lspconfig").setup({
         automatic_enable = false,
-        ensure_installed = {
-          -- formatters
-          -- "prettier", -- install manually with 'npm i -g prettier'
-          -- "stylua", -- install manually with ':MasonInstall stylua'
-
-          -- LSPs
-          "ruff",
-          "taplo",
-          "lua_ls",
-          "ts_ls",
-          "pyright",
-          "tailwindcss",
-          "rust_analyzer",
-          "bashls",
-          "emmet_ls",
-          "eslint",
-          "html",
-          "cssls",
-          "astro",
-        },
+        ensure_installed = #vim.api.nvim_list_uis() > 0 and tooling.lsp_servers
+          or {},
       })
 
       local capabilities = require("cmp_nvim_lsp").default_capabilities()

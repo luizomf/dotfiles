@@ -154,7 +154,7 @@ if [[ "$OP_SYSTEM" == "ubuntu" ]]; then
     libgdbm-dev liblua5.4-dev liblzma-dev libreadline-dev libsqlite3-dev locales \
     libssl-dev libtool libtool-bin llvm lua5.4 luarocks make nano ninja-build \
     openssl p7zip pkgconf python3-dev ripgrep sqlite3 tcl tcl-dev tk tk-dev \
-    tmux tree tree-sitter-cli unzip vim watch wget zlib1g-dev
+    tmux tree unzip vim watch wget zlib1g-dev
 
   if ! locale -a | grep -Eqi '^en_US\.utf-?8$'; then
     sudo locale-gen en_US.UTF-8
@@ -162,7 +162,7 @@ if [[ "$OP_SYSTEM" == "ubuntu" ]]; then
   sudo update-locale LANG=en_US.UTF-8
 
   install_homebrew
-  brew install fastfetch font-fira-code-nerd-font gcc neovim
+  brew install fastfetch font-fira-code-nerd-font gcc neovim tree-sitter-cli
 
   mkdir -p "$HOME/.local/bin"
   if ! command -v fd > /dev/null 2>&1 && command -v fdfind > /dev/null 2>&1; then
@@ -350,6 +350,11 @@ if [[ "${OM_INSTALL_SKIP_PLUGINS:-0}" != "1" ]]; then
 
   loginfo "Instalando plugins do Neovim..."
   nvim --headless '+Lazy! restore' +qa
+
+  loginfo "Instalando ferramentas do Mason e parsers do Treesitter..."
+  nvim --headless \
+    -c "lua require('settings.tooling').bootstrap()" \
+    -c 'qall'
 
   loginfo "Instalando plugins do Tmux..."
   "$HOME/.tmux/plugins/tpm/bin/install_plugins"

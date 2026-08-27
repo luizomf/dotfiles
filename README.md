@@ -1,6 +1,8 @@
 # Dotfiles
 
-Personal development environment for macOS and Ubuntu.
+This repository is intentionally highly opinionated. It installs the exact
+personal development environment I use every day; it is not a general-purpose
+bootstrap framework.
 
 ## Tested systems
 
@@ -47,8 +49,9 @@ The script asks for confirmation before making changes. For disposable automated
 test environments only, set `OM_INSTALL_ASSUME_YES=1` to skip that confirmation.
 
 By default, the installer also configures the latest Python 3.14 available to
-pyenv, the current Node.js LTS, Python and Node developer tools, and Neovim and
-Tmux plugins. Set `OM_PYTHON_VERSION` to select a specific Python release.
+pyenv, the current Node.js LTS, Python and Node developer tools, Vim, Neovim,
+and Tmux plugins, configured Mason tools, and Treesitter parsers. Set
+`OM_PYTHON_VERSION` to select a specific Python release.
 Disposable test runs may skip these slower stages with
 `OM_INSTALL_SKIP_TOOLCHAINS=1` or `OM_INSTALL_SKIP_PLUGINS=1`.
 
