@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 
-# The target and path remain searchable, but only the fixed-width row is displayed.
-# LIST="$(tmux list-window -a -F $'#S:#I\t#{?window_active,◆, }  #{=14;p14:#{session_name}:#{window_index}}  #{=22;p22:#{?#{@pi_status},#{@pi_status},#{pane_title}}}  #{=10;p10:window_name}  #{window_panes} #{?#{==:#{window_panes},1},pane,panes}\t#{pane_current_path}')"
-LIST="$(tmux list-window -a -F $'#S:#I\t#{?window_active,◆, }  #{=16;p16:#{session_name}:#{window_index}}  #{=36;p36:#{?#{@pi_status},#{@pi_status},#{pane_title}}}  #{=16;p16:window_name}')"
+# The target remains searchable, but only the fixed-width row is displayed.
+LIST_FORMAT=$'#S:#I\t#{?window_active,✚, }  #{=16;p16:#{session_name}:#{window_index}}  #{=36;p36:#{?#{@pi_status},#{@pi_status},#{pane_title}}}  #{=16;p16:window_name}'
+CURRENT_SESSION="$(tmux display-message -p '#S')"
+LIST="$({
+  tmux display-message -p "$LIST_FORMAT"
+  tmux list-window -t "$CURRENT_SESSION" -F "$LIST_FORMAT"
+  tmux list-window -a -F "$LIST_FORMAT"
+} | awk -F $'\t' '!seen[$1]++')"
 # Add ANSI colors after tmux pads the columns so escape sequences do not affect alignment.
 LIST="${LIST//󰓅/$'\033[32m󰓅\033[39m'}"
 LIST="${LIST///$'\033[31m\033[39m'}"
@@ -23,9 +28,9 @@ FZF_TMUX_CMD=(
   --border-label-pos=0
   --padding=0
   --margin=0
-  '--prompt=> '
-  '--marker=>'
-  --pointer=◆
+  '--prompt=❱ '
+  '--marker=❯'
+  --pointer='❭'
   --separator=─
   --scrollbar=│
   --layout=reverse
