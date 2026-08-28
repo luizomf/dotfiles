@@ -50,28 +50,28 @@ M.comment = M.gray_08
 -- │  Reds / Pinks                               │
 -- │  From the hot pink sky gradient             │
 -- └─────────────────────────────────────────────┘
-M.red = "#ff5f81" -- ANSI red (hot pink-red)
-M.red_vivid = "#ff7e9a" -- intense (critical errors)
-M.red_rose = "#ffa8bb" -- ANSI bright red (soft rose)
+M.red = "#f7718d" -- ANSI red (hot pink-red)
+M.red_vivid = "#ffafc0" -- intense (critical errors)
+M.red_rose = "#ffc1cf" -- ANSI bright red (soft rose)
 
 -- ┌─────────────────────────────────────────────┐
 -- │  Oranges                                    │
 -- └─────────────────────────────────────────────┘
-M.orange = "#ff9060" -- coral
-M.peach = "#ffb098" -- soft peach
+M.orange = "#ffab87" -- coral
+M.peach = "#ffc0ad" -- soft peach
 
 -- ┌─────────────────────────────────────────────┐
 -- │  Yellow                                     │
 -- └─────────────────────────────────────────────┘
-M.yellow = "#ffda76" -- ANSI yellow (warm gold)
+M.yellow = "#ffdc95" -- ANSI yellow (warm gold)
 
 -- ┌─────────────────────────────────────────────┐
 -- │  Greens                                     │
 -- │  Cyan-shifted greens from the alien flora   │
 -- └─────────────────────────────────────────────┘
-M.green = "#37feb7" -- ANSI green (emerald cyan-green)
-M.green_light = "#72ffcd" -- ANSI bright green
-M.green_mint = "#a0ffe0" -- mint
+M.green = "#18ffc8" -- ANSI green (emerald cyan-green)
+M.green_light = "#6fffdd" -- ANSI bright green
+M.green_mint = "#96ffe6" -- mint
 
 -- ┌──────────────────────────────────────────────────┐
 -- │  Cyans / Teals (Accent)                          │
@@ -80,37 +80,37 @@ M.green_mint = "#a0ffe0" -- mint
 -- M.cyan = "#30f4f2" -- (old accent) ANSI cyan (neon teal)
 
 -- MAIN ACCENT COLOR
-M.cyan = "#6bccff" -- ANSI cyan (neon teal)
+M.cyan = "#59d9ff" -- ANSI cyan (neon teal)
 -- M.teal = "#20d8d6" -- teal (borders, links)
-M.teal = "#77dbff" -- teal (borders, links)
-M.teal_bright = "#8ce0fe" -- ANSI bright cyan
-M.teal_dark = "#0c1d2b" -- dark teal (diff backgrounds)
+M.teal = "#81e2ff" -- teal (borders, links)
+M.teal_bright = "#abecff" -- ANSI bright cyan
+M.teal_dark = "#7fcee6" -- dark teal (diff backgrounds)
 
 -- ┌─────────────────────────────────────────────┐
 -- │  Blues                                      │
 -- │  Periwinkle/indigo from the planet          │
 -- └─────────────────────────────────────────────┘
-M.blue = "#88aaf2" -- ANSI blue (periwinkle)
-M.blue_light = "#b2cbff" -- ANSI bright blue
-M.blue_sky = "#78a0e8" -- soft sky blue
-M.blue_soft = "#8890d8" -- soft purple-blue
-M.blue_vivid = "#5070ff" -- vivid indigo
-M.blue_deep = "#4838a0" -- deep indigo
-M.aqua = "#60ffd8" -- bright aqua glow
+M.blue = "#8fb1ff" -- ANSI blue (periwinkle)
+M.blue_light = "#8fc3ff" -- ANSI bright blue
+M.blue_sky = "#9eb7ff" -- soft sky blue
+M.blue_soft = "#afd3ff" -- soft purple-blue
+M.blue_vivid = "#5194ff" -- vivid indigo
+M.blue_deep = "#5173ff" -- deep indigo
+M.aqua = "#4fbdff" -- bright aqua glow
 
 -- ┌─────────────────────────────────────────────┐
 -- │  Purples                                    │
 -- │  The sky, the atmosphere, the vibe          │
 -- └─────────────────────────────────────────────┘
-M.purple = "#b080ff" -- purple
-M.lavender = "#9898e0" -- lavender/periwinkle
-M.purple_light = "#c8a0ff" -- light purple/lilac
+M.purple = "#c88bff" -- purple
+M.lavender = "#b1a6ff" -- lavender/periwinkle
+M.purple_light = "#d6b6ff" -- light purple/lilac
 
 -- ┌─────────────────────────────────────────────┐
 -- │  Magentas                                   │
 -- │  The pink-magenta sky gradient              │
 -- └─────────────────────────────────────────────┘
-M.magenta = "#ff87bc" -- ANSI magenta (pink)
-M.magenta_vivid = "#ff88ef" -- ANSI bright magenta (hot)
+M.magenta = "#ff98f0" -- ANSI magenta (pink)
+M.magenta_vivid = "#ffaff3" -- ANSI bright magenta (hot)
 
 return M

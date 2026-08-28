@@ -66,7 +66,7 @@ M.set_groups = function()
   -- └─────────────────────────────────────────────┘
   hl("CursorLine", { bg = "NONE" }) -- old bg = p.gray_02
   hl("CursorColumn", { bg = "NONE" }) -- old bg = p.gray_02
-  hl("CursorLineNr", { bold = false, bg = "NONE", fg = p.cyan }) -- old bg = p.gray_02
+  hl("CursorLineNr", { bold = false, bg = "NONE", fg = p.blue_vivid }) -- old bg = p.gray_02
   hl("ColorColumn", { bg = "NONE" }) -- old bg = p.gray_02
   hl("VirtColumn", { link = "ColorColumn" })
   hl("SignColumn", { fg = p.gray_08 })
@@ -156,7 +156,7 @@ M.set_groups = function()
   -- │  Syntax: General                            │
   -- └─────────────────────────────────────────────┘
   hl("Comment", { italic = false, fg = p.comment })
-  hl("String", { fg = p.green })
+  hl("String", { fg = p.green_light })
   hl("Character", { fg = p.green })
   hl("Constant", { fg = p.orange })
   hl("Identifier", { fg = p.magenta })
