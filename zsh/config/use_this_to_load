@@ -12,7 +12,6 @@
 #   # printf "%b\n\n" "$(cat "${HOME}/dotfiles/zsh/splash.txt")"
 # fi
 
-
 ZSH_CONFIG_DIR="$HOME/dotfiles/zsh/config"
 
 CONFIG_CONFIG_FILE="${ZSH_CONFIG_DIR}/config"
@@ -39,5 +38,5 @@ for f in "${ZSH_CONFIG_FILES[@]}"; do
 done
 
 if [[ -f "${HOME}"/dotfiles/scripts/title ]]; then
-  "${HOME}"/dotfiles/scripts/title "$(whoami)@$(hostname -s)"
+  "${HOME}"/dotfiles/scripts/title "$(basename "$(pwd)")"
 fi
