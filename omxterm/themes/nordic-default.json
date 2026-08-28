@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "nordic-default",
+  "colors": {
+    "background": "#242933",
+    "foreground": "#bbc3d4",
+    "cursor": "#bbc3d4",
+    "selectionBackground": "#1b1f26",
+    "selectionForeground": "#bbc3d4",
+    "black": "#191d24",
+    "red": "#bf616a",
+    "green": "#a3be8c",
+    "yellow": "#ebcb8b",
+    "blue": "#5e81ac",
+    "magenta": "#b48ead",
+    "cyan": "#8fbcbb",
+    "white": "#bbc3d4",
+    "brightBlack": "#3b4252",
+    "brightRed": "#c5727a",
+    "brightGreen": "#b1c89d",
+    "brightYellow": "#efd49f",
+    "brightBlue": "#88c0d0",
+    "brightMagenta": "#be9d88",
+    "brightCyan": "#9fc6c5",
+    "brightWhite": "#d8dee9"
+  }
+}

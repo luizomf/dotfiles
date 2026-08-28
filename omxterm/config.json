@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "confirmClose": true,
+  "logLevel": "info",
+  "font": {
+    "family": "FiraMono Nerd Font Mono",
+    "size": 24,
+    "lineHeight": 1.0
+  },
+  "terminal": {
+    "padding": {
+      "top": 4,
+      "right": 4,
+      "bottom": 8,
+      "left": 16
+    }
+  },
+  "scrollback": { "lines": 100000 },
+  "keyboard": { "optionAsAlt": "none" },
+  "window": { "alwaysOnTop": false },
+  "theme": {
+    "path": "/Users/luizotavio/dotfiles/omxterm/themes/omtheme-darkice.json"
+  },
+  "keybinds": {
+    "quit": "CommandOrControl+Q",
+    "copy": "CommandOrControl+C",
+    "paste": "CommandOrControl+V",
+    "selectAll": "CommandOrControl+A",
+    "newWindow": "CommandOrControl+N",
+    "closeWindow": "CommandOrControl+Shift+W",
+    "newTab": "CommandOrControl+T",
+    "closeTab": "CommandOrControl+W",
+    "nextTab": "CommandOrControl+Shift+N",
+    "previousTab": "CommandOrControl+Shift+P",
+    "selectTab1": "CommandOrControl+1",
+    "selectTab2": "CommandOrControl+2",
+    "selectTab3": "CommandOrControl+3",
+    "selectTab4": "CommandOrControl+4",
+    "selectTab5": "CommandOrControl+5",
+    "selectTab6": "CommandOrControl+6",
+    "selectTab7": "CommandOrControl+7",
+    "selectTab8": "CommandOrControl+8",
+    "selectTab9": "CommandOrControl+9",
+    "zoomIn": "CommandOrControl+Plus",
+    "zoomOut": "CommandOrControl+-",
+    "actualSize": "CommandOrControl+0",
+    "toggleFullScreen": "CommandOrControl+Enter",
+    "toggleSnippets": "CommandOrControl+Shift+S",
+    "reloadConfig": "CommandOrControl+Shift+,"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "apprentice-default",
+  "colors": {
+    "background": "#262626",
+    "foreground": "#bcbcbc",
+    "cursor": "#bcbcbc",
+    "selectionBackground": "#87afd7",
+    "selectionForeground": "#262626",
+    "black": "#1c1c1c",
+    "red": "#af5f5f",
+    "green": "#5f875f",
+    "yellow": "#87875f",
+    "blue": "#5f87af",
+    "magenta": "#5f5f87",
+    "cyan": "#5f8787",
+    "white": "#6c6c6c",
+    "brightBlack": "#444444",
+    "brightRed": "#ff8700",
+    "brightGreen": "#87af87",
+    "brightYellow": "#ffffaf",
+    "brightBlue": "#87afd7",
+    "brightMagenta": "#8787af",
+    "brightCyan": "#5fafaf",
+    "brightWhite": "#ffffff"
+  }
+}

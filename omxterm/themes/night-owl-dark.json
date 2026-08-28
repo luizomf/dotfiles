@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "night-owl-dark",
+  "colors": {
+    "background": "#011627",
+    "foreground": "#cccccc",
+    "cursor": "#cccccc",
+    "selectionBackground": "#093b5e",
+    "selectionForeground": "#cccccc",
+    "black": "#011627",
+    "red": "#ef5350",
+    "green": "#22da6e",
+    "yellow": "#c5e478",
+    "blue": "#82aaff",
+    "magenta": "#c792ea",
+    "cyan": "#21c7a8",
+    "white": "#ffffff",
+    "brightBlack": "#575656",
+    "brightRed": "#ef5350",
+    "brightGreen": "#22da6e",
+    "brightYellow": "#ffeb95",
+    "brightBlue": "#82aaff",
+    "brightMagenta": "#c792ea",
+    "brightCyan": "#7fdbca",
+    "brightWhite": "#ffffff"
+  }
+}

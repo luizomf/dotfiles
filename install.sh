@@ -316,6 +316,8 @@ backup_and_link "$REPO_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf"
 backup_and_link "$REPO_DIR/vim/.vimrc" "$HOME/.vimrc"
 backup_and_link "$REPO_DIR/nvim" "$HOME/.config/nvim"
 backup_and_link "$REPO_DIR/ghostty" "$HOME/.config/ghostty"
+backup_and_link "$REPO_DIR/omxterm/config.json" \
+  "$HOME/.config/omxterm/config.json"
 backup_and_link "$REPO_DIR/fastfetch" "$HOME/.config/fastfetch"
 
 VIM_PLUG_PATH="$HOME/.vim/autoload/plug.vim"

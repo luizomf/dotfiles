@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "snippets": [
+    {
+      "name": "curl pandoc html to markdown",
+      "body": "export URL=\"${URL:-CHANGE URL}\" MDOUTPUT=\"${HOME}/Desktop/saved.md\" ; curl -fsSL \"${URL}\" | pandoc -f html -t gfm-raw_html-fenced_divs --wrap=none -o \"${MDOUTPUT}\"",
+      "description": "Use curl and pandoc to open HTML pages and try to save it as markdown.",
+      "execute": false
+    },
+    {
+      "name": "OpenSSL Rand 256 chars",
+      "body": "echo \"$(openssl rand -base64 48)-%-$(openssl rand -hex 160)-+-$(openssl rand -base64 48)\"",
+      "description": "Generate a long random value using openssl rand base64 and hex.",
+      "execute": false
+    },
+    {
+      "name": "Restart WireGuard All Hosts",
+      "body": "ssh -t m132 'zsh -lc \". ~/.zshrc ; sudo wg-quick down wg0 ; sudo wg-quick up wg0 ;\"' ; ssh -t m4128 'zsh -lc \". ~/.zshrc ; sudo wg-quick down wg0 ; sudo wg-quick up wg0 ;\"' ; ssh -t fedoraair 'zsh -lc \". ~/.zshrc ; sudo wg-quick down wg0 ; sudo wg-quick up wg0 ;\"'",
+      "description": "Use ssh to restart WireGuard in all local hosts.",
+      "execute": true
+    },
+    {
+      "name": "Pi Update",
+      "body": "npx @earendil-works/pi-coding-agent update",
+      "description": "Uniform pi update for linux and macos",
+      "execute": true
+    },
+    {
+      "name": "Test Sannux Ephemeral Models",
+      "body": "test_models",
+      "description": "Test local Sannux Ephemeral Models with sannux_ephemeral script for Codex, Codex Ollama, Pi and Agy",
+      "execute": true
+    },
+    {
+      "name": "Clear Docker History, Volumes and Networks",
+      "body": "docker stop `docker ps -q -a` ; docker builder prune -f ; docker system prune -f ; docker volume prune -f ; docker builder prune -f ; docker network prune -f ; docker builder history rm --all ; docker builder prune -f ;",
+      "description": "Clear Docker Bloat",
+      "execute": true
+    },
+    {
+      "name": "Create TTS for daily briefings",
+      "body": "bq --label daily_breafing_tts_clean --json --concurrency-key audio-playback zsh -lc '. ~/.zshrc ; llm_clean --model qwen3.6:35b-a3b-mlx-bf16 -c \"$(cat ~/omnews_briefings/\"$(date +%Y-%m-%d)\".md)\" -- --nowordwrap --think=max --hidethinking > ~/omnews_briefings/\"$(date +%Y-%m-%d)\"_tts.txt ; msg=\"Daily Paper Markdown Cleaner Finished.\" osalert'",
+      "description": "Create a TTS file for the current date on omnews briefing.",
+      "execute": false
+    },
+    {
+      "name": "OMQueue Test All Hosts (AUDIO)",
+      "body": "omqueue_test_audio_all",
+      "description": "Queue the bilingual OMQueue audio test locally and on m4128 and fedoraair without waiting for playback.",
+      "execute": false
+    },
+    {
+      "name": "OMQueue Test Local (AUDIO)",
+      "body": "bq --label omqueue_test_snippet --json --cwd \"$(pwd)\" --concurrency-key audio-playback zsh -lc '. ~/.zshrc ; edgetts <<< \"Attention. This is only a test of the O M Queue distributed emergency audio system. The end.\"'",
+      "description": "Queue the OMQueue audio test locally. If you can hear the audio, it is working.",
+      "execute": false
+    },
+    {
+      "name": "OMQueue Test Local (TEXT)",
+      "body": "bq --label omqueue-test-text --cwd \"${HOME}/Desktop\" --json --concurrency-key one-shot bash -c 'for i in {1..5}; do echo -n \"Linha: ${i}\"; sleep 0.5; done' | jq -r .jobId | xargs -I {} omqueue_follow --json {} | jq -r .output.payload.text",
+      "description": "Queue the OMQueue text only test locally. If you can see the text, it is working.",
+      "execute": false
+    },
+    {
+      "name": "Sannux Rebuild (only used)",
+      "body": "for t in codex codex-ollama agy pi; do sannux setup \"$t\"; sannux rebuild \"$t\"; done",
+      "description": "Rebuild selected Sannux Templates",
+      "execute": false
+    }
+  ]
+}

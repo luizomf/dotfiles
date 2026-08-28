@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "zenbones-tokyobones-light",
+  "colors": {
+    "background": "#d6d7dc",
+    "foreground": "#333a57",
+    "cursor": "#333a57",
+    "selectionBackground": "#bbc0d8",
+    "selectionForeground": "#333a57",
+    "black": "#d6d7dc",
+    "red": "#8b4351",
+    "green": "#34645d",
+    "yellow": "#8f5e14",
+    "blue": "#34548c",
+    "magenta": "#5a4a79",
+    "cyan": "#176775",
+    "white": "#333a57",
+    "brightBlack": "#adb0bd",
+    "brightRed": "#7e3242",
+    "brightGreen": "#26554f",
+    "brightYellow": "#794e0d",
+    "brightBlue": "#26467a",
+    "brightMagenta": "#503875",
+    "brightCyan": "#34645d",
+    "brightWhite": "#56618d"
+  }
+}

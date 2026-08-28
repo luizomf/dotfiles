@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "zenbones-rosebones-light",
+  "colors": {
+    "background": "#fbf6f0",
+    "foreground": "#724341",
+    "cursor": "#724341",
+    "selectionBackground": "#eadddc",
+    "selectionForeground": "#724341",
+    "black": "#fbf6f0",
+    "red": "#b5637a",
+    "green": "#286a84",
+    "yellow": "#ec9d33",
+    "blue": "#5795a0",
+    "magenta": "#917ba9",
+    "cyan": "#5795a0",
+    "white": "#724341",
+    "brightBlack": "#e8c48b",
+    "brightRed": "#a54a66",
+    "brightGreen": "#1c5970",
+    "brightYellow": "#c68223",
+    "brightBlue": "#407d88",
+    "brightMagenta": "#855aac",
+    "brightCyan": "#407d88",
+    "brightWhite": "#a4635f"
+  }
+}

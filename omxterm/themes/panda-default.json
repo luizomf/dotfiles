@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "panda-default",
+  "colors": {
+    "background": "#292a2b",
+    "foreground": "#cccccc",
+    "cursor": "#cccccc",
+    "selectionBackground": "#5f4e3b",
+    "selectionForeground": "#cccccc",
+    "black": "#000000",
+    "red": "#ff2c6d",
+    "green": "#19f9d8",
+    "yellow": "#ffb86c",
+    "blue": "#45a9f9",
+    "magenta": "#ff75b5",
+    "cyan": "#b084eb",
+    "white": "#cdcdcd",
+    "brightBlack": "#757575",
+    "brightRed": "#ff2c6d",
+    "brightGreen": "#19f9d8",
+    "brightYellow": "#ffcc95",
+    "brightBlue": "#6fc1ff",
+    "brightMagenta": "#ff9ac1",
+    "brightCyan": "#bcaafe",
+    "brightWhite": "#e6e6e6"
+  }
+}

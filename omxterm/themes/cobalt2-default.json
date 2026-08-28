@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "cobalt2-default",
+  "colors": {
+    "background": "#122738",
+    "foreground": "#ffffff",
+    "cursor": "#ffffff",
+    "selectionBackground": "#0050a4",
+    "selectionForeground": "#ffffff",
+    "black": "#000000",
+    "red": "#ff628c",
+    "green": "#3ad900",
+    "yellow": "#ffc600",
+    "blue": "#0088ff",
+    "magenta": "#fb94ff",
+    "cyan": "#80fcff",
+    "white": "#ffffff",
+    "brightBlack": "#0050a4",
+    "brightRed": "#ff628c",
+    "brightGreen": "#3ad900",
+    "brightYellow": "#ffc600",
+    "brightBlue": "#0088ff",
+    "brightMagenta": "#fb94ff",
+    "brightCyan": "#80fcff",
+    "brightWhite": "#ffffff"
+  }
+}

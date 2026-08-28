@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "zenbones-nordbones",
+  "colors": {
+    "background": "#2f3541",
+    "foreground": "#ebeef3",
+    "cursor": "#eef1f5",
+    "selectionBackground": "#545f70",
+    "selectionForeground": "#ebeef3",
+    "black": "#2f3541",
+    "red": "#c1616a",
+    "green": "#a4be8d",
+    "yellow": "#cf866f",
+    "blue": "#8fbcba",
+    "magenta": "#b38dac",
+    "cyan": "#87bfce",
+    "white": "#ebeef3",
+    "brightBlack": "#475063",
+    "brightRed": "#d6787f",
+    "brightGreen": "#a8cc86",
+    "brightYellow": "#e09680",
+    "brightBlue": "#89cac8",
+    "brightMagenta": "#cf97c5",
+    "brightCyan": "#82cce0",
+    "brightWhite": "#a5b4cd"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "lucario-default",
+  "colors": {
+    "background": "#2b3e50",
+    "foreground": "#f8f8f2",
+    "cursor": "#f8f8f2",
+    "selectionBackground": "#f8f8f2",
+    "selectionForeground": "#2b3e50",
+    "black": "#19242f",
+    "red": "#e94b35",
+    "green": "#199c4b",
+    "yellow": "#f0cc04",
+    "blue": "#5c98cd",
+    "magenta": "#ca94ff",
+    "cyan": "#8be0fd",
+    "white": "#f8f8f2",
+    "brightBlack": "#2f3943",
+    "brightRed": "#ff6541",
+    "brightGreen": "#72cc5a",
+    "brightYellow": "#ffffa5",
+    "brightBlue": "#d6acff",
+    "brightMagenta": "#d4a9ff",
+    "brightCyan": "#b9ecfd",
+    "brightWhite": "#ffffff"
+  }
+}

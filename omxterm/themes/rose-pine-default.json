@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "rose-pine-default",
+  "colors": {
+    "background": "#1f1d2e",
+    "foreground": "#e0def4",
+    "cursor": "#e0def4",
+    "selectionBackground": "#2f2c40",
+    "selectionForeground": "#e0def4",
+    "black": "#26233a",
+    "red": "#eb6f92",
+    "green": "#31748f",
+    "yellow": "#f6c177",
+    "blue": "#9ccfd8",
+    "magenta": "#c4a7e7",
+    "cyan": "#ebbcba",
+    "white": "#e0def4",
+    "brightBlack": "#908caa",
+    "brightRed": "#eb6f92",
+    "brightGreen": "#31748f",
+    "brightYellow": "#f6c177",
+    "brightBlue": "#9ccfd8",
+    "brightMagenta": "#c4a7e7",
+    "brightCyan": "#ebbcba",
+    "brightWhite": "#e0def4"
+  }
+}

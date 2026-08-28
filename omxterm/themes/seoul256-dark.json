@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "seoul256-dark",
+  "colors": {
+    "background": "#3a3a3a",
+    "foreground": "#d0d0d0",
+    "cursor": "#d0d0d0",
+    "selectionBackground": "#005f5f",
+    "selectionForeground": "#d0d0d0",
+    "black": "#4e4e4e",
+    "red": "#d68787",
+    "green": "#5f865f",
+    "yellow": "#d8af5f",
+    "blue": "#85add4",
+    "magenta": "#d7afaf",
+    "cyan": "#87afaf",
+    "white": "#d0d0d0",
+    "brightBlack": "#626262",
+    "brightRed": "#d75f87",
+    "brightGreen": "#87af87",
+    "brightYellow": "#ffd787",
+    "brightBlue": "#add4fb",
+    "brightMagenta": "#ffafaf",
+    "brightCyan": "#87d7d7",
+    "brightWhite": "#e4e4e4"
+  }
+}

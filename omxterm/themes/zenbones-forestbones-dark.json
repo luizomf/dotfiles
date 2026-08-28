@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "zenbones-forestbones-dark",
+  "colors": {
+    "background": "#2c343a",
+    "foreground": "#e7dcc4",
+    "cursor": "#ebe2cf",
+    "selectionBackground": "#615b51",
+    "selectionForeground": "#e7dcc4",
+    "black": "#2c343a",
+    "red": "#e67c7f",
+    "green": "#a9c181",
+    "yellow": "#ddbd7f",
+    "blue": "#7fbcb4",
+    "magenta": "#d69ab7",
+    "cyan": "#83c193",
+    "white": "#e7dcc4",
+    "brightBlack": "#45525c",
+    "brightRed": "#ed9294",
+    "brightGreen": "#b0ce7b",
+    "brightYellow": "#edc77a",
+    "brightBlue": "#7ac9c0",
+    "brightMagenta": "#e5a7c4",
+    "brightCyan": "#7dd093",
+    "brightWhite": "#b2a790"
+  }
+}

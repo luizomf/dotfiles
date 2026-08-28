@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "zenbones-seoulbones-dark",
+  "colors": {
+    "background": "#4b4b4b",
+    "foreground": "#dddddd",
+    "cursor": "#e2e2e2",
+    "selectionBackground": "#777777",
+    "selectionForeground": "#dddddd",
+    "black": "#4b4b4b",
+    "red": "#e388a3",
+    "green": "#98bd99",
+    "yellow": "#ffdf9b",
+    "blue": "#97bdde",
+    "magenta": "#a5a6c5",
+    "cyan": "#6fbdbe",
+    "white": "#dddddd",
+    "brightBlack": "#6c6465",
+    "brightRed": "#eb99b1",
+    "brightGreen": "#8fcd92",
+    "brightYellow": "#ffe5b3",
+    "brightBlue": "#a2c8e9",
+    "brightMagenta": "#b2b3da",
+    "brightCyan": "#6bcacb",
+    "brightWhite": "#a8a8a8"
+  }
+}

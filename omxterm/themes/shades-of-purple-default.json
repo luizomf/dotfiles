@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "shades-of-purple-default",
+  "colors": {
+    "background": "#1e1e3f",
+    "foreground": "#ffffff",
+    "cursor": "#ffffff",
+    "selectionBackground": "#6d42a5",
+    "selectionForeground": "#ffffff",
+    "black": "#000000",
+    "red": "#e43937",
+    "green": "#3ad900",
+    "yellow": "#fad000",
+    "blue": "#7857fe",
+    "magenta": "#ff2c70",
+    "cyan": "#80fcff",
+    "white": "#ffffff",
+    "brightBlack": "#5c5c61",
+    "brightRed": "#e43937",
+    "brightGreen": "#3ad900",
+    "brightYellow": "#fad000",
+    "brightBlue": "#6943ff",
+    "brightMagenta": "#fb94ff",
+    "brightCyan": "#80fcff",
+    "brightWhite": "#ffffff"
+  }
+}

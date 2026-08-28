@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "zenbones-tokyobones-dark",
+  "colors": {
+    "background": "#1a1b26",
+    "foreground": "#c0caf5",
+    "cursor": "#ced6f7",
+    "selectionBackground": "#2c4075",
+    "selectionForeground": "#c0caf5",
+    "black": "#1a1b26",
+    "red": "#f77890",
+    "green": "#74dbcb",
+    "yellow": "#e1b068",
+    "blue": "#7ba2f7",
+    "magenta": "#bb9bf7",
+    "cyan": "#2bc4de",
+    "white": "#c0caf5",
+    "brightBlack": "#36384d",
+    "brightRed": "#f98ea0",
+    "brightGreen": "#6de5d3",
+    "brightYellow": "#f2ba64",
+    "brightBlue": "#90affa",
+    "brightMagenta": "#c6acfa",
+    "brightCyan": "#74dbcb",
+    "brightWhite": "#7e98eb"
+  }
+}

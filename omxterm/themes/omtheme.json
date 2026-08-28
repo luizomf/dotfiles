@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "omtheme",
+  "colors": {
+    "background": "#000000",
+    "foreground": "#f0f0ff",
+    "cursor": "#f0f0ff",
+    "selectionBackground": "#3b4fa6",
+    "selectionForeground": "#ffffff",
+    "black": "#000000",
+    "red": "#ff7e9a",
+    "green": "#37feb7",
+    "yellow": "#ffda76",
+    "blue": "#88aaf2",
+    "magenta": "#ff87bc",
+    "cyan": "#6bccff",
+    "white": "#f0f0ff",
+    "brightBlack": "#505068",
+    "brightRed": "#ffa8bb",
+    "brightGreen": "#72ffcd",
+    "brightYellow": "#ffeab2",
+    "brightBlue": "#b2cbff",
+    "brightMagenta": "#ff88ef",
+    "brightCyan": "#77c6ff",
+    "brightWhite": "#ffffff"
+  }
+}
