@@ -5,6 +5,24 @@ set -euo pipefail
 MODEL="${MODEL:?Variable MODEL not found}"
 MODEL_REASONING="${LOCAL_MODEL_REASONING:?Variable LOCAL_MODEL_REASONING not found}"
 
+verbose=false
+declare -a pi_args=()
+while (($#)); do
+  case "$1" in
+    -v|--verbose)
+      verbose=true
+      ;;
+    --)
+      pi_args+=("$@")
+      break
+      ;;
+    *)
+      pi_args+=("$1")
+      ;;
+  esac
+  shift
+done
+
 declare PROMPT
 PROMPT="Verify the modified files in the current directory using Git. "
 PROMPT+="Create organized and well-documented commit messages, following the "
@@ -18,7 +36,37 @@ PROMPT+="bash/zsh expansion. "
 
 title "Commit: ${MODEL} ${MODEL_REASONING}"
 
-printf '%s\n' "$PROMPT" \
-  | sannux_ephemeral pi --model "ollama/${MODEL}:${MODEL_REASONING}" --no-session -p "$@"
+declare -a pi_cmd=(
+  sannux_ephemeral pi
+  --model "ollama/${MODEL}:${MODEL_REASONING}"
+  --no-session
+  -p
+)
+
+if [[ "$verbose" == true ]]; then
+  printf '%s\n' "$PROMPT" \
+    | "${pi_cmd[@]}" --mode json "${pi_args[@]}" \
+    | jq --unbuffered --join-output '
+        if .type == "message_update" then
+          .assistantMessageEvent |
+          if .type == "thinking_delta" or .type == "text_delta" then
+            .delta
+          elif .type == "toolcall_start" then
+            "\n→ tool: \(.toolName)\n"
+          else empty
+          end
+        elif .type == "tool_execution_start" then
+          "\n→ \(.toolName): \(.args | tojson)\n"
+        elif .type == "tool_execution_end" then
+          "\n← \(.toolName): \(if .isError then "ERROR" else "ok" end)\n"
+        elif .type == "agent_end" then
+          "\n"
+        else
+          empty
+        end
+      '
+else
+  printf '%s\n' "$PROMPT" | "${pi_cmd[@]}" "${pi_args[@]}"
+fi
 
 title "Commit done: ${MODEL} ${MODEL_REASONING}"
