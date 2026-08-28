@@ -18,7 +18,7 @@ tmux_make_sessions() {
 
   home_session="HOME"
   home_path="${HOME}"
-  other_windows=("term" "pi")
+  other_windows=("term")
 
   tmux new -s "${home_session}" -d -n code -c "${home_path}"
 
