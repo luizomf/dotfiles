@@ -112,6 +112,10 @@ production baseline before promoted code becomes maintained product code.
   relevant code and tests, and current worktree state. Preserve unrelated work.
 - Establish current behavior and the applicable verification path before making
   a behavior change. Reproduce reported defects when practical.
+- Prefer test-driven development for code changes: write a caller-visible test
+  first, confirm it fails for the intended reason, implement only enough to make
+  it pass, and then refactor while keeping the tests green. When this workflow is
+  impractical, explain why and still add the applicable tests.
 - Make the smallest coherent change. Exclude unrelated cleanup, formatting,
   upgrades, renames, and redesign.
 - Run focused checks during development, then every applicable canonical gate
