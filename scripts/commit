@@ -16,6 +16,9 @@ PROMPT+="Do not alter, edit, or delete files. Your only task is to document what
 PROMPT+="commit the changes. Be careful when including bash or zsh commands in the messages and "
 PROMPT+="bash/zsh expansion. "
 
+title "Commit: ${MODEL} ${MODEL_REASONING}"
+
 printf '%s\n' "$PROMPT" \
   | sannux_ephemeral pi --model "ollama/${MODEL}:${MODEL_REASONING}" --no-session -p "$@"
 
+title "Commit done: ${MODEL} ${MODEL_REASONING}"
