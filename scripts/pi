@@ -27,5 +27,6 @@ if [[ -n "$t" ]]; then
   title "$t"
   exec "${pi_cmd[@]}" --name "$t" "$@"
 else
+  title "$(basename "$(pwd)")"
   exec "${pi_cmd[@]}" "$@"
 fi
