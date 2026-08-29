@@ -23,16 +23,24 @@ while (($#)); do
   shift
 done
 
-declare PROMPT
-PROMPT="Verify the modified files in the current directory using Git. "
-PROMPT+="Create organized and well-documented commit messages, following the "
-PROMPT+="*Conventional Commits* standard, and commit the files with clear, concise messages. "
-PROMPT+="DO NOT BROWSE OTHER FILES OR COMMITS; YOUR ONLY TASK IS TO PROVIDE A CONCISE MESSAGE "
-PROMPT+="FOR THE MODIFIED FILES. "
-PROMPT+="Use the message body for longer text if necessary. The language must be English. "
-PROMPT+="Do not alter, edit, or delete files. Your only task is to document what was done and "
-PROMPT+="commit the changes. Be careful when including bash or zsh commands in the messages and "
-PROMPT+="bash/zsh expansion. "
+PROMPT="$(cat <<-EOF
+Verify the modified files in the current directory using Git.
+Create organized and well-documented commit messages, following the 
+*Conventional Commits* standard, and commit the files with clear, concise messages. 
+DO NOT BROWSE OTHER FILES OR COMMITS; YOUR ONLY TASK IS TO PROVIDE A CONCISE MESSAGE 
+FOR THE MODIFIED FILES. 
+Use the message body for longer text if necessary. The language must be English. 
+Do not alter, edit, or delete files. Your only task is to document what was done and 
+commit the changes. Be careful when including bash or zsh commands in the messages and 
+bash/zsh expansion. 
+
+Older commits:
+
+$(git log -n 2 --pretty=full)
+EOF
+)"
+
+printf '%s\n' "${PROMPT[@]}"
 
 title "Commit: ${MODEL} ${MODEL_REASONING}"
 
