@@ -25,22 +25,22 @@ done
 
 PROMPT="$(cat <<-EOF
 Verify the modified files in the current directory using Git.
-Create organized and well-documented commit messages, following the 
-*Conventional Commits* standard, and commit the files with clear, concise messages. 
-DO NOT BROWSE OTHER FILES OR COMMITS; YOUR ONLY TASK IS TO PROVIDE A CONCISE MESSAGE 
-FOR THE MODIFIED FILES. 
-Use the message body for longer text if necessary. The language must be English. 
-Do not alter, edit, or delete files. Your only task is to document what was done and 
-commit the changes. Be careful when including bash or zsh commands in the messages and 
-bash/zsh expansion. 
+Create organized and well-documented commit messages, following the
+*Conventional Commits* standard, and commit the files with clear, concise messages.
+DO NOT BROWSE OTHER FILES OR COMMITS; YOUR ONLY TASK IS TO PROVIDE A CONCISE MESSAGE
+FOR THE MODIFIED FILES.
+Use the message body for longer text if necessary. The language must be English.
+Do not alter, edit, or delete files. Your only task is to document what was done and
+commit the changes. Be careful when including bash or zsh commands in the messages and
+bash/zsh expansion.
 
 Older commits:
 
-$(git log -n 2 --pretty=full)
+$(git log -n 2 --format='%B' 2>/dev/null || true)
 EOF
 )"
 
-printf '%s\n' "${PROMPT[@]}"
+printf '%s\n' "$PROMPT"
 
 title "Commit: ${MODEL} ${MODEL_REASONING}"
 
@@ -52,21 +52,38 @@ declare -a pi_cmd=(
 )
 
 if [[ "$verbose" == true ]]; then
+  colors=false
+  if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
+    colors=true
+  fi
+
   printf '%s\n' "$PROMPT" \
     | "${pi_cmd[@]}" --mode json "${pi_args[@]}" \
-    | jq --unbuffered --join-output '
+    | jq --unbuffered --join-output --argjson colors "$colors" '
+        def colorize($code; $text):
+          if $colors then
+            "\u001b[\($code)m\($text)\u001b[0m"
+          else
+            $text
+          end;
+
         if .type == "message_update" then
           .assistantMessageEvent |
-          if .type == "thinking_delta" or .type == "text_delta" then
+          if .type == "thinking_delta" then
+            colorize(90; .delta)
+          elif .type == "text_delta" then
             .delta
           elif .type == "toolcall_start" then
-            "\n→ tool: \(.toolName)\n"
+            "\n" + colorize(36; "→ tool: \(.toolName)") + "\n"
           else empty
           end
         elif .type == "tool_execution_start" then
-          "\n→ \(.toolName): \(.args | tojson)\n"
+          "\n" + colorize(36; "→ \(.toolName)") + ": "
+            + colorize(33; (.args | tojson)) + "\n"
         elif .type == "tool_execution_end" then
-          "\n← \(.toolName): \(if .isError then "ERROR" else "ok" end)\n"
+          "\n← \(.toolName): "
+            + (if .isError then colorize(31; "ERROR") else colorize(32; "ok") end)
+            + "\n"
         elif .type == "agent_end" then
           "\n"
         else
