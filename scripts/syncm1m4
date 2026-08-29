@@ -27,6 +27,7 @@ prline
 project_excludes=(
   --exclude='node_modules/'
   --exclude='.omnews-data/'
+  --exclude='otaviomiranda.com.br/run_dir/'
   --exclude='dist/'
   --exclude='.venv/'
   --exclude='venv/'
