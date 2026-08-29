@@ -162,7 +162,7 @@ if [[ "$OP_SYSTEM" == "ubuntu" ]]; then
   sudo update-locale LANG=en_US.UTF-8
 
   install_homebrew
-  brew install fastfetch font-fira-code-nerd-font gcc neovim tree-sitter-cli
+  brew install fastfetch font-fira-code-nerd-font gcc neovim tree-sitter-cli rtk
 
   mkdir -p "$HOME/.local/bin"
   if ! command -v fd > /dev/null 2>&1 && command -v fdfind > /dev/null 2>&1; then
