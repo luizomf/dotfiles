@@ -19,7 +19,7 @@
   "keyboard": { "optionAsAlt": "none" },
   "window": { "alwaysOnTop": false },
   "theme": {
-    "path": "/Users/luizotavio/dotfiles/omxterm/themes/omtheme.json"
+    "path": "./themes/omtheme.json"
   },
   "keybinds": {
     "quit": "CommandOrControl+Q",
