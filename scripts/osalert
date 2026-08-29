@@ -2,7 +2,6 @@
 
 set -euo pipefail
 
-os="$(uname -s)"
 audio="${audio:-1}"
 alert="${alert:-0}"
 
@@ -19,16 +18,17 @@ if [[ "${audio}" == 1 ]]; then
   ) &
 fi
 
-if [[ "${os}" == "Darwin" ]]; then
-  now="$(date '+%Y-%m-%d %H:%M')"
-  msg="${msg:-You should write a message}"
-
-  if [[ "${alert}" == 1 ]]; then
-    osascript \
-      -e "display dialog \"${msg}\n\n${now}\"¬" \
-      -e 'with title "Alert"¬' \
-      -e 'with icon stop¬' \
-      -e 'buttons {"OK"}¬' \
-      -e 'default button "OK"' >/dev/null
-  fi
-fi
+# os="$(uname -s)"
+# if [[ "${os}" == "Darwin" ]]; then
+#   now="$(date '+%Y-%m-%d %H:%M')"
+#   msg="${msg:-You should write a message}"
+#
+#   if [[ "${alert}" == 1 ]]; then
+#     osascript \
+#       -e "display dialog \"${msg}\n\n${now}\"¬" \
+#       -e 'with title "Alert"¬' \
+#       -e 'with icon stop¬' \
+#       -e 'buttons {"OK"}¬' \
+#       -e 'default button "OK"' >/dev/null
+#   fi
+# fi
