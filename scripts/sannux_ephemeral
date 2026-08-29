@@ -55,6 +55,7 @@ refresh_pi_resources() (
   mkdir -p "$stage/extensions" "$stage/skills"
 
   git -C "$ompi_dir" archive HEAD -- \
+    extensions/async-activity.ts \
     extensions/background-tool.ts \
     extensions/exit-alias.ts \
     extensions/browser-fetch \
@@ -70,6 +71,13 @@ refresh_pi_resources() (
       "$stage/extensions/$extension/background-tool.ts"
   done
   rm "$stage/extensions/background-tool.ts"
+
+  for extension in browser-fetch codex-search subagents; do
+    rm "$stage/extensions/$extension/async-activity.ts"
+    cp "$stage/extensions/async-activity.ts" \
+      "$stage/extensions/$extension/async-activity.ts"
+  done
+  rm "$stage/extensions/async-activity.ts"
 
   rsync -aL --exclude='.omskills-managed-links' "$host_agent_dir/skills/" "$stage/skills/"
 
