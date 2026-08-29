@@ -1,7 +1,9 @@
 import json
 import os
 import pty
+import runpy
 import signal
+import socket
 import subprocess
 import tempfile
 import textwrap
@@ -181,6 +183,32 @@ class BqCliTests(unittest.TestCase):
         self.assertEqual(command_result["stdin"], stdin_text)
         self.assertEqual(command_result["arguments"], literal_arguments)
         self.assertFalse(shell_marker.exists())
+
+    def test_linux_session_environment_uses_only_a_private_owned_runtime(self) -> None:
+        runtime_path = self.root / "run" / str(os.getuid())
+        runtime_path.mkdir(parents=True, mode=0o700)
+        runtime_path.chmod(0o700)
+        bus_path = runtime_path / "bus"
+
+        with socket.socket(socket.AF_UNIX) as bus:
+            bus.bind(str(bus_path))
+            module = runpy.run_path(str(BQ))
+            environment = module["linux_session_environment"](
+                runtime_path, os.getuid()
+            )
+
+        self.assertEqual(
+            environment,
+            {
+                "XDG_RUNTIME_DIR": str(runtime_path),
+                "DBUS_SESSION_BUS_ADDRESS": f"unix:path={bus_path}",
+            },
+        )
+
+        runtime_path.chmod(0o755)
+        self.assertEqual(
+            module["linux_session_environment"](runtime_path, os.getuid()), {}
+        )
 
     def test_stdin_rejects_an_interactive_terminal(self) -> None:
         master, slave = pty.openpty()

@@ -7,6 +7,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -84,8 +85,10 @@ Execution:
   Commands use literal argument vectors without shell evaluation or wholesale
   inheritance of the submitting shell environment. Personal scripts, common
   Homebrew locations, and system commands are on PATH; PROJECTS_DIR is exported
-  separately. On macOS, commands receive application scheduling policy like an
-  interactive terminal command.
+  separately. On Linux, a valid private per-user runtime and its D-Bus socket
+  are discovered at execution time for desktop services such as audio. On macOS,
+  commands receive application scheduling policy like an interactive terminal
+  command.
 
 Examples:
   bq ./script --flag value
@@ -113,6 +116,32 @@ def run_omqueue(
         text=True,
         capture_output=capture,
     )
+
+
+def linux_session_environment(
+    runtime_path: Path, user_id: int
+) -> dict[str, str]:
+    try:
+        runtime_metadata = runtime_path.lstat()
+    except OSError:
+        return {}
+
+    if not (
+        stat.S_ISDIR(runtime_metadata.st_mode)
+        and runtime_metadata.st_uid == user_id
+        and stat.S_IMODE(runtime_metadata.st_mode) == 0o700
+    ):
+        return {}
+
+    environment = {"XDG_RUNTIME_DIR": str(runtime_path)}
+    bus_path = runtime_path / "bus"
+    try:
+        bus_metadata = bus_path.lstat()
+    except OSError:
+        return environment
+    if stat.S_ISSOCK(bus_metadata.st_mode) and bus_metadata.st_uid == user_id:
+        environment["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={bus_path}"
+    return environment
 
 
 def write_json_document(value: object) -> str:
@@ -758,6 +787,11 @@ def internal_run() -> NoReturn:
         entry for entry in preferred_path if Path(entry).is_dir()
     )
     os.environ["PROJECTS_DIR"] = str(Path.home() / "Desktop" / "tutoriais_e_cursos")
+    if sys.platform.startswith("linux"):
+        user_id = os.getuid()
+        os.environ.update(
+            linux_session_environment(Path("/run/user") / str(user_id), user_id)
+        )
     os.environ.update(ollama_environment)
 
     try:
