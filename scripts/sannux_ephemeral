@@ -8,6 +8,7 @@ set -euo pipefail
 # echo "Testing. Please, answer: 'OK'" | sannux_ephemeral claude-code --no-session-persistence --dangerously-skip-permissions -p - 2>/dev/null
 # echo "Testing. Please, answer: 'OK'" | sannux_ephemeral claude-ollama --no-session-persistence --dangerously-skip-permissions -p - 2>/dev/null
 # sannux_ephemeral --refresh-pi-resources  # Sync the current host Pi extensions and skills
+# sannux_ephemeral pi --shell              # Open Bash with the same ephemeral mounts
 
 CURDIR="${CURDIR:-"$(pwd)"}"
 
@@ -93,6 +94,8 @@ refresh_pi_resources() (
   mkdir -p "${persistent_home}/.local/bin" "${persistent_home}/.codex"
   install -m 0755 "$dotfiles_dir/scripts/codex_search" \
     "${persistent_home}/.local/bin/codex_search"
+  install -m 0755 "$dotfiles_dir/scripts/bq" \
+    "${persistent_home}/.local/bin/bq"
 
   # Codex now ships in the Sannux Pi image. Remove the legacy per-home package
   # once so it cannot shadow the image-managed binary on future runs.
@@ -220,12 +223,22 @@ case $template in
     exit 1
 esac
 
+shell_mode=0
+if [[ "${1:-}" == "--shell" ]]; then
+  shell_mode=1
+  shift
+fi
+
 declare -a docker_cmd=(
   docker compose run
   -v "$tmp_workspace:/workspace"
   -v "$tmp_home:/home/agent"
   --rm
 )
+
+if ((shell_mode)); then
+  docker_cmd+=(--entrypoint bash)
+fi
 
 if [[ "$template" == "pi" ]]; then
   docker_cmd+=(

@@ -115,6 +115,26 @@ class SannuxEphemeralTests(unittest.TestCase):
         self.assertEqual(stat.S_IMODE(ephemeral_root.stat().st_mode), 0o700)
         self.assertEqual(marker.read_text(encoding="utf-8"), "keep")
 
+    def test_shell_mode_keeps_ephemeral_mounts_and_replaces_only_entrypoint(self) -> None:
+        result = self.run_script("pi", "--shell", "-c", "printf shell-ready")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        invocations = self.docker_invocations()
+        self.assertEqual(len(invocations), 1)
+        invocation = invocations[0]
+        entrypoint_index = invocation.index("--entrypoint")
+        self.assertEqual(invocation[entrypoint_index + 1], "bash")
+        agent_index = invocation.index("agent")
+        self.assertEqual(invocation[agent_index + 1 :], ["-c", "printf shell-ready"])
+        home_mount = next(
+            argument
+            for argument in invocation
+            if argument.endswith(":/home/agent")
+        )
+        run_home = Path(home_mount.removesuffix(":/home/agent"))
+        self.assertEqual(run_home.parent, Path(f"{self.pi_home}.ephemeral-runs"))
+        self.assertFalse(run_home.exists())
+
     @unittest.skipUnless(shutil.which("rsync"), "rsync is required")
     def test_refresh_resolves_links_and_excludes_all_host_node_modules(self) -> None:
         host_agent = self.home / ".pi" / "agent"
@@ -158,6 +178,12 @@ class SannuxEphemeralTests(unittest.TestCase):
         self.assertTrue((snapshot / "skills" / "example" / "SKILL.md").is_file())
         self.assertFalse((snapshot / "skills" / ".omskills-managed-links").exists())
         self.assertEqual(list(snapshot.rglob("node_modules")), [])
+        installed_bq = self.pi_home / ".local" / "bin" / "bq"
+        self.assertEqual(
+            installed_bq.read_bytes(),
+            (REPOSITORY / "scripts" / "bq").read_bytes(),
+        )
+        self.assertTrue(os.access(installed_bq, os.X_OK))
 
         invocations = self.docker_invocations()
         self.assertEqual(len(invocations), 2)
