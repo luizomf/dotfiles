@@ -50,6 +50,7 @@ Treat every tracked file and Git commit as public.
 
 ## Engineering and verification
 
+- Whenever practical, prefer test-driven development (TDD).
 - Prefer simple, explicit changes in the existing language and style. Preserve
   Bash, Zsh, POSIX shell, Python, and Lua boundaries, including whether a shell
   file is executed or sourced.
