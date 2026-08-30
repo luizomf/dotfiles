@@ -7,7 +7,7 @@ set -euo pipefail
 # echo "Testing. Please, answer: 'OK'" | sannux_ephemeral codex-ollama exec --ephemeral --yolo 2>/dev/null
 # echo "Testing. Please, answer: 'OK'" | sannux_ephemeral claude-code --no-session-persistence --dangerously-skip-permissions -p - 2>/dev/null
 # echo "Testing. Please, answer: 'OK'" | sannux_ephemeral claude-ollama --no-session-persistence --dangerously-skip-permissions -p - 2>/dev/null
-# sannux_ephemeral --refresh-pi-resources  # Explicitly promote a stable Pi resource snapshot
+# sannux_ephemeral --refresh-pi-resources  # Sync the current host Pi extensions and skills
 
 CURDIR="${CURDIR:-"$(pwd)"}"
 
@@ -30,11 +30,10 @@ resolve_agent_home() (
 
 refresh_pi_resources() (
   local template_dir="${sannux_dir}/templates/pi"
-  local ompi_dir="${PROJECTS_DIR%/}/ompi"
   local host_agent_dir="${HOME}/.pi/agent"
 
   test -d "$template_dir"
-  test -d "$ompi_dir/.git"
+  test -d "$host_agent_dir/extensions"
   test -d "$host_agent_dir/skills"
 
   cd "$template_dir"
@@ -54,36 +53,27 @@ refresh_pi_resources() (
   trap 'rm -rf "$stage"' EXIT
   mkdir -p "$stage/extensions" "$stage/skills"
 
-  git -C "$ompi_dir" archive HEAD -- \
-    extensions/async-activity.ts \
-    extensions/background-tool.ts \
-    extensions/exit-alias.ts \
-    extensions/browser-fetch \
-    extensions/codex-search \
-    extensions/managed-process \
-    extensions/subagents \
-    | tar -x -C "$stage"
-
-  local extension
-  for extension in browser-fetch codex-search; do
-    rm "$stage/extensions/$extension/background-tool.ts"
-    cp "$stage/extensions/background-tool.ts" \
-      "$stage/extensions/$extension/background-tool.ts"
-  done
-  rm "$stage/extensions/background-tool.ts"
-
-  for extension in browser-fetch codex-search subagents; do
-    rm "$stage/extensions/$extension/async-activity.ts"
-    cp "$stage/extensions/async-activity.ts" \
-      "$stage/extensions/$extension/async-activity.ts"
-  done
-  rm "$stage/extensions/async-activity.ts"
-
-  rsync -aL --exclude='.omskills-managed-links' "$host_agent_dir/skills/" "$stage/skills/"
+  # Follow deployed symlinks so the snapshot is a self-contained copy of every
+  # extension currently loaded from the host Pi directory. Rebuild npm
+  # dependencies in Linux instead of copying host-specific node_modules.
+  rsync -aL --exclude='node_modules/' \
+    "$host_agent_dir/extensions/" "$stage/extensions/"
+  rsync -aL --exclude='node_modules/' --exclude='.omskills-managed-links' \
+    "$host_agent_dir/skills/" "$stage/skills/"
 
   local stage_name="${stage##*/}"
-  docker compose run --rm -T --entrypoint npm agent \
-    ci --prefix "/home/agent/${stage_name}/extensions/browser-fetch" --omit=dev
+  local package_json package_dir package_suffix
+  local -a npm_args
+  while IFS= read -r -d '' package_json; do
+    package_dir="${package_json%/*}"
+    package_suffix="${package_dir#"$stage"/}"
+    npm_args=(install --package-lock=false)
+    if [[ -f "$package_dir/package-lock.json" ]]; then
+      npm_args=(ci)
+    fi
+    docker compose run --rm -T --entrypoint npm agent \
+      "${npm_args[@]}" --prefix "/home/agent/${stage_name}/${package_suffix}" --omit=dev
+  done < <(find "$stage/extensions" -type f -name package.json -print0)
 
   local agent_dir="${persistent_home}/.pi/agent"
   mkdir -p "$agent_dir"
@@ -101,11 +91,16 @@ refresh_pi_resources() (
   done
 
   mkdir -p "${persistent_home}/.local/bin" "${persistent_home}/.codex"
-  git -C "$dotfiles_dir" show HEAD:scripts/codex_search \
-    >"${persistent_home}/.local/bin/codex_search"
-  chmod 0755 "${persistent_home}/.local/bin/codex_search"
-  docker compose run --rm -T --entrypoint npm agent \
-    install --prefix /home/agent/.local --omit=dev @openai/codex@0.146.0
+  install -m 0755 "$dotfiles_dir/scripts/codex_search" \
+    "${persistent_home}/.local/bin/codex_search"
+
+  # Codex now ships in the Sannux Pi image. Remove the legacy per-home package
+  # once so it cannot shadow the image-managed binary on future runs.
+  if [[ -f "${persistent_home}/.local/package.json" ]] \
+    && grep -q '"@openai/codex"' "${persistent_home}/.local/package.json"; then
+    docker compose run --rm -T --entrypoint npm agent \
+      uninstall --prefix /home/agent/.local @openai/codex
+  fi
 
   local sannux_codex_home
   sannux_codex_home="$(resolve_agent_home codex)"
@@ -115,12 +110,10 @@ refresh_pi_resources() (
       "${persistent_home}/.codex/auth.json"
   fi
 
-  local ompi_revision
-  ompi_revision="$(git -C "$ompi_dir" rev-parse HEAD)"
-  printf 'ompi_revision=%s\nrefreshed_at=%s\n' \
-    "$ompi_revision" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  printf 'extensions_source=%s\nrefreshed_at=%s\n' \
+    "${host_agent_dir}/extensions" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     >"${agent_dir}/RESOURCE_SNAPSHOT"
-  printf 'Refreshed stable Pi resources from ompi %s\n' "$ompi_revision"
+  printf 'Refreshed current Pi resources from %s\n' "$host_agent_dir"
 )
 
 if [[ "${1:-}" == "--refresh-pi-resources" ]]; then
@@ -137,16 +130,28 @@ cd "templates/$template" || exit 1
 source .env
 
 # EPHEMERAL
-tmp_home="$(mktemp -d)"
 persistent_home="${AGENT_HOME_PATH}"
 persistent_home="${persistent_home/#\~/$HOME}"
+if [[ -z "$persistent_home" || "$persistent_home" == "/" \
+  || "$persistent_home" == "$HOME" || "$persistent_home" == "$HOME/" ]]; then
+  printf 'Unsafe persistent home for ephemeral run: %s\n' "$persistent_home" >&2
+  exit 1
+fi
+persistent_home="${persistent_home%/}"
+test -d "$persistent_home"
+
+# Keep each run isolated while grouping it under a predictable host namespace.
+# The random suffix prevents concurrent invocations from sharing mutable state.
+ephemeral_home_root="${persistent_home}.ephemeral-runs"
+mkdir -p "$ephemeral_home_root"
+chmod 0700 "$ephemeral_home_root"
+tmp_home="$(mktemp -d "${ephemeral_home_root}/run.XXXXXX")"
 tmp_workspace="$CURDIR"
 
 # THE HOME WILL BE REMOVED AFTER DONE
 trap 'rm -rf "$tmp_home"' EXIT
 
 mkdir -p "$tmp_workspace"
-test -d "$persistent_home"
 
 # The host-owned bind mount may not match the container user's UID. Trust only
 # the fixed container workspace through the ephemeral Git configuration.
