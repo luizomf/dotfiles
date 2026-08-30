@@ -5,7 +5,9 @@ fc -W
 "$HOME"/dotfiles/scripts/zsh_history_sync.py
 "$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh
 
-sleep 5
+if command -v pullall >/dev/null; then
+  pullall
+fi
 
 (
   rm -rf "$HOME"/.local/share/tmux/resurrect/*.*
