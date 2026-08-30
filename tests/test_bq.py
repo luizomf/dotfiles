@@ -9,6 +9,7 @@ import tempfile
 import textwrap
 import time
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 REPOSITORY = Path(__file__).resolve().parents[1]
@@ -251,6 +252,199 @@ class BqCliTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr.decode())
         self.assertEqual(result_path.read_text(encoding="utf-8"), "")
+
+    def test_unconfigured_bq_runs_independent_local_processes_with_stdin(self) -> None:
+        (self.home / ".config" / "bq" / "config.json").unlink()
+        recorder = self.root / "local-recorder"
+        recorder.write_text(
+            textwrap.dedent(
+                """\
+                #!/usr/bin/env python3
+                import json
+                import os
+                import pathlib
+                import sys
+                import time
+
+                destination = pathlib.Path(sys.argv[1])
+                time.sleep(float(sys.argv[2]))
+                destination.write_text(
+                    json.dumps({
+                        "arguments": sys.argv[3:],
+                        "stdin": sys.stdin.read(),
+                        "unrelatedEnvironment": os.environ.get("BQ_UNRELATED_TEST"),
+                    }),
+                    encoding="utf-8",
+                )
+                """
+            ),
+            encoding="utf-8",
+        )
+        recorder.chmod(0o755)
+        first_output = self.root / "first-local-result.json"
+        second_output = self.root / "second-local-result.json"
+
+        local_environment = self.environment()
+        local_environment["BQ_UNRELATED_TEST"] = "must not reach the payload"
+
+        first = subprocess.run(
+            [
+                str(BQ),
+                "--stdin",
+                "--json",
+                "--concurrency-key",
+                "audio-playback",
+                "--",
+                str(recorder),
+                str(first_output),
+                "0.2",
+                "first",
+            ],
+            input="first stdin",
+            text=True,
+            capture_output=True,
+            env=local_environment,
+            check=False,
+        )
+        second = subprocess.run(
+            [
+                str(BQ),
+                "--at",
+                "2000-01-01T00:00:00Z",
+                "--",
+                str(recorder),
+                str(second_output),
+                "0.1",
+                "second",
+            ],
+            text=True,
+            capture_output=True,
+            env=local_environment,
+            check=False,
+        )
+
+        self.assertEqual(first.returncode, 0, first.stderr)
+        first_acceptance = json.loads(first.stdout)
+        self.assertEqual(first_acceptance["mode"], "local_background")
+        self.assertIsInstance(first_acceptance["pid"], int)
+        self.assertFalse(first_acceptance["concurrencyKeyEnforced"])
+        self.assertEqual(second.returncode, 0, second.stderr)
+        self.assertIn("local background process", second.stdout)
+        self.assertIn("non-durable", second.stdout)
+        self.assertNotEqual(
+            first_acceptance["pid"],
+            int(second.stdout.split("pid=", 1)[1].split()[0]),
+        )
+
+        deadline = time.monotonic() + 5
+        while (
+            (not first_output.exists() or not second_output.exists())
+            and time.monotonic() < deadline
+        ):
+            time.sleep(0.01)
+        self.assertEqual(
+            json.loads(first_output.read_text(encoding="utf-8")),
+            {
+                "arguments": ["first"],
+                "stdin": "first stdin",
+                "unrelatedEnvironment": None,
+            },
+        )
+        self.assertEqual(
+            json.loads(second_output.read_text(encoding="utf-8")),
+            {
+                "arguments": ["second"],
+                "stdin": "",
+                "unrelatedEnvironment": None,
+            },
+        )
+
+    def test_local_relative_timing_reuses_whole_minute_calculation(self) -> None:
+        module = runpy.run_path(str(BQ))
+        now = datetime(2026, 8, 30, 12, 0, 30, tzinfo=timezone.utc)
+
+        due = module["local_due_instant"]({"in": "10m"}, now=now)
+
+        self.assertEqual(
+            due,
+            datetime(2026, 8, 30, 12, 11, 0, tzinfo=timezone.utc),
+        )
+
+    def test_local_fallback_rejects_recurring_timing(self) -> None:
+        (self.home / ".config" / "bq" / "config.json").unlink()
+        values = [
+            ["--cron", "0 9 * * *"],
+            ["--in", "1m", "--every", "1m", "--count", "2"],
+        ]
+
+        for timing in values:
+            with self.subTest(timing=timing):
+                result = subprocess.run(
+                    [str(BQ), *timing, "--", "/usr/bin/true"],
+                    text=True,
+                    capture_output=True,
+                    env=self.environment(),
+                    check=False,
+                )
+
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("local background fallback", result.stderr)
+                self.assertIn("does not support", result.stderr)
+
+    def test_configured_bq_never_falls_back_when_omqueue_is_unavailable(self) -> None:
+        marker = self.root / "must-not-run-locally"
+        environment = self.environment()
+        environment["BQ_OMQUEUE"] = str(self.root / "missing-omqueue")
+
+        result = subprocess.run(
+            [str(BQ), "--", "/usr/bin/touch", str(marker)],
+            text=True,
+            capture_output=True,
+            env=environment,
+            check=False,
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("OMQueue CLI not found", result.stderr)
+        self.assertFalse(marker.exists())
+
+    def test_dangling_queue_config_never_selects_local_fallback(self) -> None:
+        config_path = self.home / ".config" / "bq" / "config.json"
+        config_path.unlink()
+        config_path.symlink_to(self.root / "missing-config-target")
+        marker = self.root / "must-not-run-from-dangling-config"
+
+        result = subprocess.run(
+            [str(BQ), "--", "/usr/bin/touch", str(marker)],
+            text=True,
+            capture_output=True,
+            env=self.environment(),
+            check=False,
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("not configured", result.stderr)
+        self.assertFalse(marker.exists())
+
+    def test_unreadable_queue_config_path_never_selects_local_fallback(self) -> None:
+        config_path = self.home / ".config" / "bq" / "config.json"
+        config_path.unlink()
+        config_path.parent.chmod(0)
+        marker = self.root / "must-not-run-from-unreadable-config"
+        try:
+            result = subprocess.run(
+                [str(BQ), "--", "/usr/bin/touch", str(marker)],
+                text=True,
+                capture_output=True,
+                env=self.environment(),
+                check=False,
+            )
+        finally:
+            config_path.parent.chmod(0o700)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("cannot inspect configuration", result.stderr)
+        self.assertFalse(marker.exists())
 
     def test_json_immediate_submission_prints_only_accepted_job(self) -> None:
         result = subprocess.run(
