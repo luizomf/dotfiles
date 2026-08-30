@@ -52,44 +52,9 @@ declare -a pi_cmd=(
 )
 
 if [[ "$verbose" == true ]]; then
-  colors=false
-  if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
-    colors=true
-  fi
-
   printf '%s\n' "$PROMPT" \
     | "${pi_cmd[@]}" --mode json "${pi_args[@]}" \
-    | jq --unbuffered --join-output --argjson colors "$colors" '
-        def colorize($code; $text):
-          if $colors then
-            "\u001b[\($code)m\($text)\u001b[0m"
-          else
-            $text
-          end;
-
-        if .type == "message_update" then
-          .assistantMessageEvent |
-          if .type == "thinking_delta" then
-            colorize(90; .delta)
-          elif .type == "text_delta" then
-            .delta
-          elif .type == "toolcall_start" then
-            "\n" + colorize(36; "→ tool: \(.toolName)") + "\n"
-          else empty
-          end
-        elif .type == "tool_execution_start" then
-          "\n" + colorize(36; "→ \(.toolName)") + ": "
-            + colorize(33; (.args | tojson)) + "\n"
-        elif .type == "tool_execution_end" then
-          "\n← \(.toolName): "
-            + (if .isError then colorize(31; "ERROR") else colorize(32; "ok") end)
-            + "\n"
-        elif .type == "agent_end" then
-          "\n"
-        else
-          empty
-        end
-      '
+    | pi_parse_json
 else
   printf '%s\n' "$PROMPT" | "${pi_cmd[@]}" "${pi_args[@]}"
 fi
