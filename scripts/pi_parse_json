@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 colors=false
-if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
+if [[ -n "${FORCE_COLOR:-}" || ( -t 1 && -z "${NO_COLOR:-}" ) ]]; then
   colors=true
 fi
 
@@ -32,6 +32,22 @@ jq --unbuffered --join-output --argjson colors "$colors" '
       + "\n"
   elif .type == "agent_end" then
     "\n"
+  elif .type == "message" and .message.role == "assistant" then
+    .message.content[] |
+    if .type == "thinking" then
+      colorize(90; .thinking)
+    elif .type == "text" then
+      .text
+    elif .type == "toolCall" then
+      "\n" + colorize(36; "→ \(.name)") + ": "
+        + colorize(33; (.arguments | tojson)) + "\n"
+    else
+      empty
+    end
+  elif .type == "message" and .message.role == "toolResult" then
+    "\n← \(.message.toolName): "
+      + (if .message.isError then colorize(31; "ERROR") else colorize(32; "ok") end)
+      + "\n"
   else
     empty
   end
