@@ -26,7 +26,7 @@ done
 PROMPT="$(cat <<-EOF
 Verify the modified files in the current directory using Git.
 Create organized and well-documented commit messages, following the
-*Conventional Commits* standard, and commit the files with clear, concise messages.
+*Conventional Commits* standard with scope, and commit the files with clear, concise messages.
 DO NOT BROWSE OTHER FILES OR COMMITS; YOUR ONLY TASK IS TO PROVIDE A CONCISE MESSAGE
 FOR THE MODIFIED FILES.
 Use the message body for longer text if necessary. The language must be English.
@@ -40,7 +40,9 @@ $(git log -n 2 --format='%B' 2>/dev/null || true)
 EOF
 )"
 
-printf '%s\n' "$PROMPT"
+printf '\e[38;5;2mMODEL:\e[0m %s\n' "${MODEL}:${MODEL_REASONING}"
+printf '\e[38;5;2mPROMPT:\e[0m %s\n\n'
+printf '\e[38;5;8m%s\e[0m\n\n' "$PROMPT"
 
 title "Commit: ${MODEL} ${MODEL_REASONING}"
 
