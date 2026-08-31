@@ -56,7 +56,7 @@ prline
 
 echo "PI (Ephemeral):"
 sannux_ephemeral pi --no-session -p --model \
-  ollama/qwen3.8:27b-mlx:medium <<< "$TESTING_"
+  "${LOCAL_MODEL}" <<< "$TESTING_"
 prline
 
 ) || true
