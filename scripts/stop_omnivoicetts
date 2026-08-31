@@ -1,24 +1,9 @@
 #!/usr/bin/env bash
 
-set -u
-
-status=0
+set -euo pipefail
 
 if ! ~/dotfiles/scripts/clear_tts_cache; then
   printf 'Failed to clear the local TTS caches.\n' >&2
-  status=1
 fi
 
-pkill -9 -f '[o]mnivoicetts' >/dev/null 2>&1 || true
-
-if ! ssh m4128 "pkill -9 -f '[o]mnivoicetts' || true"; then
-  printf 'Failed to stop OmniVoice on m4128.\n' >&2
-  status=1
-fi
-
-if ! ssh m4128 '~/dotfiles/scripts/clear_omnivoice_cache'; then
-  printf 'Failed to clear the OmniVoice cache on m4128.\n' >&2
-  status=1
-fi
-
-exit "$status"
+pkill -9 -f '/[o]mnivoicetts' >/dev/null 2>&1 || true

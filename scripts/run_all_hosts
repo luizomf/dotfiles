@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+declare -a hosts=('m132' 'm4128' 'fedoraair')
+readonly script_file="${BASH_SOURCE[0]##*/}"
+readonly cmd="${1:?No command found. Use: ./${script_file} 'command_to_run'}"
+
+for host in "${hosts[@]}"; do
+  printf '\e[32mHost:\e[0m %s\n' "$host"
+  printf '\e[32mCommand:\e[0m \e[33m%s\e[0m\n\n' "$cmd"
+
+  ssh "${host}" "$cmd"
+
+  echo '---'
+done

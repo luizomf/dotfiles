@@ -9,6 +9,10 @@ if command -v pullall >/dev/null; then
   pullall
 fi
 
+if command -v stop_omnivoicetts >/dev/null; then
+  stop_omnivoicetts
+fi
+
 (
   rm -rf "$HOME"/.local/share/tmux/resurrect/*.*
   rm -rf "$HOME"/.local/share/tmux/resurrect/**
