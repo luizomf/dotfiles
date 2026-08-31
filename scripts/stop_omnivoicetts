@@ -2,8 +2,5 @@
 
 set -euo pipefail
 
-if ! ~/dotfiles/scripts/clear_tts_cache; then
-  printf 'Failed to clear the local TTS caches.\n' >&2
-fi
-
+clear_tts_cache
 pkill -9 -f '/[o]mnivoicetts' >/dev/null 2>&1 || true
