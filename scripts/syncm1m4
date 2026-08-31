@@ -6,7 +6,6 @@ fc -W
 "$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh
 
 run_all_hosts 'stop_omnivoicetts'
-pullall
 
 (
   rm -rf "$HOME"/.local/share/tmux/resurrect/*.*
