@@ -33,7 +33,7 @@
     },
     {
       "name": "Create TTS for daily briefings",
-      "body": "bq --label daily_breafing_tts_clean --json --concurrency-key audio-playback zsh -lc '. ~/.zshrc ; llm_clean --model qwen3.6:35b-a3b-mlx-bf16 -c \"$(cat ~/omnews_briefings/\"$(date +%Y-%m-%d)\".md)\" -- --nowordwrap --think=max --hidethinking > ~/omnews_briefings/\"$(date +%Y-%m-%d)\"_tts.txt ; msg=\"Daily Paper Markdown Cleaner Finished.\" osalert'",
+      "body": "bq --label daily_breafing_tts_clean --json --concurrency-key audio-playback zsh -lc '. ~/.zshrc ; llm_clean --model \"${LOCAL_MODEL}\" -c \"$(cat ~/omnews_briefings/\"$(date +%Y-%m-%d)\".md)\" -- --nowordwrap --think=max --hidethinking > ~/omnews_briefings/\"$(date +%Y-%m-%d)\"_tts.txt ; msg=\"Daily Paper Markdown Cleaner Finished.\" osalert'",
       "description": "Create a TTS file for the current date on omnews briefing.",
       "execute": false
     },
