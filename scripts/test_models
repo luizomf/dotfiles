@@ -27,7 +27,7 @@ sannux_ephemeral codex --model gpt-5.4-mini -c model_reasoning_effort=low exec \
 prline
 
 echo "CODEX OLLAMA:"
-sannux_ephemeral codex-ollama --model qwen3.8:27b-mlx -c \
+sannux_ephemeral codex-ollama --model "${LOCAL_MODEL}" -c \
   model_reasoning_effort=low exec --skip-git-repo-check --ephemeral <<< "$TESTING_"
 prline
 
