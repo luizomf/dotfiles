@@ -30,7 +30,7 @@ alias killadobe='sudo pkill -9 -f "Adobe" ; sudo pkill -9 -f "ACCFinderSync" ; s
 # Mac OS
 alias cleanmacos='sudo purge; sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder; sudo rm -rf ~/Library/Logs/*; osascript -e "tell app \"Finder\" to empty Trash" &> /dev/null'
 
-alias zs='source ~/.zshrc'  # recarregar config rápido
+alias zs='. ~/.zshenv ; . ~/.zshrc'  # recarregar config rápido
 alias brewcheck='brew leaves | sort'
 
 # Tree ignorando .git, __pycache__, node_modules, .venv, dist, .DS_Store
