@@ -4,6 +4,7 @@
 path=("${(@)path:#${HOME:-/Users/luizotavio}/.local/bin}")
 path=("${HOME:-/Users/luizotavio}/.local/bin" "${path[@]}")
 path=("${HOME:-/Users/luizotavio}/dotfiles/scripts" "${path[@]}")
+path=("${HOME:-/Users/luizotavio/.docker/bin}" "${path[@]}")
 
 path=("${(@)path:#/usr/local/bin}")
 path=("${(@)path:#/opt/homebrew/bin}")
@@ -24,3 +25,4 @@ export OLLAMA_KEEP_ALIVE="${OLLAMA_KEEP_ALIVE:-10m}"
 export LOCAL_MODEL="${LOCAL_MODEL:-muse-glimmer:30b-mlx}"
 export LOCAL_MODEL_REASONING="${LOCAL_MODEL_REASONING:-high}"
 export MODEL="${LOCAL_MODEL}"
+
