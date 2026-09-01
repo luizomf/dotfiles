@@ -61,8 +61,7 @@ Treat every tracked file and Git commit as public.
   practical test boundary exists, and update affected user documentation in the
   same change.
 - There is no repository-wide build, lint, type-check, format, or CI workflow.
-  The empty `package.json` is not an npm toolchain. Do not invent or claim gates
-  that are not configured.
+  Do not invent or claim gates that are not configured.
 - For changes to `scripts/bq`, run from the repository root:
   `python3 -m unittest tests/test_bq.py`.
 - For other changes, use focused interpreter-specific syntax or behavior checks
