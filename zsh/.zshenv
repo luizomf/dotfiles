@@ -4,7 +4,7 @@
 path=("${(@)path:#${HOME:-/Users/luizotavio}/.local/bin}")
 path=("${HOME:-/Users/luizotavio}/.local/bin" "${path[@]}")
 path=("${HOME:-/Users/luizotavio}/dotfiles/scripts" "${path[@]}")
-path=("${HOME:-/Users/luizotavio/.docker/bin}" "${path[@]}")
+path=("${HOME:-/Users/luizotavio}/.docker/bin" "${path[@]}")
 
 path=("${(@)path:#/usr/local/bin}")
 path=("${(@)path:#/opt/homebrew/bin}")
