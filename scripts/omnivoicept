@@ -9,12 +9,17 @@ export PIP_NO_INDEX=1
 export UV_OFFLINE=1
 export UV_NO_SYNC=1
 
+# The downloaded models:
+# k2-fsa/OmniVoice - fp32 - original (heavily tested)
+# drbaph/OmniVoice-bf16 - bf16
+export OMNIVOICE_MODEL='drbaph/OmniVoice-bf16'
+
 (
 cd "${HOME}/Desktop/tutoriais_e_cursos/omnivoicetts" || exit 1
 # ./scripts/clear_cache
 pkill -9 -f '[o]mnivoicetts' || true
 cat | ./scripts/male-pt \
-  --offline --player auto \
+  --offline --player auto --model "${OMNIVOICE_MODEL}" \
   --num-step 24 --guidance-scale 1 --t-shift 0.1 \
   --class-temperature 0.0 --position-temperature 4.0 --layer-penalty-factor 5.0 \
   --chunk-len 80 --prebuffer-chunks 2 --sliding-window-chunks 2 \
