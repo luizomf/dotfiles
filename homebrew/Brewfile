@@ -33,6 +33,8 @@ brew "fzf"
 brew "gh"
 # Render markdown on the CLI
 brew "glow"
+# GNU Privacy Guard (OpenPGP)
+brew "gnupg"
 # Open source programming language to build simple/reliable/efficient software
 brew "go"
 # Command-line interface for SQLite
