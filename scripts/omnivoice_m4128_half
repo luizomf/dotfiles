@@ -2,13 +2,24 @@
 
 set -euo pipefail
 
+# The downloaded models:
+# k2-fsa/OmniVoice - fp32 - original (heavily tested)
+# drbaph/OmniVoice-bf16 - bf16
+OMNIVOICE_MODEL='drbaph/OmniVoice-bf16'
 INPUT_FILE="${1:?'Missing input file path.'}"
+MODEL="${OMNIVOICE_MODEL}"
+
+if (( $# > 2 )); then
+  printf 'Usage: %s INPUT_FILE [MODEL]\n' "$0" >&2
+  exit 2
+fi
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 # shellcheck source=/dev/null
 source "${OM_PATHS_FILE:-${script_dir}/../config/paths.sh}"
 export OMNIVOICE_DIR="${OMNIVOICE_DIR:-${PROJECTS_DIR}/omnivoicetts}"
 export OMNIVOICE_REMOTE_APP="${OMNIVOICE_REMOTE_APP:-$OMNIVOICE_DIR}"
+export OMNIVOICE_MODEL="$MODEL"
 
 kill_omnivoice
 
