@@ -7,7 +7,7 @@ set -euo pipefail
 # drbaph/OmniVoice-bf16 - bf16
 OMNIVOICE_MODEL='drbaph/OmniVoice-bf16'
 INPUT_FILE="${1:?'Missing input file path.'}"
-MODEL="${OMNIVOICE_MODEL}"
+MODEL="${2:-$OMNIVOICE_MODEL}"
 
 if (( $# > 2 )); then
   printf 'Usage: %s INPUT_FILE [MODEL]\n' "$0" >&2
