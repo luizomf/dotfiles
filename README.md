@@ -71,9 +71,25 @@ The installer links the static configuration under `pi/agent/` into
 `~/.pi/agent/`. Credentials, sessions, trust decisions, generated model state,
 and machine-specific model configuration remain local.
 
-Skills and extensions are maintained separately in
-[omskills](https://github.com/luizomf/omskills) and
-[ompi](https://github.com/luizomf/ompi).
+## Related public repositories
+
+This repository is only one part of the development environment. Some of its
+configuration and commands integrate with other repositories, usually checked
+out under `$PROJECTS_DIR`:
+
+- [omskills](https://github.com/luizomf/omskills) maintains the Pi skills;
+- [ompi](https://github.com/luizomf/ompi) maintains the Pi extensions;
+- [loudterm](https://github.com/luizomf/loudterm) provides local audio and TTS
+  workflows used by some commands;
+- [sannux](https://github.com/luizomf/sannux) provides the sandboxed containers
+  used by the `sannux` commands;
+- [otaviomiranda.com.br](https://github.com/luizomf/otaviomiranda.com.br)
+  provides the site checkout expected by publishing commands;
+- [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) provides the image
+  upscaler used by `imgupscale`.
+
+These repositories are not required for the base installation, but the related
+commands will not work without them.
 
 ## License
 
