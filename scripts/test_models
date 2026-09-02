@@ -12,7 +12,7 @@ cd ~/Desktop/tmp || exit 1
 
 (
 
-TESTING_='Testing. Reply with OK'
+TESTING_='Testing. Answer OK'
 sannux_ephemeral --refresh-pi-resources
 prline
 
@@ -59,6 +59,12 @@ sannux_ephemeral pi --no-session -p --model \
   "${LOCAL_MODEL}" <<< "$TESTING_"
 prline
 
+echo "PI (Ephemeral):"
+  ~/.codex/automations/daily-paper-llm-roundup/runners/run-pi-ephemeral.sh \
+  --model "${LOCAL_MODEL}" \
+  --provider ollama thinking low \
+  --no-session -p <<< "$TESTING_"
+prline
 ) || true
 
 cd -
