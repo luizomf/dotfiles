@@ -5,7 +5,7 @@ set -euo pipefail
 # The downloaded models:
 # k2-fsa/OmniVoice - fp32 - original (heavily tested)
 # drbaph/OmniVoice-bf16 - bf16
-OMNIVOICE_MODEL='drbaph/OmniVoice-bf16'
+OMNIVOICE_MODEL='k2-fsa/OmniVoice'
 INPUT_FILE="${1:?'Missing input file path.'}"
 MODEL="${2:-$OMNIVOICE_MODEL}"
 
