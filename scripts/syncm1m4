@@ -106,12 +106,20 @@ rsync -havzu --progress --stats "${project_excludes[@]}" ~/.ollama/service/ fedo
 echo
 prline
 
-
 # Omxterm
 rsync -havzu --progress --stats "${project_excludes[@]}" ~/.config/omxterm/ m132:~/.config/omxterm/
 rsync -havzu --progress --stats "${project_excludes[@]}" ~/.config/omxterm/ m4128:~/.config/omxterm/
 rsync -havzu --progress --stats "${project_excludes[@]}" m4128:~/.config/omxterm/ ~/.config/omxterm/
 rsync -havzu --progress --stats "${project_excludes[@]}" ~/.config/omxterm/ fedoraair:~/.config/omxterm/
+
+echo
+prline
+
+# Daily
+rsync -havzu --progress --stats "${project_excludes[@]}" ~/.codex/automations/ m132:~/.codex/automations/
+rsync -havzu --progress --stats "${project_excludes[@]}" ~/.codex/automations/ m4128:~/.codex/automations/
+rsync -havzu --progress --stats "${project_excludes[@]}" m4128:~/.codex/automations/ ~/.codex/automations/
+rsync -havzu --progress --stats "${project_excludes[@]}" ~/.codex/automations/ fedoraair:~/.codex/automations/
 
 echo
 prline
