@@ -59,10 +59,10 @@ sannux_ephemeral pi --no-session -p --model \
   "${LOCAL_MODEL}" <<< "$TESTING_"
 prline
 
-echo "PI (Ephemeral):"
+echo "PI Daily (Ephemeral):"
   ~/.codex/automations/daily-paper-llm-roundup/runners/run-pi-ephemeral.sh \
   --model "${LOCAL_MODEL}" \
-  --provider ollama thinking low \
+  --provider ollama --thinking low \
   --no-session -p <<< "$TESTING_"
 prline
 ) || true
