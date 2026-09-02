@@ -24,7 +24,7 @@ resolve_agent_home() (
   # shellcheck disable=SC1091
   source .env
 
-  local agent_home="${AGENT_HOME_PATH}"
+  local agent_home="${AGENT_HOME_PATH:-${HOME}/sannux-data/agent-homes/${template}}"
   agent_home="${agent_home/#\~/$HOME}"
   printf '%s\n' "$agent_home"
 )
@@ -37,12 +37,14 @@ refresh_pi_resources() (
   test -d "$host_agent_dir/extensions"
   test -d "$host_agent_dir/skills"
 
-  cd "$template_dir"
-  # shellcheck disable=SC1091
-  source .env
+  local persistent_home
+  persistent_home="$(resolve_agent_home pi)"
+  # This assignment is isolated inside the refresh subshell.
+  # shellcheck disable=SC2030
+  local AGENT_HOME_PATH="$persistent_home"
+  export AGENT_HOME_PATH
 
-  local persistent_home="${AGENT_HOME_PATH}"
-  persistent_home="${persistent_home/#\~/$HOME}"
+  cd "$template_dir"
   test -d "$persistent_home"
   if [[ -z "$persistent_home" || "$persistent_home" == "/" || "$persistent_home" == "$HOME" ]]; then
     printf 'Unsafe Pi home for resource refresh: %s\n' "$persistent_home" >&2
@@ -129,12 +131,11 @@ template="${1:?'Usage: sannux_ephemeral <template_name>|--refresh-pi-resources'}
 
 cd "templates/$template" || exit 1
 
-# shellcheck disable=SC1091
-source .env
-
 # EPHEMERAL
-persistent_home="${AGENT_HOME_PATH}"
-persistent_home="${persistent_home/#\~/$HOME}"
+persistent_home="$(resolve_agent_home "$template")"
+# refresh_pi_resources cannot mutate this shell.
+# shellcheck disable=SC2031
+export AGENT_HOME_PATH="$persistent_home"
 if [[ -z "$persistent_home" || "$persistent_home" == "/" \
   || "$persistent_home" == "$HOME" || "$persistent_home" == "$HOME/" ]]; then
   printf 'Unsafe persistent home for ephemeral run: %s\n' "$persistent_home" >&2
