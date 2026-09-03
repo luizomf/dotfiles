@@ -9,7 +9,7 @@
     },
     {
       "name": "Restart WireGuard All Hosts",
-      "body": "ssh -t m132 'zsh -lc \". ~/.zshrc ; sudo wg-quick down wg0 ; sudo wg-quick up wg0 ;\"' ; ssh -t m4128 'zsh -lc \". ~/.zshrc ; sudo wg-quick down wg0 ; sudo wg-quick up wg0 ;\"' ; ssh -t fedoraair 'zsh -lc \". ~/.zshrc ; sudo wg-quick down wg0 ; sudo wg-quick up wg0 ;\"'",
+      "body": "hosts=(m132 m4128 fedoraair); for h in \"${hosts[@]}\"; do; echo \"HOST DOWN: $h\"; ssh -t \"${h}\" 'zsh -lc \". ~/.zshrc ; sudo wg-quick down wg0 ;\"'; done; echo 'REBOOT'; ssh kvm8reboot; sleep 60; for h in \"${hosts[@]}\"; do echo \"HOST UP: $h\";  ssh -t \"${h}\" 'zsh -lc \". ~/.zshrc ; sudo wg-quick up wg0 ;\"'; done;",
       "description": "Use ssh to restart WireGuard in all local hosts.",
       "execute": true
     },
