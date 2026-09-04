@@ -36,7 +36,7 @@ sannux_ephemeral pi --no-session -p <<< "$TESTING_"
 prline
 
 echo "PI (NOT EPHEMERAL):"
-sannux run pi -p --no-session --model openai-codex/gpt-5.6-sol:high <<< "$TESTING_"
+sannux run pi -p --no-session --model openai-codex/gpt-6-astra:medium <<< "$TESTING_"
 prline
 
 echo "AGY:"
@@ -50,7 +50,7 @@ pi --no-session -p <<< \
 prline
 
 echo 'CODEX codex:'
-codex --model gpt-5.6-sol -c model_reasoning_effort=low --yolo exec --ephemeral \
+codex --model gpt-6-astra -c model_reasoning_effort=low --yolo exec --ephemeral \
   2>/dev/null <<< "$TESTING_"
 prline
 
