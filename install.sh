@@ -149,12 +149,12 @@ if [[ "$OP_SYSTEM" == "ubuntu" ]]; then
 
   loginfo "Instalando dependências do Ubuntu..."
   sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    aria2 autoconf automake bat blt-dev build-essential cmake curl ffmpeg \
-    fd-find fonts-firacode fonts-jetbrains-mono fzf gettext git htop libbz2-dev \
+    aria2 autoconf automake blt-dev build-essential cmake curl ffmpeg \
+    fd-find fonts-firacode fonts-jetbrains-mono gettext git htop libbz2-dev \
     libgdbm-dev liblua5.4-dev liblzma-dev libreadline-dev libsqlite3-dev locales \
     libssl-dev libtool libtool-bin llvm lua5.4 luarocks make nano ninja-build \
-    openssl p7zip pkgconf python3-dev ripgrep sqlite3 tcl tcl-dev tk tk-dev \
-    tmux tree unzip vim watch wget zlib1g-dev
+    openssl pkgconf python3-dev ripgrep sqlite3 tcl tcl-dev tk tk-dev \
+    tree unzip vim watch wget zlib1g-dev
 
   if ! locale -a | grep -Eqi '^en_US\.utf-?8$'; then
     sudo locale-gen en_US.UTF-8
@@ -162,7 +162,8 @@ if [[ "$OP_SYSTEM" == "ubuntu" ]]; then
   sudo update-locale LANG=en_US.UTF-8
 
   install_homebrew
-  brew install fastfetch font-fira-code-nerd-font gcc neovim tree-sitter-cli rtk glow
+  brew install fastfetch font-fira-code-nerd-font gcc neovim tree-sitter-cli rtk glow \
+    bat chafa fzf tmux btop gh imagemagick just lazygit p7zip pandoc vhs trash-cli hf
 
   mkdir -p "$HOME/.local/bin"
   if ! command -v fd > /dev/null 2>&1 && command -v fdfind > /dev/null 2>&1; then
