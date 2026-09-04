@@ -320,6 +320,8 @@ backup_and_link "../../dotfiles/omxterm/config.json" \
   "$HOME/.config/omxterm/config.json"
 backup_and_link "../../dotfiles/omxterm/snippets.json" \
   "$HOME/.config/omxterm/snippets.json"
+backup_and_link "../../dotfiles/omxterm/themes" \
+  "$HOME/.config/omxterm/themes"
 backup_and_link "$REPO_DIR/fastfetch" "$HOME/.config/fastfetch"
 
 VIM_PLUG_PATH="$HOME/.vim/autoload/plug.vim"
@@ -390,6 +392,7 @@ required_links=(
   "$HOME/.config/ghostty"
   "$HOME/.config/omxterm/config.json"
   "$HOME/.config/omxterm/snippets.json"
+  "$HOME/.config/omxterm/themes"
   "$HOME/.config/fastfetch"
   "$HOME/.pi/agent/settings.json"
 )
