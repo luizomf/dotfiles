@@ -3,8 +3,10 @@
   "defaultModel": "gpt-5.6-sol",
   "defaultThinkingLevel": "medium",
   "theme": "omtheme",
-  "enabledModels": ["gpt-*", "ollama/*"],
-
+  "enabledModels": [
+    "gpt-*",
+    "ollama/*"
+  ],
   "compaction": {
     "enabled": true
   },
@@ -12,7 +14,6 @@
     "enabled": true,
     "maxRetries": 3
   },
-  "enabledModels": ["gpt-*", "ollama/*"],
   "warnings": {
     "anthropicExtraUsage": true
   },
@@ -21,7 +22,7 @@
     "-../../.codex/skills/",
     "-../../.claude/skills/"
   ],
-  "lastChangelogVersion": "0.84.4",
+  "lastChangelogVersion": "0.85.0",
   "outputPad": 1,
   "steeringMode": "one-at-a-time",
   "enableSkillCommands": true,
