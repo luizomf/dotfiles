@@ -10,7 +10,7 @@ for host in "${hosts[@]}"; do
   printf '\e[32mHost:\e[0m %s\n' "$host"
   printf '\e[32mCommand:\e[0m \e[33m%s\e[0m\n\n' "$cmd"
 
-  ssh "${host}" "$cmd"
+  ssh -t "${host}" "$cmd"
 
   echo '---'
 done
