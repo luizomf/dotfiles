@@ -17,11 +17,11 @@ fi
 
 case "$profile" in
   quick)
-    default_model="${CODEX_SEARCH_QUICK_MODEL:-gpt-5.4-mini}"
+    default_model="${CODEX_SEARCH_QUICK_MODEL:-gpt-6-astra}"
     default_reasoning="${CODEX_SEARCH_QUICK_REASONING:-low}"
     ;;
   research)
-    default_model="${CODEX_SEARCH_RESEARCH_MODEL:-gpt-5.6-sol}"
+    default_model="${CODEX_SEARCH_RESEARCH_MODEL:-gpt-6-astra}"
     default_reasoning="${CODEX_SEARCH_RESEARCH_REASONING:-medium}"
     ;;
   *)
@@ -42,8 +42,8 @@ Usage:
 
 Profiles:
   quick     Search, scraping, extraction, and source cleanup (default:
-            gpt-5.4-mini with low reasoning).
-  research  Complex source comparison and synthesis (default: gpt-5.6-sol
+            gpt-6-astra with low reasoning).
+  research  Complex source comparison and synthesis (default: gpt-6-astra
             with medium reasoning).
 
 Permissions:
