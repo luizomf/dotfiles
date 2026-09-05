@@ -65,6 +65,18 @@ callers may select a machine-specific replacement with `OM_PATHS_FILE`.
 `omnivoice_m4128_half` also accepts `OMNIVOICE_REMOTE_APP` when the remote
 checkout differs from the local one.
 
+## Tmux window picker
+
+The `prefix Ctrl+l` / right-click window picker lists windows across sessions by
+most recent visit. Switching windows or attaching/switching sessions updates the
+order; terminal output does not. Unvisited windows fall back to session/index
+order. Typing a query still ranks matches by relevance.
+
+Visit history lives only in the running tmux server and starts empty after a
+server restart. Reload the tmux config (`prefix r`) to enable tracking in an
+existing server. Focused regression checks (requires tmux and fzf):
+`python3 -m unittest tests.test_tmux_fzf`. They use disposable isolated servers.
+
 ## Pi Coding Agent
 
 The installer links the static configuration under `pi/agent/` into

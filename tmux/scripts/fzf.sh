@@ -2,12 +2,10 @@
 
 # The target remains searchable, but only the fixed-width row is displayed.
 LIST_FORMAT=$'#S:#I\t#{?window_active,✚, }  #{=16;p16:#{session_name}:#{window_index}}  #{=36;p36:#{?#{@pi_status},#{@pi_status},#{pane_title}}}  #{=16;p16:window_name}'
-CURRENT_SESSION="$(tmux display-message -p '#S')"
-LIST="$({
-  tmux display-message -p "$LIST_FORMAT"
-  tmux list-window -t "$CURRENT_SESSION" -F "$LIST_FORMAT"
-  tmux list-window -a -F "$LIST_FORMAT"
-} | awk -F $'\t' '!seen[$1]++')"
+# Strip the hidden rank after sorting; unvisited windows fall back to session/index.
+LIST="$(tmux list-windows -a -F "#{?@window_mru,#{@window_mru},0}"$'\t'"$LIST_FORMAT" |
+  LC_ALL=C sort -t $'\t' -k1,1nr -k2,2V |
+  cut -f2-)"
 # Add ANSI colors after tmux pads the columns so escape sequences do not affect alignment.
 LIST="${LIST//󰓅/$'\033[32m󰓅\033[39m'}"
 LIST="${LIST///$'\033[31m\033[39m'}"
