@@ -6,6 +6,9 @@ CURDIR="${3:-$(tmux display-message -p '#{pane_current_path}')}"
 
 CURRENT_SESSION=$(tmux display-message -p "#{session_name}")
 
+POPUP_WIDTH="${POPUP_WIDTH:-80%}"
+POPUP_HEIGHT="${POPUP_HEIGHT:-80%}"
+
 if [ "${CURRENT_SESSION}" = "${SESSION_NAME}" ]; then
   # We are inside the popup, so we detach
   tmux detach-client
@@ -24,6 +27,6 @@ else
   # Open the popup
   # -E: closes when command ends
   # attach: attach to the floating session
-  tmux popup -d "#{pane_current_path}" -xC -yC -w90% -h90% \
+  tmux popup -d "#{pane_current_path}" -xC -yC -w "${POPUP_WIDTH}" -h "${POPUP_HEIGHT}" \
       -E "tmux attach -t ${SESSION_NAME}"
 fi
