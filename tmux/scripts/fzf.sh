@@ -12,6 +12,7 @@ LIST="${LIST///$'\033[31m\033[39m'}"
 WINDOW_COUNT="$(printf '%s\n' "$LIST" | wc -l | tr -d ' ')"
 POPUP_HEIGHT=$((WINDOW_COUNT + 5))
 ((POPUP_HEIGHT > 20)) && POPUP_HEIGHT=20
+POPUP_WIDTH="${POPUP_WIDTH:-80%}"
 
 LIST_FILE="$(mktemp "${TMPDIR:-/tmp}/tmux-windows.XXXXXX")"
 trap 'rm -f "$LIST_FILE"' EXIT
@@ -38,7 +39,7 @@ FZF_TMUX_CMD=(
   --with-nth=2
   --bind="change:reload(fzf --filter={q} --algo=v2 --tiebreak=length < '$LIST_FILE' || true)"
   --header='Enter: switch · Esc: close'
-  --tmux="center,80%,${POPUP_HEIGHT}"
+  --tmux="center,${POPUP_WIDTH},${POPUP_HEIGHT}"
 )
 
 SELECTED="$(printf '%s\n' "$LIST" | "${FZF_TMUX_CMD[@]}")"
