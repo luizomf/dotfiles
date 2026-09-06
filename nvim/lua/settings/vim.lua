@@ -62,7 +62,7 @@ vim.cmd("syntax on")
 
 -- Render tabs and white spaces
 vim.opt.list = true
-vim.opt.listchars = "tab:>-,trail:-,lead:·,eol:¬"
+-- vim.opt.listchars = "tab:>-,trail:-,lead:·,eol:¬"
 
 -- restaura posição do cursor
 vim.cmd([[
