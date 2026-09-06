@@ -83,3 +83,4 @@ Session.vim
 *.db
 *.bak
 *.orig
+.scratch/
