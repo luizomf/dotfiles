@@ -41,10 +41,10 @@ set t_Co=256
 " colorscheme sorbet " Nice
 " colorscheme lunaperche " Nice
 " colorscheme pablo " Nice
-colorscheme slate " Nice
+" colorscheme slate " Nice
 " colorscheme wildcharm " Nice
 " colorscheme zaibatsu " Nice
-set background=dark
+" set background=dark
 
 highlight Normal ctermbg=NONE guibg=NONE
 highlight NonText ctermbg=NONE guibg=NONE
