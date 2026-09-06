@@ -54,6 +54,12 @@
       "body": "for t in codex codex-ollama agy pi; do sannux setup \"$t\"; sannux rebuild \"$t\"; done",
       "description": "Rebuild selected Sannux Templates",
       "execute": false
+    },
+    {
+      "name": "Change tmux popup size (temp)",
+      "body": "((T=600 W=50% H=50%; tmux setenv -g POPUP_WIDTH $W; tmux setenv -g POPUP_HEIGHT $H; sleep $T; tmux setenv -gu POPUP_WIDTH; tmux setenv -gu POPUP_HEIGHT) >/dev/null 2>&1 &)",
+      "description": "Set tmux width and height for popups and unset the variables after 10 minutes",
+      "execute": false
     }
   ]
 }
