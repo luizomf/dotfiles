@@ -67,3 +67,11 @@ Treat every tracked file and Git commit as public.
 - For other changes, use focused interpreter-specific syntax or behavior checks
   that do not alter the host. Review the final diff and report exactly what ran,
   what was skipped, and any remaining risk.
+
+## Scratch
+
+Use `./.scratch/*` for internal notes, working documents, and memory that need to
+persist across sessions for days while work is ongoing. Unlike `/tmp` or ephemeral
+handoffs, these files should remain available while useful. They are local-only,
+not repository deliverables: never commit them, and remove them only when no
+longer needed.
