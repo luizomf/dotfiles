@@ -1,10 +1,14 @@
+" INSTALL PLUGGEG:
+" curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+" vim +PlugInstall
 call plug#begin('~/.vim/plugged')
 " fzf
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
+Plug 'machakann/vim-highlightedyank'
+
 call plug#end()
 
-packadd! hlyank
 syntax on
 
 set nocompatible
@@ -41,7 +45,7 @@ set t_Co=256
 " colorscheme sorbet " Nice
 " colorscheme lunaperche " Nice
 " colorscheme pablo " Nice
-" colorscheme slate " Nice
+ colorscheme slate " Nice
 " colorscheme wildcharm " Nice
 " colorscheme zaibatsu " Nice
 " set background=dark
