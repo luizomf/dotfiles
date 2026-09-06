@@ -6,7 +6,13 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 # shellcheck source=/dev/null
 source "${OM_PATHS_FILE:-${script_dir}/../config/paths.sh}"
 readonly AUTOMATION_ROOT="${AUTOMATION_ROOT:-${HOME}/.codex/automations/daily-paper-llm-roundup}"
-readonly ENV_FILE="${OMNIVOICE_ENV_FILE:-${HOME}/.env}"
+if [[ -n "${OMNIVOICE_ENV_FILE:-}" ]]; then
+  readonly ENV_FILE="$OMNIVOICE_ENV_FILE"
+elif [[ -f "${HOME}/.env" ]]; then
+  readonly ENV_FILE="${HOME}/.env"
+else
+  readonly ENV_FILE="${HOME}/.env/.env.r2"
+fi
 readonly POSTS_ROOT="${POSTS_ROOT:-$PROJECTS_DIR/otaviomiranda.com.br/src/content/posts}"
 readonly OMNIVOICE_DIR="${OMNIVOICE_DIR:-$PROJECTS_DIR/omnivoicetts}"
 readonly AUDIO_PATH="${OMNIVOICE_AUDIO_PATH:-$OMNIVOICE_DIR/outputs/daily-paper/final.opus}"

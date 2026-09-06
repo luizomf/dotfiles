@@ -1,9 +1,27 @@
 #!/usr/bin/env bash
 # vim: set filetype=sh :
 
-# Local .env
-# shellcheck disable=SC1091
-[[ -f ~/.env ]] && source "${HOME}/.env"
+# Load local service configuration, including hidden .env.* files.
+load_local_env() {
+  local env_file
+  if [[ -n "${ZSH_VERSION:-}" ]]; then
+    setopt localoptions nullglob
+  fi
+
+  # Preserve compatibility with hosts that still use a single ~/.env file.
+  if [[ -f "${HOME}/.env" ]]; then
+    # shellcheck disable=SC1091
+    source "${HOME}/.env"
+  elif [[ -d "${HOME}/.env" ]]; then
+    for env_file in "${HOME}"/.env/.env.*; do
+      [[ -f "$env_file" ]] || continue
+      # shellcheck disable=SC1090
+      source "$env_file"
+    done
+  fi
+}
+load_local_env
+unset -f load_local_env
 
 # if [[ -z "$SPLASH_SHOWN" ]]; then
 #   export SPLASH_SHOWN=1
