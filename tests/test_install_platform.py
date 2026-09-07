@@ -14,6 +14,37 @@ class InstallPlatformTests(unittest.TestCase):
                                'test', str(MODULE), *args],
                               text=True, capture_output=True, timeout=5)
 
+    def run_error_policy(self, body):
+        # Exercise the actual prologue without running the destructive installer.
+        lines = (ROOT / 'install.sh').read_text().splitlines()
+        options = next(line for line in lines if line.startswith('set -'))
+        trap = next(line for line in lines if line.startswith('trap '))
+        script = options + '\nlogerror() { printf "INSTALLER_ERR\\n" >&2; }\n' + trap + '\n' + body
+        # macOS /bin/bash 3.2 differs from newer Bash for ERR in a guarded $(...).
+        return subprocess.run(['/bin/bash', '-c', script], text=True,
+                              capture_output=True, timeout=5)
+
+    def test_expected_subshell_probe_does_not_report_installation_failure(self):
+        result = self.run_error_policy('''
+            probe() {
+                local value
+                if ! value="$(false)"; then printf 'expected-miss\\n'; fi
+            }
+            probe
+            printf 'READY\\n'
+        ''')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('READY', result.stdout)
+        self.assertEqual(result.stderr, '')
+
+    def test_real_failures_still_abort_and_report(self):
+        for command in ('false', 'fail() { false; }; fail', 'value="$(false)"', '( false )'):
+            with self.subTest(command=command):
+                result = self.run_error_policy(command + '\nprintf "UNREACHABLE\\n"')
+                self.assertNotEqual(result.returncode, 0)
+                self.assertNotIn('UNREACHABLE', result.stdout)
+                self.assertIn('INSTALLER_ERR', result.stderr)
+
     def test_supported_platforms(self):
         for kernel, distro, expected in (
             ('Darwin', '', 'darwin'), ('Linux', 'ubuntu', 'ubuntu'),

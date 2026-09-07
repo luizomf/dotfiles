@@ -30,7 +30,10 @@ logerror() {
   printf "🔴 ${red}%s${reset}\n" "$1" >&2
 }
 
-trap 'logerror "Installation failed at line $LINENO."' ERR
+# Report only an actual failed installer exit. macOS Bash 3.2 can fire ERR for
+# expected probes inside guarded substitutions, while omitting a parent ERR for
+# some failed subshells. EXIT handles both without claiming a successful run failed.
+trap 'exit_status=$?; if (( BASH_SUBSHELL == 0 && exit_status != 0 )); then logerror "Installation failed (exit $exit_status)."; fi' EXIT
 
 run_remote_script() (
   local shell_path=$1

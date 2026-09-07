@@ -21,6 +21,7 @@ Clean-install testing has been performed only on:
 - Ubuntu 24.04 on ARM
 - Ubuntu 26.04 on ARM
 - macOS Sequoia on Apple Silicon
+- macOS 26.6.2 on Apple Silicon (clean VM, full toolchain/plugin bootstrap)
 
 Other Ubuntu and macOS versions may work, but are not supported until tested.
 
@@ -93,6 +94,11 @@ or PATH before retrying. A rerun is not a frozen environment: package installati
 may update requested packages/dependencies, Node LTS and Python selection may
 change, and plugin bootstrap restores the repository's locked versions. Use the
 existing toolchain/plugin skip flags when intentionally preserving those layers.
+
+Failure diagnostics use the installer's final exit status, rather than reporting
+expected third-party probes as failures on macOS Bash 3.2. Unhandled failures in
+commands, functions, command substitutions and subshells still abort and report
+failure.
 
 Focused policy tests do not invoke the installer or real package managers:
 `python3 -m unittest tests.test_install_platform`.
