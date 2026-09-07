@@ -8,12 +8,14 @@ additional_hosts=()
 selected_host=''
 list_only=0
 tty=1
+capture=0
 
 usage() {
   printf '%s\n' \
     "Usage: ${0##*/} [--additional-hosts HOST ... --] [--no-tty] 'COMMAND'" \
     "       ${0##*/} --host HOST [--no-tty] 'COMMAND'" \
-    "       ${0##*/} --list [--additional-hosts HOST ...]"
+    "       ${0##*/} --list [--additional-hosts HOST ...]" \
+    "       ${0##*/} --host HOST --capture 'COMMAND'"
 }
 
 fail() { printf '%s\n' "$1" >&2; exit 2; }
@@ -41,12 +43,17 @@ while (( $# )); do
       ;;
     --list) list_only=1; shift ;;
     --no-tty) tty=0; shift ;;
+    --capture) capture=1; shift ;;
     -h|--help) usage; exit 0 ;;
     --) shift; break ;;
     -*) fail "Unknown option: $1" ;;
     *) break ;;
   esac
 done
+
+if (( capture )); then
+  [[ -n "$selected_host" ]] && (( ! list_only )) || fail '--capture requires --host and cannot be combined with --list.'
+fi
 
 if [[ -n "$selected_host" ]]; then
   (( ${#additional_hosts[@]} == 0 )) || fail '--host cannot be combined with --additional-hosts.'
@@ -68,6 +75,11 @@ if (( list_only )); then
 fi
 (( $# == 1 )) || fail "Expected one quoted command; use ${0##*/} --help."
 cmd="$1"
+if (( capture )); then
+  # Machine-readable stdout, no prompts or stdin consumption. Exec lets the
+  # caller's timeout terminate SSH itself rather than just this wrapper.
+  exec ssh -n -T -o BatchMode=yes -o ConnectTimeout=10 "$selected_host" "$cmd"
+fi
 ssh_options=()
 (( ! tty )) || ssh_options=(-t)
 exit_status=0

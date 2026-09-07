@@ -13,7 +13,7 @@ sync_hosts=("${(@f)host_output}")
 
 fc -W
 
-"$HOME"/dotfiles/scripts/zsh_history_sync.py
+"$script_dir/zsh_history_sync.py" "$@"
 "$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh
 
 "$host_runner" 'stop_omnivoicetts'

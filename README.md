@@ -110,7 +110,10 @@ is reported without stopping the remaining hosts; a final summary lists failures
 and the script exits with the first failed SSH invocation's status (zero if all
 succeeded). No failed command is retried. Use `--no-tty` for unattended calls,
 `--host HOST` for exactly one destination, or `--list` to list the fleet without
-contacting it:
+contacting it. For programmatic reads, `--host HOST --capture 'COMMAND'` emits
+only SSH stdout/stderr, disables TTY/stdin and password prompts, and uses a
+10-second connection timeout. It replaces the wrapper with SSH so the caller
+can enforce a whole-command timeout directly.
 
 ```sh
 run_all_hosts --list --additional-hosts utmvm1
@@ -158,10 +161,17 @@ continue. Staging requires Python 3 and is removed on normal script exit.
 Expansion of `~` was checked with local tmux 3.7c for sessions, windows, and panes;
 other hosts/versions and full application restoration have not been verified.
 
+`scripts/zsh_history_sync.py` uses the same fleet and SSH runner. It accepts
+`--additional-hosts HOST ...` and `--dry-run` (which still reads remote histories).
+It skips the local hostname and unavailable hosts, retaining the 120-second
+per-host read timeout, merge rules, atomic replacement, and ten local backups.
+Its existing Python 3.14 launcher requirement is unchanged. A host-list failure
+aborts before history is modified. `synchosts` forwards additional hosts to the
+history merge as well as rsync; service stops still use only the default fleet.
+
 No installation or reload is needed after editing this script. Running it has
 real effects, including history synchronization, tmux cleanup, service stops,
-`pullall`, and remote writes. The added hosts only extend the rsync section, not
-those preparatory helpers. Check syntax without running synchronization with
+`pullall`, and remote writes. Check syntax without running synchronization with
 `zsh -n scripts/synchosts`.
 
 ## Zsh startup and local service environments

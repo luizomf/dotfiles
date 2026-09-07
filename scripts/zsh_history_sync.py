@@ -6,6 +6,7 @@ a later run. The local history is always part of the merge, so the result is a
 superset of what is already on disk.
 """
 
+import argparse
 import os
 import shutil
 import socket
@@ -22,9 +23,9 @@ CURR_ZSH_HISTORY = HOME / ".zsh_history"
 BKP_ZSH_HISTORY_DIR = HOME / ".zsh_history_bkp"
 KEEP_BACKUPS = 10
 
-REMOTE_HOSTS = ("m4128", "m132", "fedoraair")
+HOST_RUNNER = Path(__file__).resolve().with_name("run_all_hosts")
 REMOTE_HISTORY_PATH = "~/.zsh_history"
-SSH_CONNECT_TIMEOUT = 10
+HOST_LIST_TIMEOUT = 5
 SSH_READ_TIMEOUT = 120
 
 ENTRY_START = b": "
@@ -108,19 +109,26 @@ def sort_entries(entries: set[ZshHistoryEntry]) -> Sequence[ZshHistoryEntry]:
     return sorted(entries, key=lambda e: (e.timestamp, e.command, e.duration))
 
 
+def list_hosts(additional_hosts: Sequence[str]) -> list[str]:
+    """Use the shared fleet and alias validation before touching history."""
+    command = [str(HOST_RUNNER), "--list"]
+    if additional_hosts:
+        command.extend(["--additional-hosts", *additional_hosts])
+    result = subprocess.run(
+        command, check=True, capture_output=True, text=True, timeout=HOST_LIST_TIMEOUT
+    )
+    return result.stdout.splitlines()
+
+
 def read_remote_history(host: str) -> bytes | None:
     """Return the host's raw history, or None when it cannot be read."""
     try:
         out = subprocess.run(
             [
-                "ssh",
-                "-n",
-                "-T",
-                "-o",
-                "BatchMode=yes",
-                "-o",
-                f"ConnectTimeout={SSH_CONNECT_TIMEOUT}",
+                str(HOST_RUNNER),
+                "--host",
                 host,
+                "--capture",
                 f"cat {REMOTE_HISTORY_PATH}",
             ],
             check=False,
@@ -145,10 +153,12 @@ def is_local_host(host: str) -> bool:
     return host.split(".")[0].lower() == socket.gethostname().split(".")[0].lower()
 
 
-def collect_entries(local_entries: set[ZshHistoryEntry]) -> set[ZshHistoryEntry]:
+def collect_entries(
+    local_entries: set[ZshHistoryEntry], hosts: Sequence[str]
+) -> set[ZshHistoryEntry]:
     all_entries = set(local_entries)
 
-    for host in REMOTE_HOSTS:
+    for host in hosts:
         if is_local_host(host):
             print(f"  {host}: skipped (this machine)")
             continue
@@ -216,7 +226,7 @@ def write_history(curr_history_path: Path, entries: Sequence[ZshHistoryEntry]) -
 
 
 def merge_and_overwrite_histories(
-    curr_history_path: Path, *, dry_run: bool = False
+    curr_history_path: Path, *, hosts: Sequence[str], dry_run: bool = False
 ) -> int:
     if not curr_history_path.is_file():
         print(f"ABORT: {curr_history_path} does not exist")
@@ -225,7 +235,7 @@ def merge_and_overwrite_histories(
     local_entries = history_to_entries(curr_history_path.read_bytes())
     print(f"  local: {len(local_entries)} entries")
 
-    all_entries = collect_entries(local_entries)
+    all_entries = collect_entries(local_entries, hosts)
 
     if len(all_entries) < len(local_entries):
         # The merge is a superset of the local history by construction, so this
@@ -249,15 +259,30 @@ def merge_and_overwrite_histories(
     return 0
 
 
-if __name__ == "__main__":
-    dry_run = "--dry-run" in sys.argv[1:]
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--dry-run", action="store_true", help="read and merge without writing"
+    )
+    parser.add_argument("--additional-hosts", nargs="+", default=[], metavar="HOST")
+    args = parser.parse_args()
+    try:
+        hosts = list_hosts(args.additional_hosts)
+    except (subprocess.SubprocessError, OSError) as err:
+        print(f"Cannot load host list: {err}", file=sys.stderr)
+        if isinstance(err, subprocess.CalledProcessError) and err.stderr:
+            print(err.stderr.strip(), file=sys.stderr)
+        return 1
 
     print()
     print("ZSH History Sync starting...")
-
-    exit_code = merge_and_overwrite_histories(CURR_ZSH_HISTORY, dry_run=dry_run)
-
+    exit_code = merge_and_overwrite_histories(
+        CURR_ZSH_HISTORY, hosts=hosts, dry_run=args.dry_run
+    )
     print("Sync done!" if exit_code == 0 else "Sync failed!")
     print()
+    return exit_code
 
-    sys.exit(exit_code)
+
+if __name__ == "__main__":
+    sys.exit(main())
