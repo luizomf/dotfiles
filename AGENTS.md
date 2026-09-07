@@ -33,6 +33,8 @@ the installer. Do not assume a change is isolated to this repository.
   implementation and tests. Correct verified discrepancies in the same change;
   prefer links to a source of truth over duplicated facts. If intent or evidence
   is unclear, report the conflict rather than inventing behavior or test results.
+- [ ] **Cleanup:** before final handoff, follow [Task cleanup](#task-cleanup) for
+  task-owned temporary artifacts, worktrees, and local or remote branches.
 - [ ] **Handoff:** review the final diff, update affected documentation, and report
   checks run, checks skipped or not applicable, and remaining risks. If a relevant
   consumer cannot be verified, say so; do not claim the next run is guaranteed.
@@ -106,6 +108,27 @@ Treat every tracked file and Git commit as public.
 - For other changes, use focused interpreter-specific syntax or behavior checks
   that do not alter the host. Review the final diff and report exactly what ran,
   what was skipped, and any remaining risk.
+
+## Task cleanup
+
+When finishing a task, remove temporary artifacts, worktrees, and branches that
+this agent created for that task and no longer needs. Apply this to the local
+machine, authorized remote checkouts, and branches on Git remotes.
+
+- Establish ownership from this task's recorded actions; a matching name, age,
+  clean worktree, or merged status alone does not prove ownership.
+- Before removing a worktree or branch, verify its work is preserved in the
+  intended target branch or another agreed durable location. Check for untracked
+  files, uncommitted changes, and commits that have not been preserved. Never
+  force deletion to bypass these checks.
+- Never remove another agent's or the user's worktrees, branches, changes, or
+  local state. If ownership, preservation, or remote authorization is uncertain,
+  leave the item intact and report it rather than guessing.
+- Use explicit task-owned paths and branch names, not broad deletion or pruning
+  commands. Do not delete the user's primary checkout or shared target branches.
+- Stop task-owned temporary processes when no longer needed. Preserve useful
+  investigation notes under the [Scratch](#scratch) policy, and report any
+  deliberately retained artifacts or cleanup that could not safely complete.
 
 ## Scratch
 
