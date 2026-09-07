@@ -134,7 +134,6 @@ cask "vlc"
 cask "whatsapp"
 # Video communication and virtual meeting platform
 cask "zoom"
-# edgetts is a local project launched by dotfiles/scripts/edgetts, not a uv tool.
 uv "langgraph-cli[inmem]"
 uv "mypy"
 uv "pyright"
