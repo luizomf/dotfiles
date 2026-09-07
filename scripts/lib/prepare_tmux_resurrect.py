@@ -21,8 +21,13 @@ def prepare(source: Path, destination: Path, home: str) -> None:
             if len(fields) < 11:
                 raise ValueError("unsupported resurrect pane record")
             directory = fields[7]
+            # Resurrect expands ~ in new_window, but not new_session/new_pane.
+            # All three pass -c through tmux's format expansion instead.
             if directory == prefix or directory.startswith(prefix + b"/"):
-                fields[7] = b":~" + directory[len(prefix):]
+                fields[7] = b":#{HOME}" + directory[len(prefix):]
+            elif directory == b":~" or directory.startswith(b":~/"):
+                # Also upgrade snapshots produced by the old staging helper.
+                fields[7] = b":#{HOME}" + directory[2:]
         lines.append(b"\t".join(fields))
 
     # Keep pane contents and other metadata, but never follow copied symlinks

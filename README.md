@@ -185,13 +185,20 @@ subdirectories inside each destination as it copies them.
 
 Before tmux transfers, `scripts/lib/prepare_tmux_resurrect.py` stages a temporary
 copy of the resurrect directory. In the snapshot referenced by `last`, only the
-pane-directory field's exact local-home prefix becomes `~`; commands and other
-fields are untouched. The staged `last` points to the staged snapshot using a
-relative link, even when the original link was absolute. The local snapshot and
+pane-directory field's exact local-home prefix becomes `#{HOME}`, a tmux format
+expanded on the destination machine. Older `~/...` directory fields are upgraded
+too; commands and other fields are untouched. Do not use literal `~` here:
+resurrect expands it for new windows, but not new sessions or split panes, which
+can silently fall back to the home directory. The staged `last` points to the
+staged snapshot using a relative link, even when the original link was absolute. The local snapshot and
 link are not edited. If staging fails, tmux transfers are skipped; other copies
 continue. Staging requires Python 3 and is removed on normal script exit.
-Expansion of `~` was checked with local tmux 3.7c for sessions, windows, and panes;
-other hosts/versions and full application restoration have not been verified.
+Staged `#{HOME}/...` paths were checked with local tmux 3.7c through resurrect's
+actual new-session, new-window, and split-pane functions, including directories
+with spaces. Other hosts/versions and full application restoration have not
+been verified. If a bad restore was subsequently saved, its original project
+path may already be lost; recover that snapshot from the source or a backup
+before synchronizing again.
 
 `scripts/zsh_history_sync.py` uses the same fleet and SSH runner. It accepts
 `--additional-hosts HOST ...` and `--dry-run` (which still reads remote histories).
