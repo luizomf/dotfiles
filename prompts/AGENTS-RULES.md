@@ -33,8 +33,8 @@ already exists.
   policy._
 - **External systems and trust boundaries:** _Services, protocols, schemas,
   sensitive boundaries, and ownership._
-- **Generated artifacts:** _Generated paths, their source inputs, and the command
-  that regenerates them._
+- **Generated artifacts:** _Generated paths, their source inputs, and the
+  command that regenerates them._
 
 ## Canonical commands
 
@@ -96,9 +96,10 @@ When strict repository-wide adoption would fail on legacy code:
 - do not weaken or remove a gate that already passes;
 - require new and materially changed code to meet the target standard;
 - use the tool's narrowest practical baseline, scoped configuration, or changed-
-  code enforcement to isolate pre-existing violations without exempting new debt;
-- record broad cleanup as separate work instead of absorbing it into an unrelated
-  change; and
+  code enforcement to isolate pre-existing violations without exempting new
+  debt;
+- record broad cleanup as separate work instead of absorbing it into an
+  unrelated change; and
 - tighten or remove temporary baselines and exclusions as the affected legacy
   code is intentionally migrated.
 
@@ -114,8 +115,8 @@ production baseline before promoted code becomes maintained product code.
   a behavior change. Reproduce reported defects when practical.
 - Prefer test-driven development for code changes: write a caller-visible test
   first, confirm it fails for the intended reason, implement only enough to make
-  it pass, and then refactor while keeping the tests green. When this workflow is
-  impractical, explain why and still add the applicable tests.
+  it pass, and then refactor while keeping the tests green. When this workflow
+  is impractical, explain why and still add the applicable tests.
 - Make the smallest coherent change. Exclude unrelated cleanup, formatting,
   upgrades, renames, and redesign.
 - Run focused checks during development, then every applicable canonical gate
@@ -138,3 +139,11 @@ production baseline before promoted code becomes maintained product code.
   prohibited artifacts, and destructive operations requiring authorization._
 - **Documentation language and format:** _Language, style, generated-doc rules,
   and documents that must change with affected behavior._
+
+## Scratch
+
+Use `./.scratch/*` for internal notes, working documents, and memory that need
+to persist across sessions for days while work is ongoing. Unlike `/tmp` or
+ephemeral handoffs, these files should remain available while useful. They are
+local-only, not repository deliverables: never commit them, and remove them only
+when no longer needed. MUST BE IGNORED BY `.gitignore`.
