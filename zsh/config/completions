@@ -1,0 +1,54 @@
+#!/usr/bin/env zsh
+# Generate CLI completions on first use, not once per restored tmux pane.
+(( $+functions[compdef] )) || return 0
+
+_om_lazy_completion() {
+  local tool="${service:-${words[1]}}"
+  local completion_script completion_function
+  case "$tool" in
+    codex|docker)
+      completion_script="$(command "$tool" completion zsh)" || return
+      completion_function="_$tool"
+      ;;
+    gh)
+      completion_script="$(command gh completion -s zsh)" || return
+      completion_function=_gh
+      ;;
+    just)
+      completion_script="$(command just --completions zsh)" || return
+      completion_function=_just
+      ;;
+    omqueue)
+      completion_script="$(command omqueue completion zsh)" || return
+      completion_function=_omqueue_zsh
+      ;;
+    *) return 1 ;;
+  esac
+
+  if ! eval "$completion_script"; then
+    compdef _om_lazy_completion "$tool"
+    return 1
+  fi
+  # Some generators (including newer just versions) register a different name.
+  if [[ ${_comps[$tool]} != _om_lazy_completion ]]; then
+    completion_function="${_comps[$tool]}"
+  fi
+  if [[ -z "$completion_script" ]] || (( ! $+functions[$completion_function] )); then
+    compdef _om_lazy_completion "$tool"
+    return 1
+  fi
+  compdef "$completion_function" "$tool"
+  "$completion_function" "$@"
+}
+
+# Preserve the existing availability gates; compinit still handles other tools.
+(( $+commands[codex] )) && compdef _om_lazy_completion codex
+(( $+commands[gh] )) && compdef _om_lazy_completion gh
+(( $+commands[omqueue] )) && compdef _om_lazy_completion omqueue
+if (( $+commands[just] )) && [[ -f Justfile ]]; then
+  compdef _om_lazy_completion just
+fi
+if (( $+commands[docker] )) && [[ -f "$HOME/.docker/completions/_docker" ]]; then
+  compdef _om_lazy_completion docker
+fi
+return 0

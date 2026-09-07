@@ -56,5 +56,11 @@ for f in "${ZSH_CONFIG_FILES[@]}"; do
 done
 
 if [[ -f "${HOME}"/dotfiles/scripts/title ]]; then
-  "${HOME}"/dotfiles/scripts/title "$(basename "$(pwd)")"
+  if [[ -n ${TMUX:-} && -n ${TMUX_PANE:-} ]]; then
+    # A busy restore must not hold the prompt waiting for a tmux title reply.
+    # Manual invocations of scripts/title remain synchronous and report errors.
+    ("${HOME}"/dotfiles/scripts/title "${${PWD:t}:-/}" </dev/null >/dev/null 2>&1) &!
+  else
+    "${HOME}"/dotfiles/scripts/title "${${PWD:t}:-/}"
+  fi
 fi

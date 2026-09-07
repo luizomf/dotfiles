@@ -23,7 +23,11 @@ Clean-install testing has been performed only on:
 - macOS Sequoia on Apple Silicon
 
 Other Ubuntu and macOS versions may work, but are not supported until tested.
-The installer intentionally rejects other Linux distributions.
+
+The configurations are also in use on **Fedora Linux Asahi Remix 44 (KDE Plasma
+Desktop Edition)**. Focused Zsh startup tests and a real tmux/Resurrect restart
+have been validated there. This is not a clean-install test: `install.sh` still
+intentionally rejects Linux distributions other than Ubuntu.
 
 ## Before installing
 
@@ -74,6 +78,50 @@ shells and unattended scripts. It currently defines `PROJECTS_DIR`. Supported
 callers may select a machine-specific replacement with `OM_PATHS_FILE`.
 `omnivoice_m4128_half` also accepts `OMNIVOICE_REMOTE_APP` when the remote
 checkout differs from the local one.
+
+## Zsh startup and local service environments
+
+The interactive loader sources `~/.env` when it is a file, or each
+`~/.env/.env.*` file when it is a directory. Keep these files private and split
+by service so containers and unattended consumers can select only what they
+need. This shell loader still loads all of them; it does not provide container
+or queue environment isolation.
+
+Guard macOS Keychain assignments in those local files, rather than skipping an
+entire service file on Linux:
+
+```sh
+if [ "$(uname -s)" = Darwin ] && command -v security >/dev/null 2>&1; then
+  export EXAMPLE_API_KEY="$(security find-generic-password -s example-service -w)"
+fi
+```
+
+On Linux (or without `security`), this preserves an inherited value and leaves
+an unset variable unset. Supply Linux values through the parent environment or
+private per-service configuration loaded by the appropriate consumer. There is
+no automatic Linux secret-store provider, and skipping a Keychain lookup does
+not create a credential. Never commit real values. Unguarded `security` calls
+can trigger Fedora's PackageKit command-not-found searches in every restored
+shell.
+
+CLI completion generation for Codex, GH, Just, Docker and OMQueue is deferred
+until the first completion request for each command in each shell. Successful
+loads register the generated completion directly; failed generation can retry
+on the next Tab. Existing availability gates remain: Just's override requires
+`Justfile` in the shell's startup directory, and Docker's override requires
+`~/.docker/completions/_docker`. Other completions remain managed by the existing
+configuration. NVM and Pyenv still initialize before the prompt so the toolchain
+PATH is ready for the first command.
+
+Automatic pane-title updates run without blocking Zsh startup inside tmux. The
+title can appear slightly later and automatic tmux updates are best-effort and
+silent; an overlapping restore or another title writer can still replace it.
+Manual `title` commands remain synchronous and report errors. Outside tmux, the
+startup title update remains synchronous.
+
+Changes apply to new shells; do not restart a live tmux server just to apply
+them. Focused isolated checks: `python3 -m unittest tests.test_zsh_startup`.
+These do not measure a real restore or verify live credentials.
 
 ## Tmux window picker
 

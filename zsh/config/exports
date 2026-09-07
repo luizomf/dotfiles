@@ -86,22 +86,6 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
     && . "/opt/homebrew/etc/profile.d/bash_completion.sh"
 fi
 
-if [[ "$(command -v just)" && -f "Justfile" ]]; then
-  eval "$(just --completions zsh)"
-fi
-
-if [[ "$(command -v codex)" ]]; then
-  eval "$(codex completion zsh)"
-fi
-
-if [[ "$(command -v docker)" && -f "${HOME}/.docker/completions/_docker" ]]; then
-  eval "$(docker completion zsh)"
-fi
-
-if [[ "$(command -v gh)" ]]; then
-  eval "$(gh completion -s zsh)"
-fi
-
 # bun completions
 [ -s "$HOME/.oh-my-zsh/completions/_bun" ] && source "$HOME/.oh-my-zsh/completions/_bun"
 
@@ -129,14 +113,5 @@ typeset -gU path
 
 export PATH
 
-# Generate OMQueue completion only when it is first requested.
-if (( $+commands[omqueue] && $+functions[compdef] )); then
-  _omqueue_lazy_completion() {
-    local completion_script
-    completion_script="$(omqueue completion zsh)" || return
-    eval "$completion_script"
-    unfunction _omqueue_lazy_completion
-    _omqueue_zsh "$@"
-  }
-  compdef _omqueue_lazy_completion omqueue
-fi
+# Register lightweight completion loaders after toolchain PATH setup.
+source "${HOME}/dotfiles/zsh/config/completions"
