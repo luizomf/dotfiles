@@ -108,6 +108,11 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
+# brew shellenv can prepend a system Node ahead of an inherited NVM path.
+# nvm use replaces that old path in place; explicitly restore its priority.
+if [[ -n ${NVM_BIN:-} && -x "$NVM_BIN/node" ]]; then
+  path=("$NVM_BIN" "${path[@]}")
+fi
 path=("${HOME}/dotfiles/scripts" "${HOME}/.local/bin" "${path[@]}")
 typeset -gU path
 

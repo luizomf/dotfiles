@@ -6,6 +6,9 @@ REPO_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 BACKUP_DIR="$HOME/.dotfiles-backups/$(date '+%Y%m%d-%H%M%S')"
 readonly REPO_DIR BACKUP_DIR
 
+# shellcheck source=scripts/lib/install-platform.sh
+source "$REPO_DIR/scripts/lib/install-platform.sh"
+
 # Make user-managed tools visible during reruns before shell config is linked.
 export PATH="$HOME/.local/bin:$HOME/.pyenv/bin:$PATH"
 
@@ -118,19 +121,20 @@ case "$(uname -s)" in
     fi
     # shellcheck disable=SC1091
     . /etc/os-release
-    if [[ "${ID:-}" != "ubuntu" ]]; then
-      logerror "Distribuição Linux não suportada: ${PRETTY_NAME:-desconhecida}"
+    ostree=0
+    [[ ! -e /run/ostree-booted ]] || ostree=1
+    if ! OP_SYSTEM=$(detect_install_platform Linux "${ID:-}" "$ostree"); then
+      logerror "Distribuição Linux não suportada (incluindo variantes OSTree): ${PRETTY_NAME:-desconhecida}"
       exit 1
     fi
-    OP_SYSTEM="ubuntu"
     loginfo "Sistema detectado: ${PRETTY_NAME}."
     ;;
   Darwin)
-    OP_SYSTEM="darwin"
+    OP_SYSTEM=$(detect_install_platform Darwin)
     loginfo "Sistema detectado: macOS $(sw_vers -productVersion)."
     ;;
   *)
-    logerror "Apenas macOS e Ubuntu são suportados."
+    logerror "Apenas macOS, Ubuntu e Fedora tradicional/Asahi são suportados."
     exit 1
     ;;
 esac
@@ -195,6 +199,16 @@ if [[ "$OP_SYSTEM" == "ubuntu" ]]; then
   fi
 fi
 
+if [[ "$OP_SYSTEM" == "fedora" ]]; then
+  install_fedora_packages
+  zsh_path=$(command -v zsh)
+  if [[ "$(getent passwd "$(id -un)" | cut -d: -f7)" != "$zsh_path" ]]; then
+    sudo chsh -s "$zsh_path" "$(id -un)"
+  fi
+  # Fedora keeps the host's locale and terminal choice. Ghostty's Ubuntu-only
+  # installer must not run here; the existing desktop terminal is sufficient.
+fi
+
 loginfo "Configurando Oh My Zsh..."
 if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
   run_remote_script /bin/sh \
@@ -228,7 +242,7 @@ fi
 
 if ! command -v pyenv > /dev/null 2>&1; then
   loginfo "Instalando pyenv..."
-  rm -rf "$HOME/.pyenv"
+  require_new_toolchain_dir "$HOME/.pyenv"
   run_remote_script /bin/bash https://pyenv.run
 fi
 
@@ -239,7 +253,7 @@ fi
 
 if ! command -v nvm > /dev/null 2>&1 && [[ ! -s "$HOME/.nvm/nvm.sh" ]]; then
   loginfo "Instalando nvm..."
-  rm -rf "$HOME/.nvm"
+  require_new_toolchain_dir "$HOME/.nvm"
   run_remote_script /bin/bash \
     https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh
 fi

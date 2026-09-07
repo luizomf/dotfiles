@@ -16,7 +16,7 @@ the installer. Do not assume a change is isolated to this repository.
   only. Never print secret values as part of verification.
 - [ ] **Dependencies and startup:** when changing packages, runtimes, images,
   assets, or external tools, check their references and consumers. Preserve
-  applicable macOS/Ubuntu behavior, executable permissions, quoting, and shared
+  applicable macOS/Ubuntu/Fedora behavior, executable permissions, quoting, and shared
   path overrides. For unattended commands, check explicit PATH, environment,
   working directory, and non-interactive execution assumptions.
 - [ ] **Safe validation:** choose focused syntax and regression checks for the
@@ -42,8 +42,9 @@ the installer. Do not assume a change is isolated to this repository.
 ## Purpose and scope
 
 This public repository contains Otávio Miranda's personal dotfiles and bootstrap
-automation for macOS and Ubuntu. Other people also use it, so preserve personal
-preferences while keeping shared setup behavior safe and understandable.
+automation for macOS, Ubuntu, and traditional Fedora/Asahi. Other people also use
+it, so preserve personal preferences while keeping shared setup behavior safe and
+understandable.
 
 - These instructions apply repository-wide. `pi/agent/AGENTS.md` adds stricter
   rules for `pi/agent/`; follow the closest applicable `AGENTS.md`.

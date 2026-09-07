@@ -26,8 +26,10 @@ Other Ubuntu and macOS versions may work, but are not supported until tested.
 
 The configurations are also in use on **Fedora Linux Asahi Remix 44 (KDE Plasma
 Desktop Edition)**. Focused Zsh startup tests and a real tmux/Resurrect restart
-have been validated there. This is not a clean-install test: `install.sh` still
-intentionally rejects Linux distributions other than Ubuntu.
+have been validated there. The installer completed successfully on this existing
+environment, including its toolchain and editor-plugin phases. This is not a
+clean-install test. The installer accepts traditional Fedora and Fedora Asahi
+Remix; Atomic/OSTree Fedora variants and other Linux distributions are rejected.
 
 ## Before installing
 
@@ -40,10 +42,11 @@ shared scripts rely on that location.
 
 Review the script before running it. In particular, it:
 
-- installs packages with Homebrew or APT without upgrading the whole OS;
+- installs packages with Homebrew, APT or DNF without upgrading the whole OS;
 - downloads installers and source code from third-party projects;
 - installs the current stable Neovim formula with Homebrew;
-- configures the UTF-8 locale and changes the default shell to Zsh on Ubuntu;
+- configures the UTF-8 locale on Ubuntu and preserves Fedora's selected locale;
+- changes the default shell to Zsh on Ubuntu and Fedora;
 - installs Vim, Neovim, and Tmux plugin managers and plugins;
 - installs shell, editor, terminal, Git, and Pi configuration.
 
@@ -70,6 +73,29 @@ Disposable test runs may skip these slower stages with
 `OM_INSTALL_SKIP_TOOLCHAINS=1` or `OM_INSTALL_SKIP_PLUGINS=1`.
 
 Start a new login shell after installation.
+
+### Fedora and safe reruns
+
+`scripts/lib/install-platform.sh` contains the Fedora package policy, based on
+installed development packages and CLI providers on the Fedora Asahi host. DNF
+supplies the compiler/Python build dependencies, Zsh, tmux, fastfetch and Just;
+Homebrew supplies Neovim and the selected CLI tools. Fedora's `zlib-devel` and
+`wget` capabilities can resolve to zlib-ng and wget2 packages. The installer does
+not add third-party RPM repositories, install Asahi kernels/drivers, change boot
+or SSH configuration, or provision personal services/projects such as Ollama and
+EdgeTTS. Fedora keeps its existing terminal; the Ghostty Ubuntu installer is not
+used there. This does not replicate every package installed on the reference host.
+
+Reruns preserve matching configuration links and reuse existing tool managers.
+If pyenv or nvm cannot be detected but their target directory already exists,
+installation stops rather than deleting that directory. Repair the installation
+or PATH before retrying. A rerun is not a frozen environment: package installation
+may update requested packages/dependencies, Node LTS and Python selection may
+change, and plugin bootstrap restores the repository's locked versions. Use the
+existing toolchain/plugin skip flags when intentionally preserving those layers.
+
+Focused policy tests do not invoke the installer or real package managers:
+`python3 -m unittest tests.test_install_platform`.
 
 ## Shared host paths
 
@@ -206,7 +232,9 @@ on the next Tab. Existing availability gates remain: Just's override requires
 `Justfile` in the shell's startup directory, and Docker's override requires
 `~/.docker/completions/_docker`. Other completions remain managed by the existing
 configuration. NVM and Pyenv still initialize before the prompt so the toolchain
-PATH is ready for the first command.
+PATH is ready for the first command. The selected NVM Node directory takes
+priority over Homebrew's Node, including when a new Homebrew dependency installs
+its own Node; the NVM default alias is not changed by this PATH correction.
 
 Automatic pane-title updates run without blocking Zsh startup inside tmux. The
 title can appear slightly later and automatic tmux updates are best-effort and

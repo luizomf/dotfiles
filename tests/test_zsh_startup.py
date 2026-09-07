@@ -92,6 +92,31 @@ class StartupTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), 'dynamic')
 
+    def test_nvm_node_keeps_priority_over_an_inherited_brew_node(self):
+        for provider in ('brew', 'nvm'):
+            binary = self.home / provider / 'bin/node'
+            binary.parent.mkdir(parents=True)
+            binary.write_text(f'#!/bin/sh\nprintf "{provider}-node\\n"\n')
+            binary.chmod(0o700)
+        nvm = self.home / '.nvm/nvm.sh'
+        nvm.parent.mkdir()
+        nvm.write_text('export NVM_BIN="$HOME/nvm/bin"\n')
+        config = self.home / 'dotfiles/zsh/config'
+        config.mkdir(parents=True)
+        (config / 'completions').symlink_to(ROOT / 'zsh/config/completions')
+        result = self.run_zsh(f'''
+            path=("$HOME/brew/bin" "$HOME/nvm/bin" /usr/bin /bin)
+            typeset -A ZSH_HIGHLIGHT_STYLES
+            uname() {{ print TestOS; }}
+            pyenv() {{ :; }}
+            source {ROOT / 'zsh/config/exports'}
+            node
+            source {ROOT / 'zsh/config/exports'}
+            node
+        ''')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.splitlines(), ['nvm-node', 'nvm-node'])
+
     def test_no_completion_system_is_a_noop(self):
         result = self.run_zsh(f'source {ROOT / "zsh/config/completions"}')
         self.assertEqual(result.returncode, 0, result.stderr)
