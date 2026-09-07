@@ -2,9 +2,13 @@
 
 set -euo pipefail
 
-export PROJECTS_DIR="${PROJECTS_DIR:-$HOME/Desktop/tutoriais_e_cursos}"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+if [[ -n "${OM_PATHS_FILE:-}" || -z "${PROJECTS_DIR:-}" ]]; then
+  # shellcheck source=/dev/null
+  source "${OM_PATHS_FILE:-${script_dir}/../config/paths.sh}"
+fi
 LOUDTERM_OUTPUT_DIR="${LOUDTERM_OUTPUT_DIR:-$PROJECTS_DIR/loudterm/output}"
-EDGETTS_DIR="${EDGETTS_DIR:-$PROJECTS_DIR/edgetts}"
+export EDGETTS_DIR="${EDGETTS_DIR:-$PROJECTS_DIR/edgetts}"
 OMNIVOICE_CLEAR_BIN="${OMNIVOICE_CLEAR_BIN:-$HOME/dotfiles/scripts/clear_omnivoice_cache}"
 
 "$OMNIVOICE_CLEAR_BIN"
@@ -15,11 +19,13 @@ if [[ -d "$LOUDTERM_OUTPUT_DIR" ]]; then
 fi
 
 edgetts_bin="${EDGETTS_BIN:-}"
-if [[ -z "$edgetts_bin" && -x "$HOME/.local/bin/edgetts" ]]; then
+if [[ -z "$edgetts_bin" && -f "$EDGETTS_DIR/pyproject.toml" && -x "$script_dir/edgetts" ]]; then
+  edgetts_bin="$script_dir/edgetts"
+elif [[ -z "$edgetts_bin" && -x "$HOME/.local/bin/edgetts" ]]; then
   edgetts_bin="$HOME/.local/bin/edgetts"
 elif [[ -z "$edgetts_bin" && -x "$EDGETTS_DIR/.venv/bin/edgetts" ]]; then
   edgetts_bin="$EDGETTS_DIR/.venv/bin/edgetts"
-elif [[ -z "$edgetts_bin" ]]; then
+elif [[ -z "$edgetts_bin" && -d "$EDGETTS_DIR/.cache/edgetts" ]]; then
   edgetts_bin="$(command -v edgetts || true)"
 fi
 

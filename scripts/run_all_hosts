@@ -2,15 +2,93 @@
 
 set -euo pipefail
 
-declare -a hosts=('m132' 'm4128' 'fedoraair')
-readonly script_file="${BASH_SOURCE[0]##*/}"
-readonly cmd="${1:?No command found. Use: ./${script_file} 'command_to_run'}"
+# Source of truth for the default fleet. Keep SSH aliases, not machine paths here.
+hosts=(m132 m4128 fedoraair)
+additional_hosts=()
+selected_host=''
+list_only=0
+tty=1
+
+usage() {
+  printf '%s\n' \
+    "Usage: ${0##*/} [--additional-hosts HOST ... --] [--no-tty] 'COMMAND'" \
+    "       ${0##*/} --host HOST [--no-tty] 'COMMAND'" \
+    "       ${0##*/} --list [--additional-hosts HOST ...]"
+}
+
+fail() { printf '%s\n' "$1" >&2; exit 2; }
+valid_host() { [[ "$1" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$ ]]; }
+
+while (( $# )); do
+  if (( list_only )) && [[ "$1" != --additional-hosts ]]; then
+    fail 'After --list, only --additional-hosts is accepted.'
+  fi
+  case "$1" in
+    --additional-hosts)
+      shift
+      (( $# )) && [[ "$1" != -* ]] || fail '--additional-hosts requires at least one SSH alias.'
+      while (( $# )) && [[ "$1" != --* ]]; do
+        valid_host "$1" || fail "Invalid SSH alias: $1"
+        additional_hosts+=("$1")
+        shift
+      done
+      ;;
+    --host)
+      (( $# >= 2 )) || fail '--host requires one SSH alias.'
+      valid_host "$2" || fail "Invalid SSH alias: $2"
+      selected_host="$2"
+      shift 2
+      ;;
+    --list) list_only=1; shift ;;
+    --no-tty) tty=0; shift ;;
+    -h|--help) usage; exit 0 ;;
+    --) shift; break ;;
+    -*) fail "Unknown option: $1" ;;
+    *) break ;;
+  esac
+done
+
+if [[ -n "$selected_host" ]]; then
+  (( ${#additional_hosts[@]} == 0 )) || fail '--host cannot be combined with --additional-hosts.'
+  hosts=("$selected_host")
+else
+  for host in ${additional_hosts[@]+"${additional_hosts[@]}"}; do
+    found=0
+    for existing in "${hosts[@]}"; do
+      [[ "$host" != "$existing" ]] || found=1
+    done
+    (( found )) || hosts+=("$host")
+  done
+fi
+
+if (( list_only )); then
+  (( $# == 0 )) || fail '--list does not accept a command.'
+  printf '%s\n' "${hosts[@]}"
+  exit 0
+fi
+(( $# == 1 )) || fail "Expected one quoted command; use ${0##*/} --help."
+cmd="$1"
+ssh_options=()
+(( ! tty )) || ssh_options=(-t)
+exit_status=0
+failures=()
 
 for host in "${hosts[@]}"; do
   printf '\e[32mHost:\e[0m %s\n' "$host"
   printf '\e[32mCommand:\e[0m \e[33m%s\e[0m\n\n' "$cmd"
-
-  ssh -t "${host}" "$cmd"
-
+  if ssh ${ssh_options[@]+"${ssh_options[@]}"} "$host" "$cmd"; then
+    :
+  else
+    host_status=$?
+    failures+=("$host (exit $host_status)")
+    (( exit_status != 0 )) || exit_status=$host_status
+    printf 'Host %s failed (exit %s); continuing.\n' "$host" "$host_status" >&2
+  fi
   echo '---'
 done
+
+if (( exit_status != 0 )); then
+  printf 'Failed hosts:\n' >&2
+  printf '  %s\n' "${failures[@]}" >&2
+fi
+exit "$exit_status"

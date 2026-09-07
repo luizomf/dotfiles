@@ -1,0 +1,156 @@
+#!/usr/bin/env zsh
+
+script_dir="${0:A:h}"
+host_runner="$script_dir/run_all_hosts"
+if (( $# == 1 )) && [[ "$1" == -h || "$1" == --help ]]; then
+  print -r -- "Usage: ${0:t} [--additional-hosts HOST [HOST ...]]"
+  print -r -- 'Additional hosts receive all directories; existing routes are unchanged.'
+  exit 0
+fi
+# Delegate validation and fleet membership before any side effects.
+host_output="$("$host_runner" --list "$@")" || exit $?
+sync_hosts=("${(@f)host_output}")
+
+fc -W
+
+"$HOME"/dotfiles/scripts/zsh_history_sync.py
+"$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh
+
+"$host_runner" 'stop_omnivoicetts'
+
+(
+  rm -rf "$HOME"/.local/share/tmux/resurrect/*.*
+  rm -rf "$HOME"/.local/share/tmux/resurrect/**
+  rm -rf "$HOME"/.local/share/tmux/resurrect/.*
+) > /dev/null 2>&1 || true
+
+sleep 5
+
+"$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh
+
+ls -lah "$HOME"/.local/share/tmux/resurrect
+
+pullall
+
+echo
+prline
+
+project_excludes=(
+  --exclude='node_modules/'
+  --exclude='.omnews-data/'
+  --exclude='otaviomiranda.com.br/run_dir/'
+  --exclude='dist/'
+  --exclude='.venv/'
+  --exclude='venv/'
+  --exclude='__pycache__/'
+  --exclude='.pytest_cache/'
+  --exclude='.mypy_cache/'
+  --exclude='.ruff_cache/'
+)
+
+# Paths are relative to each machine's own home, never the sender's absolute home.
+projects_directory='Desktop/tutoriais_e_cursos'
+tmux_directory='.local/share/tmux/resurrect/'
+pi_directory='.pi/'
+shared_directories=(
+  'sannux-data/'
+  '.ollama/service/'
+  '.config/omxterm/'
+  '.codex/automations/'
+)
+
+# Existing routes retain their original order and direction.
+pi_hosts=(fedoraair m4128 m132)
+shared_routes=(push:m132 push:m4128 pull:m4128 push:fedoraair)
+# Fleet members without legacy routes receive all directories, without pulls.
+# This includes CLI additions and any new defaults in run_all_hosts.
+additional_hosts=()
+for host in "${sync_hosts[@]}"; do
+  (( ${pi_hosts[(Ie)$host]} )) || additional_hosts+=("$host")
+done
+
+# Only the staged snapshot is made portable; never edit the live save or last link.
+resurrect_stage="$(mktemp -d "${TMPDIR:-/tmp}/synchosts-resurrect.XXXXXX")" || exit 1
+trap 'rm -rf -- "$resurrect_stage"' EXIT
+resurrect_ready=0
+if python3 "$script_dir/lib/prepare_tmux_resurrect.py" \
+  "$HOME/$tmux_directory" "$resurrect_stage/resurrect" "$HOME"; then
+  resurrect_ready=1
+else
+  print -u2 -- 'Cannot prepare tmux snapshot; skipping tmux transfers.'
+fi
+
+# Usage: sync_home <home-relative directory> <push:host|pull:host> [rsync options...]
+sync_home() {
+  local directory="$1" route="$2"
+  local host="${route#*:}" source destination
+  shift 2
+  (( ${sync_hosts[(Ie)$host]} )) || return 0
+
+  case "$route" in
+    push:*)
+      source="$HOME/${directory%/}/"
+      if [[ "$directory" == "$tmux_directory" ]]; then
+        (( resurrect_ready )) || return 1
+        source="$resurrect_stage/resurrect/"
+      fi
+      destination="$host:~/$directory"
+      # Expand ~ on the remote host; single-quote the relative path for its shell.
+      if ! "$host_runner" --host "$host" --no-tty "mkdir -p -- ~/${(qq)directory}"; then
+        print -u2 -- "Cannot create destination on $host: ~/$directory; skipping this transfer."
+        return 1
+      fi
+      ;;
+    pull:*)
+      source="$host:~/${directory%/}/"
+      destination="$HOME/${directory%/}/"
+      ;;
+    *)
+      print -u2 -- "Invalid sync route: $route"
+      return 1
+      ;;
+  esac
+
+  rsync -havzu --progress --stats "$@" "$source" "$destination"
+}
+
+# Keep the legacy tmux/projects interleaving, including the duplicate tmux push.
+sync_home "$tmux_directory" push:m4128 "${project_excludes[@]}" --delete
+sync_home "$projects_directory" push:m4128 "${project_excludes[@]}" --exclude='tutoriais_e_cursos/'
+echo
+prline
+
+sync_home "$tmux_directory" push:fedoraair --delete
+sync_home "$projects_directory" pull:m4128 "${project_excludes[@]}" --exclude='tutoriais_e_cursos/'
+echo
+prline
+
+sync_home "$tmux_directory" push:fedoraair --delete
+sync_home "$projects_directory" push:fedoraair "${project_excludes[@]}" --exclude='tutoriais_e_cursos/'
+echo
+prline
+
+for host in "${pi_hosts[@]}"; do
+  sync_home "$pi_directory" "push:$host" "${project_excludes[@]}" --exclude='agent/extensions/**/node_modules/'
+done
+echo
+prline
+
+for directory in "${shared_directories[@]}"; do
+  for route in "${shared_routes[@]}"; do
+    sync_home "$directory" "$route" "${project_excludes[@]}"
+  done
+  echo
+  prline
+done
+
+for host in "${additional_hosts[@]}"; do
+  sync_home "$tmux_directory" "push:$host" "${project_excludes[@]}" --delete
+  sync_home "$projects_directory" "push:$host" "${project_excludes[@]}" --exclude='tutoriais_e_cursos/'
+  sync_home "$pi_directory" "push:$host" "${project_excludes[@]}" --exclude='agent/extensions/**/node_modules/'
+  for directory in "${shared_directories[@]}"; do
+    sync_home "$directory" "push:$host" "${project_excludes[@]}"
+  done
+  echo
+  prline
+done

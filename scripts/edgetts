@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+if [[ -n "${OM_PATHS_FILE:-}" || -z "${PROJECTS_DIR:-}" ]]; then
+  # shellcheck source=/dev/null
+  source "${OM_PATHS_FILE:-${script_dir}/../config/paths.sh}"
+fi
+export EDGETTS_DIR="${EDGETTS_DIR:-${PROJECTS_DIR}/edgetts}"
+export EDGETTS_CACHE_DIR="${EDGETTS_CACHE_DIR:-${EDGETTS_DIR}/.cache/edgetts}"
+
+if [[ ! -f "$EDGETTS_DIR/pyproject.toml" || ! -f "$EDGETTS_DIR/uv.lock" ]]; then
+  printf 'EdgeTTS checkout missing or incomplete: %s (requires pyproject.toml and uv.lock).\n' "$EDGETTS_DIR" >&2
+  exit 1
+fi
+if ! command -v uv > /dev/null 2>&1; then
+  printf 'EdgeTTS requires uv; install it before running this command.\n' >&2
+  exit 1
+fi
+
+# Use the local locked project, not a globally installed tool or a PyPI namesake.
+# Keep the caller's working directory so relative input/output paths still work.
+exec uv run --project "$EDGETTS_DIR" --locked --no-dev python -m edgetts "$@"

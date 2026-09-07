@@ -79,6 +79,91 @@ callers may select a machine-specific replacement with `OM_PATHS_FILE`.
 `omnivoice_m4128_half` also accepts `OMNIVOICE_REMOTE_APP` when the remote
 checkout differs from the local one.
 
+## Local EdgeTTS command
+
+`edgetts` (no hyphen) is launched by `scripts/edgetts` from the local checkout at
+`$PROJECTS_DIR/edgetts`, with cache data in that checkout's `.cache/edgetts/`.
+It is not installed by Homebrew Bundle: do not add `uv "edgetts"` to the Brewfile
+when exporting installed tools. The bootstrap installs uv, not this personal
+project. Clone or synchronize the project separately, including `pyproject.toml`
+and `uv.lock`, before using the command on a new machine.
+
+The launcher uses `uv run --locked --no-dev` and may install Python/dependencies
+on first use. It preserves stdin, arguments, and the caller's working directory.
+It accepts inherited `PROJECTS_DIR`, an `OM_PATHS_FILE` replacement, `EDGETTS_DIR`,
+and `EDGETTS_CACHE_DIR`; absent overrides, paths come from `config/paths.sh`.
+`clear_tts_cache` prefers this launcher for a local checkout and still accepts
+`EDGETTS_BIN` for an explicit executable override.
+
+Existing editable uv tool installations are not removed automatically. The Zsh
+configuration puts `dotfiles/scripts` ahead of `~/.local/bin`; use `rehash` or
+open a new shell if an existing session still resolves the old command. External
+callers with a different PATH should use `$HOME/dotfiles/scripts/edgetts` directly.
+Audio generation sends text to Microsoft's online TTS service.
+
+## Manual host synchronization
+
+`scripts/run_all_hosts` owns the default fleet (`m132`, `m4128`, `fedoraair`),
+validates/deduplicates additional SSH aliases, and runs SSH commands. Existing
+`run_all_hosts 'COMMAND'` calls still use a TTY. A failed command or SSH connection
+is reported without stopping the remaining hosts; a final summary lists failures,
+and the script exits with the first failed SSH invocation's status (zero if all
+succeeded). No failed command is retried. Use `--no-tty` for unattended calls,
+`--host HOST` for exactly one destination, or `--list` to list the fleet without
+contacting it:
+
+```sh
+run_all_hosts --list --additional-hosts utmvm1
+run_all_hosts --additional-hosts utmvm1 -- 'hostname'
+run_all_hosts --host utmvm1 --no-tty 'mkdir -p ~/.config'
+```
+
+`scripts/synchosts` uses that fleet and delegates remote directory creation to
+`run_all_hosts`. Its legacy rsync routes are retained for participating hosts;
+new fleet members (including additions to the default list) receive every
+configured directory, push-only. Optionally add hosts for one invocation:
+
+```sh
+synchosts --additional-hosts utmvm1 another-vm
+```
+
+Without that option, no additional hosts are used. `--help` shows usage without
+running synchronization, and invalid arguments are rejected before side effects.
+`shared_directories` lists the common home-relative directories; projects, Pi,
+and tmux have separate path variables because their options differ. Local paths
+use `$HOME`; remote paths use `~`, so
+the sender's macOS/Linux absolute home is never reused on another machine. The
+projects path remains `~/Desktop/tutoriais_e_cursos` on each host.
+
+Legacy routes intentionally remain asymmetric: only `m4128` is pulled from, Pi
+is push-only, and the duplicate tmux push to `fedoraair` is preserved. There is
+no automatic self-host detection. `--update` still skips newer destination files,
+`.git` is included, and `--delete` applies only to tmux. This is not conflict-aware
+synchronization: deleted files may return and concurrent edits can be lost or
+leave Git inconsistent. Stop agents/writers on participating directories first.
+Pi synchronization still includes the entire `~/.pi/` tree, including local
+credentials and sessions; only add trusted hosts. Hosts need SSH/rsync. Before
+each push, the script creates the destination with remote `mkdir -p`, relative
+to that host's home. If creation fails, it reports the error and skips that
+transfer; the remaining plan continues. Pulls are unchanged. Rsync creates
+subdirectories inside each destination as it copies them.
+
+Before tmux transfers, `scripts/lib/prepare_tmux_resurrect.py` stages a temporary
+copy of the resurrect directory. In the snapshot referenced by `last`, only the
+pane-directory field's exact local-home prefix becomes `~`; commands and other
+fields are untouched. The staged `last` points to the staged snapshot using a
+relative link, even when the original link was absolute. The local snapshot and
+link are not edited. If staging fails, tmux transfers are skipped; other copies
+continue. Staging requires Python 3 and is removed on normal script exit.
+Expansion of `~` was checked with local tmux 3.7c for sessions, windows, and panes;
+other hosts/versions and full application restoration have not been verified.
+
+No installation or reload is needed after editing this script. Running it has
+real effects, including history synchronization, tmux cleanup, service stops,
+`pullall`, and remote writes. The added hosts only extend the rsync section, not
+those preparatory helpers. Check syntax without running synchronization with
+`zsh -n scripts/synchosts`.
+
 ## Zsh startup and local service environments
 
 The interactive loader sources `~/.env` when it is a file, or each
@@ -155,6 +240,8 @@ out under `$PROJECTS_DIR`:
   used by the `sannux` commands;
 - [otaviomiranda.com.br](https://github.com/luizomf/otaviomiranda.com.br)
   provides the site checkout expected by publishing commands;
+- [edgetts](https://github.com/luizomf/edgetts) provides the local EdgeTTS project
+  used by `scripts/edgetts`;
 - [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) provides the image
   upscaler used by `imgupscale`.
 
