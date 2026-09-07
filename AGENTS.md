@@ -1,5 +1,42 @@
 # Repository Guidelines
 
+## Required checklist for every change
+
+Before editing and again before handing off, review this checklist—even when
+arriving from another project. These dotfiles are shared infrastructure: deployed
+symlinks can make edits affect the live environment immediately, without running
+the installer. Do not assume a change is isolated to this repository.
+
+- [ ] **Scope and consumers:** identify affected configs, scripts, symlink targets,
+  and downstream commands or projects. Check callers before changing paths,
+  arguments, defaults, output formats, or environment-variable contracts.
+- [ ] **Public-data safety:** review changed and newly added files for secrets,
+  `.env` files, credentials, private host details, logs, and local state. Keep
+  machine-specific values local; document variable names and safe placeholders
+  only. Never print secret values as part of verification.
+- [ ] **Dependencies and startup:** when changing packages, runtimes, images,
+  assets, or external tools, check their references and consumers. Preserve
+  applicable macOS/Ubuntu behavior, executable permissions, quoting, and shared
+  path overrides. For unattended commands, check explicit PATH, environment,
+  working directory, and non-interactive execution assumptions.
+- [ ] **Safe validation:** choose focused syntax and regression checks for the
+  affected behavior (see Engineering and verification below). Do not run the
+  installer, reload live configuration, or trigger remote, publishing, sync, or
+  queue operations just to validate a change. Obtain explicit authorization for
+  checks with those side effects; use isolated environments where practical.
+- [ ] **Next-use readiness:** consider a fresh login shell, a new terminal/editor
+  session, and the next unattended run, as applicable—not just the current shell.
+  Identify any required restart, reload, local migration, or downstream update;
+  document it rather than applying it silently.
+- [ ] **Documentation consistency:** after every change, check that affected
+  README sections, agent instructions, examples, and comments still match the
+  implementation and tests. Correct verified discrepancies in the same change;
+  prefer links to a source of truth over duplicated facts. If intent or evidence
+  is unclear, report the conflict rather than inventing behavior or test results.
+- [ ] **Handoff:** review the final diff, update affected documentation, and report
+  checks run, checks skipped or not applicable, and remaining risks. If a relevant
+  consumer cannot be verified, say so; do not claim the next run is guaranteed.
+
 ## Purpose and scope
 
 This public repository contains Otávio Miranda's personal dotfiles and bootstrap
@@ -9,12 +46,13 @@ preferences while keeping shared setup behavior safe and understandable.
 - These instructions apply repository-wide. `pi/agent/AGENTS.md` adds stricter
   rules for `pi/agent/`; follow the closest applicable `AGENTS.md`.
 - `README.md` is the user-facing source for supported setup and safety warnings.
-  It documents clean-install testing only on ARM Ubuntu 24.04 and macOS Sequoia;
+  Use its Tested systems section for the documented clean-install test matrix;
   do not claim broader support without evidence.
 - `config/paths.sh` is the documented source of truth for shared host paths.
   Preserve `OM_PATHS_FILE` overrides at callers that support them.
 - When documentation, tests, comments, and implementation disagree, trace the
-  intended behavior and report the conflict instead of silently choosing one.
+  intended behavior, correct verified discrepancies, and report unresolved
+  conflicts instead of silently choosing one.
 
 ## Repository map and boundaries
 
@@ -28,8 +66,9 @@ preferences while keeping shared setup behavior safe and understandable.
 - `pi/agent/` contains only static Pi configuration. Credentials, sessions,
   trust decisions, generated model state, and machine-specific model settings
   must remain local, as described in `README.md`.
-- `prompts/` contains reusable prompt text. `tests/` currently covers only
-  `scripts/bq`.
+- `prompts/` contains reusable prompt text. `tests/` contains focused regression
+  suites for selected scripts and tmux behavior; inspect the available test files
+  for coverage relevant to a change rather than assuming repository-wide coverage.
 
 ## Safety and public data
 

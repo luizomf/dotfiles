@@ -4,6 +4,16 @@ This repository is intentionally highly opinionated. It installs the exact
 personal development environment I use every day; it is not a general-purpose
 bootstrap framework.
 
+## Before changing anything
+
+**These dotfiles affect the live environment and commands used by other projects.**
+Installed configuration is symlinked into this checkout, so edits may take effect
+without reinstalling. Follow the [required change checklist in AGENTS.md](AGENTS.md#required-checklist-for-every-change)
+before editing and before handing off, including documentation-only changes.
+Check downstream consumers, protect public data, and report validation gaps and
+any required reloads or migrations. Never commit `.env` files or secrets, and do
+not run the installer or operational commands merely as a check.
+
 ## Tested systems
 
 Clean-install testing has been performed only on:
