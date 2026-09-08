@@ -1,0 +1,9 @@
+#!/usr/bin/env zsh
+
+. ~/.zshrc
+
+open -na OMXterm --args \
+  -e "${SHELL}" \
+  -lc \
+  "{ cd $PROJECTS_DIR/github-agent-inbox || exit 1 } && ./scripts/gpgsign"
+

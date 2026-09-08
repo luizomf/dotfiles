@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+cd "${HOME}" || exit 1
+
+open -na OMXterm --args \
+  -e "$SHELL" -lc \
+  "nvim -n"
