@@ -16,21 +16,23 @@ not run the installer or operational commands merely as a check.
 
 ## Tested systems
 
-Clean-install testing has been performed only on:
+**Installer platforms: macOS, Ubuntu, and traditional Fedora / Fedora Asahi Remix.**
 
-- Ubuntu 24.04 on ARM
-- Ubuntu 26.04 on ARM
-- macOS Sequoia on Apple Silicon
-- macOS 26.6.2 on Apple Silicon (clean VM, full toolchain/plugin bootstrap)
+| System | Hardware | Validation |
+| --- | --- | --- |
+| **Ubuntu 24.04** | ARM | Clean installation; less day-to-day use |
+| **Ubuntu 26.04** | ARM | Clean installation; less day-to-day use |
+| **macOS Sequoia** | Apple Silicon | Clean installation |
+| **macOS 26.6.2** | Apple Silicon VM | Clean installation, including toolchains and plugins |
+| **Fedora Asahi Remix 44 — KDE Plasma** | ARM64 | Ongoing day-to-day use; full installer on an existing environment; Zsh and tmux/Resurrect validated |
 
-Other Ubuntu and macOS versions may work, but are not supported until tested.
+**Fedora is validated through ongoing use; Ubuntu mainly through repeated clean installations.**
+These are different kinds of coverage, not a reliability ranking.
 
-The configurations are also in use on **Fedora Linux Asahi Remix 44 (KDE Plasma
-Desktop Edition)**. Focused Zsh startup tests and a real tmux/Resurrect restart
-have been validated there. The installer completed successfully on this existing
-environment, including its toolchain and editor-plugin phases. This is not a
-clean-install test. The installer accepts traditional Fedora and Fedora Asahi
-Remix; Atomic/OSTree Fedora variants and other Linux distributions are rejected.
+**Fedora has not been clean-install tested.** Traditional Fedora is accepted by
+the installer but has not been separately validated. Other versions remain
+untested. Atomic/OSTree Fedora variants and other Linux distributions are rejected.
+See [Fedora and safe reruns](#fedora-and-safe-reruns) for the package policy and limits.
 
 ## Before installing
 
