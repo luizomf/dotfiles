@@ -17,12 +17,12 @@ sannux_ephemeral --refresh-pi-resources
 prline
 
 echo "CODEX:"
-sannux_ephemeral codex --model gpt-5.4-mini -c model_reasoning_effort=low \
+sannux_ephemeral codex --model gpt-5.6-luna -c model_reasoning_effort=low \
   exec --skip-git-repo-check --ephemeral <<< "$TESTING_"
 prline
 
 echo "CODEX (NOT EPHEMERAL):"
-sannux_ephemeral codex --model gpt-5.4-mini -c model_reasoning_effort=low exec \
+sannux_ephemeral codex --model gpt-5.6-luna -c model_reasoning_effort=low exec \
   --skip-git-repo-check --ephemeral <<< "$TESTING_"
 prline
 
