@@ -4,33 +4,47 @@ script_dir="${0:A:h}"
 host_runner="$script_dir/run_all_hosts"
 if (( $# == 1 )) && [[ "$1" == -h || "$1" == --help ]]; then
   print -r -- "Usage: ${0:t} [--additional-hosts HOST [HOST ...]]"
-  print -r -- 'Additional hosts receive all directories; existing routes are unchanged.'
+  print -r -- 'Collect shared data from all peers, then distribute it to all peers.'
   exit 0
 fi
 # Delegate validation and fleet membership before any side effects.
 host_output="$("$host_runner" --list "$@")" || exit $?
 sync_hosts=("${(@f)host_output}")
+local_host="$(hostname -s)" || exit $?
+peers=()
+for host in "${sync_hosts[@]}"; do
+  [[ "${host:l}" == "${local_host:l}" ]] || peers+=("$host")
+done
+sync_hosts=("${peers[@]}")
 
-fc -W
+if ! command -v trash >/dev/null 2>&1; then
+  print -u2 -- 'trash is required; no synchronization was started.'
+  exit 1
+fi
 
-"$script_dir/zsh_history_sync.py" "$@"
-"$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh
+# An executed script has no interactive history to flush.
+if [[ -o interactive ]]; then
+  fc -W || exit $?
+fi
 
-"$host_runner" 'stop_omnivoicetts'
+"$script_dir/zsh_history_sync.py" "$@" || exit $?
+"$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh || exit $?
 
-(
-  rm -rf "$HOME"/.local/share/tmux/resurrect/*.*
-  rm -rf "$HOME"/.local/share/tmux/resurrect/**
-  rm -rf "$HOME"/.local/share/tmux/resurrect/.*
-) > /dev/null 2>&1 || true
+"$host_runner" 'stop_omnivoicetts' || exit $?
 
-sleep 5
+# Include hidden entries and symlinks, but keep the live parent directory.
+resurrect_entries=("$HOME"/.local/share/tmux/resurrect/*(DN))
+if (( ${#resurrect_entries[@]} )); then
+  trash "${resurrect_entries[@]}" || exit $?
+fi
 
-"$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh
+sleep 5 || exit $?
+
+"$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh || exit $?
 
 ls -lah "$HOME"/.local/share/tmux/resurrect
 
-pullall
+pullall || exit $?
 
 echo
 prline
@@ -60,19 +74,21 @@ shared_directories=(
   '.codex/automations/'
 )
 
-# Existing routes retain their original order and direction.
-pi_hosts=(fedoraair m4128 m132)
-shared_routes=(push:m132 push:m4128 pull:m4128 push:fedoraair)
-# Fleet members without legacy routes receive all directories, without pulls.
-# This includes CLI additions and any new defaults in run_all_hosts.
-additional_hosts=()
-for host in "${sync_hosts[@]}"; do
-  (( ${pi_hosts[(Ie)$host]} )) || additional_hosts+=("$host")
-done
+data_directories=("$projects_directory" "$pi_directory" "${shared_directories[@]}")
 
 # Only the staged snapshot is made portable; never edit the live save or last link.
 resurrect_stage="$(mktemp -d "${TMPDIR:-/tmp}/synchosts-resurrect.XXXXXX")" || exit 1
-trap 'rm -rf -- "$resurrect_stage"' EXIT
+resurrect_stage="${resurrect_stage:A}"
+cleanup_stage() {
+  local result=$?
+  trap - EXIT
+  if [[ -d "$resurrect_stage" ]] && ! trash "$resurrect_stage"; then
+    print -u2 -- "Cannot move staged tmux snapshot to Trash: $resurrect_stage"
+    (( result != 0 )) || result=1
+  fi
+  exit "$result"
+}
+trap cleanup_stage EXIT
 resurrect_ready=0
 if python3 "$script_dir/lib/prepare_tmux_resurrect.py" \
   "$HOME/$tmux_directory" "$resurrect_stage/resurrect" "$HOME"; then
@@ -96,15 +112,11 @@ sync_home() {
         source="$resurrect_stage/resurrect/"
       fi
       destination="$host:~/$directory"
-      # Expand ~ on the remote host; single-quote the relative path for its shell.
-      if ! "$host_runner" --host "$host" --no-tty "mkdir -p -- ~/${(qq)directory}"; then
-        print -u2 -- "Cannot create destination on $host: ~/$directory; skipping this transfer."
-        return 1
-      fi
       ;;
     pull:*)
       source="$host:~/${directory%/}/"
       destination="$HOME/${directory%/}/"
+      mkdir -p -- "$destination" || return $?
       ;;
     *)
       print -u2 -- "Invalid sync route: $route"
@@ -112,46 +124,61 @@ sync_home() {
       ;;
   esac
 
+  # Empty peers can contribute nothing and still receive the collected result.
+  # Expand ~ on the peer; never send the caller's absolute home.
+  if ! "$host_runner" --host "$host" --no-tty "mkdir -p -- ~/${(qq)directory}"; then
+    print -u2 -- "Cannot prepare directory on $host: ~/$directory; stopping synchronization."
+    return 1
+  fi
   rsync -havzu --progress --stats "$@" "$source" "$destination"
 }
 
-# Keep the legacy tmux/projects interleaving, including the duplicate tmux push.
-sync_home "$tmux_directory" push:m4128 "${project_excludes[@]}" --delete
-sync_home "$projects_directory" push:m4128 "${project_excludes[@]}" --exclude='tutoriais_e_cursos/'
-echo
-prline
+sync_data_home() {
+  local directory="$1" route="$2"
+  local -a excludes=("${project_excludes[@]}")
+  if [[ "$directory" == "$projects_directory" ]]; then
+    excludes+=(--exclude='tutoriais_e_cursos/')
+  elif [[ "$directory" == "$pi_directory" ]]; then
+    excludes+=(--exclude='agent/extensions/**/node_modules/')
+  fi
+  sync_home "$directory" "$route" "${excludes[@]}"
+}
 
-sync_home "$tmux_directory" push:fedoraair --delete
-sync_home "$projects_directory" pull:m4128 "${project_excludes[@]}" --exclude='tutoriais_e_cursos/'
-echo
-prline
-
-sync_home "$tmux_directory" push:fedoraair --delete
-sync_home "$projects_directory" push:fedoraair "${project_excludes[@]}" --exclude='tutoriais_e_cursos/'
-echo
-prline
-
-for host in "${pi_hosts[@]}"; do
-  sync_home "$pi_directory" "push:$host" "${project_excludes[@]}" --exclude='agent/extensions/**/node_modules/'
-done
-echo
-prline
-
-for directory in "${shared_directories[@]}"; do
-  for route in "${shared_routes[@]}"; do
-    sync_home "$directory" "$route" "${project_excludes[@]}"
+# Complete collection before publishing any data. A failed pull leaves the
+# caller potentially partially updated, but must not spread that partial copy.
+for direction in pull push; do
+  for directory in "${data_directories[@]}"; do
+    for host in "${sync_hosts[@]}"; do
+      sync_data_home "$directory" "$direction:$host" || exit $?
+    done
   done
-  echo
-  prline
 done
 
-for host in "${additional_hosts[@]}"; do
-  sync_home "$tmux_directory" "push:$host" "${project_excludes[@]}" --delete
-  sync_home "$projects_directory" "push:$host" "${project_excludes[@]}" --exclude='tutoriais_e_cursos/'
-  sync_home "$pi_directory" "push:$host" "${project_excludes[@]}" --exclude='agent/extensions/**/node_modules/'
-  for directory in "${shared_directories[@]}"; do
-    sync_home "$directory" "push:$host" "${project_excludes[@]}"
+# Tmux remains a publication of the caller's portable snapshot, not a merge.
+# Load the peer's environment: Linuxbrew trash may not be on the SSH PATH.
+trash_remote_tmux() {
+  local host="$1"
+  local remote_script='
+if [[ -f "$HOME/.zshrc" ]]; then
+  # A non-interactive title/prompt hook can return nonzero after PATH is loaded.
+  # Check the required executable below instead of trusting the profile status.
+  source "$HOME/.zshrc" >/dev/null 2>&1 || :
+fi
+command -v trash >/dev/null 2>&1 || { print -u2 "trash is required on this host"; exit 1; }
+directory="$HOME/.local/share/tmux/resurrect"
+mkdir -p "$directory" || exit 1
+entries=("$directory"/*(DN))
+if (( ${#entries[@]} )); then
+  trash "${entries[@]}"
+fi'
+  "$host_runner" --host "$host" --no-tty "zsh -f -c ${(qq)remote_script}"
+}
+
+if (( resurrect_ready )); then
+  for host in "${sync_hosts[@]}"; do
+    trash_remote_tmux "$host" || exit $?
+    sync_home "$tmux_directory" "push:$host" || exit $?
   done
-  echo
-  prline
-done
+else
+  exit 1
+fi

@@ -155,10 +155,11 @@ run_all_hosts --additional-hosts utmvm1 -- 'hostname'
 run_all_hosts --host utmvm1 --no-tty 'mkdir -p ~/.config'
 ```
 
-`scripts/synchosts` uses that fleet and delegates remote directory creation to
-`run_all_hosts`. Its legacy rsync routes are retained for participating hosts;
-new fleet members (including additions to the default list) receive every
-configured directory, push-only. Optionally add hosts for one invocation:
+`scripts/synchosts` uses that fleet and delegates remote operations to
+`run_all_hosts`. Projects, Pi, and shared directories use two phases: collect
+from every peer into the caller, then distribute the collected files to every
+peer. Additional hosts participate in both phases. Optionally add hosts for one
+invocation:
 
 ```sh
 synchosts --additional-hosts utmvm1 another-vm
@@ -172,18 +173,50 @@ use `$HOME`; remote paths use `~`, so
 the sender's macOS/Linux absolute home is never reused on another machine. The
 projects path remains `~/Desktop/tutoriais_e_cursos` on each host.
 
-Legacy routes intentionally remain asymmetric: only `m4128` is pulled from, Pi
-is push-only, and the duplicate tmux push to `fedoraair` is preserved. There is
-no automatic self-host detection. `--update` still skips newer destination files,
-`.git` is included, and `--delete` applies only to tmux. This is not conflict-aware
-synchronization: deleted files may return and concurrent edits can be lost or
-leave Git inconsistent. Stop agents/writers on participating directories first.
-Pi synchronization still includes the entire `~/.pi/` tree, including local
-credentials and sessions; only add trusted hosts. Hosts need SSH/rsync. Before
-each push, the script creates the destination with remote `mkdir -p`, relative
-to that host's home. If creation fails, it reports the error and skips that
-transfer; the remaining plan continues. Pulls are unchanged. Rsync creates
-subdirectories inside each destination as it copies them.
+An SSH alias matching the caller's short hostname (case-insensitively) is
+excluded from rsync transfers; arbitrary aliases for the same machine are not
+automatically resolved. `--update` skips newer destination files and `.git` is
+included. The existing runtime/dependency/build exclusions remain in force,
+including `.omnews-data/`, `node_modules/`, and `dist/`. This is not conflict-aware
+synchronization: concurrent edits, equal-mtime divergent files, clock differences,
+and copied Git internals can lose changes or leave inconsistent state. Stop
+agents/writers on participating directories first, including ephemeral runners.
+Pi synchronization includes the entire `~/.pi/` tree, including credentials and
+sessions; only add trusted hosts. Symlink targets and paths inside files are
+copied verbatim, not rewritten for the receiving machine.
+
+Hosts need SSH, rsync, Zsh, and `trash`. Directories are created relative to each
+host's own home before collection or distribution, so an empty new peer can
+contribute nothing and then receive the collected files. Failed prerequisites,
+directory preparation, or transfers stop the script with a failing exit status.
+A failed collection prevents distribution; already completed local changes are
+not rolled back. A distribution failure can leave only some peers updated.
+Unavailable hosts therefore prevent a successful complete run; no retry is made.
+Prerequisite checks depend on helper exit statuses: `pullall` currently does not
+reliably propagate individual `git pull` failures, so inspect its output. This
+script is not a clean-Git gate.
+
+Shared data uses neither `--delete` nor deletion markers. A file removed from
+only one host can return, including from a host that was offline. For intentional
+fleet-wide removal, stop affected writers and move the exact intended path to
+Trash on every participating host; check the command's failure summary. For
+example, after replacing the placeholder with the authorized path:
+
+```sh
+run_all_hosts 'source ~/.zshrc; trash "$HOME/path/to/remove"'
+```
+
+Do not add `|| true`: it conceals failures and a surviving copy can reappear.
+This is not automatic versioned backup: ordinary rsync overwrites do not move
+every previous file version to Trash.
+
+Tmux remains separate: publish the caller's portable snapshot once to each peer,
+never collect or merge remote tmux snapshots. Old local and remote resurrect
+entries (including dotfiles and symlinks) go through `trash`, not `rm` or rsync
+`--delete`. Remote cleanup explicitly loads that peer's `.zshrc` when present so
+Linuxbrew-installed `trash` is available to a non-interactive SSH command. Failed
+Trash operations abort; a later transfer failure may require recovering that
+peer's previous snapshot from Trash.
 
 Before tmux transfers, `scripts/lib/prepare_tmux_resurrect.py` stages a temporary
 copy of the resurrect directory. In the snapshot referenced by `last`, only the
@@ -194,7 +227,9 @@ resurrect expands it for new windows, but not new sessions or split panes, which
 can silently fall back to the home directory. The staged `last` points to the
 staged snapshot using a relative link, even when the original link was absolute. The local snapshot and
 link are not edited. If staging fails, tmux transfers are skipped; other copies
-continue. Staging requires Python 3 and is removed on normal script exit.
+continue. Staging requires Python 3; the temporary staging directory is also moved to
+Trash on script exit. A staging failure skips tmux transfers and makes the final
+exit status nonzero, even if data transfers succeeded.
 Staged `#{HOME}/...` paths were checked with local tmux 3.7c through resurrect's
 actual new-session, new-window, and split-pane functions, including directories
 with spaces. Other hosts/versions and full application restoration have not
@@ -213,7 +248,10 @@ history merge as well as rsync; service stops still use only the default fleet.
 No installation or reload is needed after editing this script. Running it has
 real effects, including history synchronization, tmux cleanup, service stops,
 `pullall`, and remote writes. Check syntax without running synchronization with
-`zsh -n scripts/synchosts`.
+`zsh -n scripts/synchosts`. Run `python3 -m unittest tests.test_synchosts` for
+isolated CLI regression tests using fake SSH/services/Trash and real rsync between
+disposable homes; those tests do not contact the fleet or validate the real Trash
+provider's ability to recover files.
 
 ## Zsh startup and local service environments
 
