@@ -54,6 +54,7 @@ tmux_directory='.local/share/tmux/resurrect/'
 pi_directory='.pi/'
 shared_directories=(
   'sannux-data/'
+  '.agents/'
   '.ollama/service/'
   '.config/omxterm/'
   '.codex/automations/'
