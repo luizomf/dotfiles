@@ -279,6 +279,18 @@ The installer links the static configuration under `pi/agent/` into
 `~/.pi/agent/`. Credentials, sessions, trust decisions, generated model state,
 and machine-specific model configuration remain local.
 
+## Optional runner keepwarm
+
+`scripts/keepwarm` launches a background loop that periodically calls configured
+Sannux runners to refresh persistent authentication. These are real provider
+calls; it is not a read-only authentication check. Starting it terminates older
+matching workers. Linux requires procps `pkill` with `--ignore-ancestors` (`-A`)
+so replacement does not kill its own launcher; macOS already excludes ancestors.
+Load the normal runner environment before invoking it.
+
+The isolated regression test runs no provider calls and only signals uniquely
+named fixture processes: `python3 -m unittest tests.test_keepwarm`.
+
 ## Related public repositories
 
 This repository is only one part of the development environment. Some of its
