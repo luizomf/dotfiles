@@ -113,6 +113,61 @@ callers may select a machine-specific replacement with `OM_PATHS_FILE`.
 `omnivoice_m4128_half` also accepts `OMNIVOICE_REMOTE_APP` when the remote
 checkout differs from the local one.
 
+## Local site Git automation lock
+
+Bash callers that mutate a shared local site checkout source
+`scripts/site_git_automation_lock`, call `site_git_lock_acquire "$repo"`, and
+arrange `trap site_git_lock_release EXIT` after successful acquisition. The repo
+must have a `.git` directory. Acquire/release belong in the same owning shell,
+not a command substitution; acquire is not reentrant. Source the helper once
+before acquiring. Release is safe to call again after it has completed.
+
+`SITE_GIT_LOCK_TIMEOUT_SECONDS` remains a nonnegative integer (default 60;
+0 means an immediate attempt). An unavailable tool fails with 69, invalid
+configuration with 64, and contention timeout with 75. Never ignore acquisition
+failure and continue a Git mutation. Unknown operating systems fail closed.
+
+- **macOS:** preserves `/usr/bin/shlock` and the legacy
+  `.git/om-site-automation.lock` PID-file protocol. `SITE_GIT_SHLOCK_BIN` retains
+  its trusted executable override. Release removes the file only when its PID
+  matches the caller; stale-owner handling remains delegated to shlock. A stale
+  PID file may need a second attempt, so a zero timeout can fail during recovery.
+- **Linux:** requires Bash 4+ and util-linux `/usr/bin/flock`; select another
+  absolute executable with `SITE_GIT_FLOCK_BIN`. An explicit shlock override on
+  Linux is rejected, not silently ignored. A dynamically allocated descriptor
+  holds an exclusive lock on `.git/om-site-automation.flock`. The file is opened
+  without truncation and **is never unlinked by release**. Closing the final
+  inherited descriptor releases the kernel lock, including after a process
+  crashes; no stale-PID cleanup is necessary. Other flock errors propagate.
+
+Linux child processes inherit the descriptor deliberately. Protected Git work
+must remain protected if its shell crashes. If a child outlives the caller,
+release/exit of the parent alone does not release that child's copy: the lock
+remains until the child closes it or exits. Do not launch unrelated detached
+processes while holding the lock. Callers must finish their protected child work
+before release. Existing consumers' synchronous subprocesses fit this contract.
+
+These are **local, cooperative, non-interoperable backends**, not distributed
+locking. Every writer to a checkout must use the same protocol. Linux refuses
+an existing legacy `.lock` entry (including a symlink); inspect ownership and
+drain old consumers before migrating rather than deleting evidence automatically.
+This check is not an atomic bridge to a concurrently started shlock writer.
+Drain all holders and waiters before changing backends, replacing/synchronizing
+`.git`, or restoring a backup. Never unlink/replace the Linux `.flock` inode
+while a holder or waiter exists: new callers could otherwise lock a different
+inode. A retained file does not mean a lock is currently held, and copying its
+bytes to another machine does not copy the kernel lock. Network/shared-filesystem
+semantics and cross-host synchronization are not validated by this helper.
+The `.git` directory must be trusted; path checks are not a defense against a
+local actor concurrently replacing its entries.
+
+Focused tests: `python3 tests/test_site_git_lock.py`. They use disposable repo
+directories and bounded test-owned processes, not the real site or services.
+Native macOS tests cover the PID protocol; native Fedora tests cover descriptor
+exclusion, timeout, waiters sharing one inode, crash/child lifetime, and failure
+cleanup. Platform-specific tests skip on the other OS. These tests do not prove
+publication, Queue ownership, or safe deployment into an active consumer.
+
 ## Local EdgeTTS command
 
 `edgetts` (no hyphen) is launched by `scripts/edgetts` from the local checkout at

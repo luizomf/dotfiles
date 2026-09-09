@@ -1,53 +1,110 @@
 #!/usr/bin/env bash
 
-# Shared atomic lock for scripts that update the local site checkout.
-# Source this file, then call site_git_lock_acquire <repo> and arrange for
-# site_git_lock_release to run on exit.
-
+# Source in the owning Bash shell, acquire <repo>, then release in its EXIT trap.
+# Local cooperative locking only: never unlink/replace a Linux lock inode while
+# holders or waiters exist. See README for backend and child-process lifetime.
 site_git_lock_held=false
 site_git_lock_path=""
+site_git_lock_backend=""
+site_git_lock_fd=""
 
 site_git_lock_acquire() {
-  local repo="$1"
-  local owner_pid=""
+  local repo="${1:-}" owner_pid=""
   local timeout_seconds="${SITE_GIT_LOCK_TIMEOUT_SECONDS:-60}"
   local shlock_bin="${SITE_GIT_SHLOCK_BIN:-/usr/bin/shlock}"
-  local deadline=0
+  local flock_bin="${SITE_GIT_FLOCK_BIN:-/usr/bin/flock}"
+  local deadline=0 status=0
 
+  [[ $# -eq 1 && -d "$repo/.git" ]] || {
+    printf 'Expected a repository with a .git directory.\n' >&2
+    return 66
+  }
+  [[ "$site_git_lock_held" == false ]] || {
+    printf 'This shell already holds a site Git lock.\n' >&2
+    return 75
+  }
   if [[ ! "$timeout_seconds" =~ ^[0-9]+$ ]]; then
     printf 'Invalid site Git lock timeout: %s\n' "$timeout_seconds" >&2
     return 64
   fi
 
-  if [[ ! -x "$shlock_bin" ]]; then
-    printf 'shlock executable not found: %s\n' "$shlock_bin" >&2
-    return 69
-  fi
-
-  site_git_lock_path="${repo}/.git/om-site-automation.lock"
-  deadline=$((SECONDS + timeout_seconds))
-
-  while ! "$shlock_bin" -p "$$" -f "$site_git_lock_path"; do
-    owner_pid="$(sed -n '1p' "$site_git_lock_path" 2>/dev/null || true)"
-    if (( SECONDS >= deadline )); then
-      printf 'Timed out waiting for site Git automation owned by PID %s.\n' "${owner_pid:-unknown}" >&2
-      return 75
-    fi
-    sleep 1
-  done
-
+  case "$(uname -s)" in
+    Darwin)
+      site_git_lock_backend=shlock
+      if [[ ! -x "$shlock_bin" ]]; then
+        printf 'shlock executable not found: %s\n' "$shlock_bin" >&2
+        return 69
+      fi
+      site_git_lock_path="${repo}/.git/om-site-automation.lock"
+      deadline=$((SECONDS + timeout_seconds))
+      while ! "$shlock_bin" -p "$$" -f "$site_git_lock_path"; do
+        owner_pid="$(sed -n '1p' "$site_git_lock_path" 2>/dev/null || true)"
+        if (( SECONDS >= deadline )); then
+          printf 'Timed out waiting for site Git automation owned by PID %s.\n' "${owner_pid:-unknown}" >&2
+          return 75
+        fi
+        sleep 1
+      done
+      ;;
+    Linux)
+      site_git_lock_backend=flock
+      # Do not silently ignore an operator's old backend override or mix
+      # non-interoperable PID-file and descriptor-lock protocols.
+      [[ -z "${SITE_GIT_SHLOCK_BIN:-}" ]] || {
+        printf 'Linux uses SITE_GIT_FLOCK_BIN, not SITE_GIT_SHLOCK_BIN.\n' >&2
+        return 64
+      }
+      [[ "${BASH_VERSINFO[0]}" -ge 4 && "$flock_bin" == /* && -f "$flock_bin" && -x "$flock_bin" ]] || {
+        printf 'Linux locking requires Bash 4+ and an absolute util-linux flock executable: %s\n' "$flock_bin" >&2
+        return 69
+      }
+      [[ ! -e "$repo/.git/om-site-automation.lock" && ! -L "$repo/.git/om-site-automation.lock" ]] || {
+        printf 'Legacy shlock state exists; drain and inspect before switching backends.\n' >&2
+        return 75
+      }
+      site_git_lock_path="${repo}/.git/om-site-automation.flock"
+      [[ ! -L "$site_git_lock_path" && ( ! -e "$site_git_lock_path" || -f "$site_git_lock_path" ) ]] || {
+        printf 'Refusing non-regular site Git flock path.\n' >&2
+        return 66
+      }
+      # Append-open preserves the inode and bytes. Each acquisition gets a new
+      # open file description; the shell retains it after the flock CLI exits.
+      if ! exec {site_git_lock_fd}>>"$site_git_lock_path"; then
+        printf 'Cannot open site Git flock file.\n' >&2
+        return 73
+      fi
+      "$flock_bin" -x -E 75 -w "$timeout_seconds" "$site_git_lock_fd" || status=$?
+      if (( status != 0 )); then
+        exec {site_git_lock_fd}>&-
+        site_git_lock_fd=""
+        printf 'Site Git flock acquisition failed (exit %s).\n' "$status" >&2
+        return "$status"
+      fi
+      ;;
+    *)
+      printf 'Unsupported site Git lock operating system.\n' >&2
+      return 69
+      ;;
+  esac
   site_git_lock_held=true
 }
 
 site_git_lock_release() {
   local owner_pid=""
-
   [[ "$site_git_lock_held" == true ]] || return 0
-  [[ -r "$site_git_lock_path" ]] && owner_pid="$(<"$site_git_lock_path")"
-
-  if [[ "$owner_pid" == "$$" ]]; then
-    rm -f "$site_git_lock_path"
-  fi
-
+  case "$site_git_lock_backend" in
+    flock)
+      # Close, do not unlink or explicitly unlock: inherited descriptors keep
+      # protecting any still-running child work until their final close/exit.
+      exec {site_git_lock_fd}>&-
+      site_git_lock_fd=""
+      ;;
+    shlock)
+      [[ -r "$site_git_lock_path" ]] && owner_pid="$(<"$site_git_lock_path")"
+      if [[ "$owner_pid" == "$$" ]]; then
+        rm -f "$site_git_lock_path"
+      fi
+      ;;
+  esac
   site_git_lock_held=false
 }
