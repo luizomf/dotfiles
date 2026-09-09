@@ -15,7 +15,7 @@
     },
     {
       "name": "Pi Update",
-      "body": "npx @earendil-works/pi-coding-agent update",
+      "body": "npx @earendil-works/pi-coding-agent update ; npx @earendil-works/pi-coding-agent update --all ; npx @earendil-works/pi-coding-agent update --models ;",
       "description": "Uniform pi update for linux and macos",
       "execute": true
     },
