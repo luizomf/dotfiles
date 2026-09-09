@@ -381,6 +381,24 @@ matching workers. Linux requires procps `pkill` with `--ignore-ancestors` (`-A`)
 so replacement does not kill its own launcher; macOS already excludes ancestors.
 Load the normal runner environment before invoking it.
 
+Codex maintenance pings omit `--model` by default, so the persistent Codex
+runner uses its own configured default. An optional nonempty
+`KEEPWARM_CODEX_MODEL` environment variable supplies one literal model argument;
+unset or empty values keep the default. Low reasoning and the other existing
+Codex flags are unchanged. This setting does not change the Pi ping route or
+Daily Paper's editorial model selection. Supply any override in the environment
+of the keepwarm owner, not only in an unrelated interactive shell.
+
+After deploying script changes or changing the override, the existing background
+owner must be restarted through its normal authorized lifecycle to use them.
+Deployment alone does not update an already-running loop. Restarting makes real
+provider calls and terminates older matching workers; do not do it as a syntax
+or configuration check.
+
+Focused model-argument tests: `python3 tests/test_keepwarm_model.py`. They fake
+pkill, Sannux, sleep and OS selection, use disposable HOME/process groups, and
+never contact a provider or signal an existing keepwarm owner.
+
 The isolated regression test runs no provider calls and only signals uniquely
 named fixture processes: `python3 -m unittest tests.test_keepwarm`.
 

@@ -69,8 +69,13 @@ ping_agents() {
   #   claude-code -p - --model haiku --effort low --dangerously-skip-permissions
   # sannux run claude-code auth status >/dev/null 2>&1 || true
 
+  # Leave model selection to Codex unless the maintenance owner overrides it.
+  set --
+  if [[ -n "${KEEPWARM_CODEX_MODEL:-}" ]]; then
+    set -- --model "$KEEPWARM_CODEX_MODEL"
+  fi
   run_ping codex sannux run \
-    codex exec --yolo - --ephemeral --model gpt-5.4-mini -c model_reasoning_effort=low --color never
+    codex exec --yolo - --ephemeral "$@" -c model_reasoning_effort=low --color never
 
   run_ping pi sannux run \
     pi -p --no-session --model openai-codex/gpt-5.6-sol:high
