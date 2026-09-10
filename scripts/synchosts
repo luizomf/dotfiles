@@ -17,8 +17,12 @@ for host in "${sync_hosts[@]}"; do
 done
 sync_hosts=("${peers[@]}")
 
-if ! command -v trash >/dev/null 2>&1; then
-  print -u2 -- 'trash is required; no synchronization was started.'
+if command -v trash >/dev/null 2>&1; then
+  trash_command=(trash)
+elif command -v gio >/dev/null 2>&1; then
+  trash_command=(gio trash --)
+else
+  print -u2 -- 'trash or gio is required; no synchronization was started.'
   exit 1
 fi
 
@@ -27,15 +31,20 @@ if [[ -o interactive ]]; then
   fc -W || exit $?
 fi
 
+# Manual idle maintenance only. Refuse live agent-home consumers before stops
+# or synchronization. All peers need the updated helper before this is used.
+"$host_runner" "$@" -- '"$HOME/dotfiles/scripts/clear_sannux_transients"' || exit $?
+
 "$script_dir/zsh_history_sync.py" "$@" || exit $?
 "$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh || exit $?
 
-"$host_runner" 'stop_omnivoicetts' || exit $?
+"$host_runner" "$@" -- '"$HOME/dotfiles/scripts/stop_omnivoicetts"' || exit $?
+"$host_runner" "$@" -- '"$HOME/dotfiles/scripts/clear_sannux_transients" --apply --idle-confirmed' || exit $?
 
 # Include hidden entries and symlinks, but keep the live parent directory.
 resurrect_entries=("$HOME"/.local/share/tmux/resurrect/*(DN))
 if (( ${#resurrect_entries[@]} )); then
-  trash "${resurrect_entries[@]}" || exit $?
+  "${trash_command[@]}" "${resurrect_entries[@]}" || exit $?
 fi
 
 sleep 5 || exit $?
@@ -50,6 +59,9 @@ echo
 prline
 
 project_excludes=(
+  --exclude='.scratch/'
+  --exclude='.cache/'
+  --exclude='.astro/'
   --exclude='node_modules/'
   --exclude='.omnews-data/'
   --exclude='otaviomiranda.com.br/run_dir/'
@@ -82,7 +94,7 @@ resurrect_stage="${resurrect_stage:A}"
 cleanup_stage() {
   local result=$?
   trap - EXIT
-  if [[ -d "$resurrect_stage" ]] && ! trash "$resurrect_stage"; then
+  if [[ -d "$resurrect_stage" ]] && ! "${trash_command[@]}" "$resurrect_stage"; then
     print -u2 -- "Cannot move staged tmux snapshot to Trash: $resurrect_stage"
     (( result != 0 )) || result=1
   fi
@@ -139,7 +151,19 @@ sync_data_home() {
   if [[ "$directory" == "$projects_directory" ]]; then
     excludes+=(--exclude='tutoriais_e_cursos/')
   elif [[ "$directory" == "$pi_directory" ]]; then
-    excludes+=(--exclude='agent/extensions/**/node_modules/')
+    excludes+=(--exclude='agent/extensions/**/node_modules/'
+      --exclude='/agent/sessions/')
+  elif [[ "$directory" == 'sannux-data/' ]]; then
+    excludes+=(--exclude='/agent-homes/*.ephemeral-runs/'
+      --exclude='/agent-homes/pi-daily-paper-sessions/'
+      --exclude='/agent-homes/*/.pi-resources.*/'
+      --exclude='/agent-homes/*/.pi/agent/sessions/'
+      --exclude='/agent-homes/*/.codex/sessions/'
+      --exclude='/agent-homes/*/.codex/archived_sessions/'
+      --exclude='/workspaces/pi-daily-paper-node-modules/')
+  elif [[ "$directory" == '.codex/automations/' ]]; then
+    excludes+=(--exclude='/*/hooks/state/'
+      --exclude='/*/hooks/on-end/tts/*.json')
   fi
   sync_home "$directory" "$route" "${excludes[@]}"
 }
@@ -164,12 +188,18 @@ if [[ -f "$HOME/.zshrc" ]]; then
   # Check the required executable below instead of trusting the profile status.
   source "$HOME/.zshrc" >/dev/null 2>&1 || :
 fi
-command -v trash >/dev/null 2>&1 || { print -u2 "trash is required on this host"; exit 1; }
+if command -v trash >/dev/null 2>&1; then
+  trash_command=(trash)
+elif command -v gio >/dev/null 2>&1; then
+  trash_command=(gio trash --)
+else
+  print -u2 "trash or gio is required on this host"; exit 1
+fi
 directory="$HOME/.local/share/tmux/resurrect"
 mkdir -p "$directory" || exit 1
 entries=("$directory"/*(DN))
 if (( ${#entries[@]} )); then
-  trash "${entries[@]}"
+  "${trash_command[@]}" "${entries[@]}"
 fi'
   "$host_runner" --host "$host" --no-tty "zsh -f -c ${(qq)remote_script}"
 }

@@ -348,12 +348,14 @@ including `.omnews-data/`, `node_modules/`, and `dist/`. This is not conflict-aw
 synchronization: concurrent edits, equal-mtime divergent files, clock differences,
 and copied Git internals can lose changes or leave inconsistent state. Stop
 agents/writers on participating directories first, including ephemeral runners.
-Pi synchronization includes the entire `~/.pi/` tree, including credentials and
-sessions; only add trusted hosts. Symlink targets and paths inside files are
-copied verbatim, not rewritten for the receiving machine.
+Pi synchronization still includes credentials, configuration, and resource
+snapshots, but excludes agent sessions; only add trusted hosts. Symlink targets
+and paths inside files are copied verbatim, not rewritten for the receiving
+machine.
 
-Hosts need SSH, rsync, Zsh, and `trash`. Directories are created relative to each
-host's own home before collection or distribution, so an empty new peer can
+Hosts need SSH, rsync, Zsh, and `trash` or GIO (`gio trash`, notably on Linux).
+Directories are created relative to each host's own home before collection or
+distribution, so an empty new peer can
 contribute nothing and then receive the collected files. Failed prerequisites,
 directory preparation, or transfers stop the script with a failing exit status.
 A failed collection prevents distribution; already completed local changes are
@@ -362,6 +364,51 @@ Unavailable hosts therefore prevent a successful complete run; no retry is made.
 Prerequisite checks depend on helper exit statuses: `pullall` currently does not
 reliably propagate individual `git pull` failures, so inspect its output. This
 script is not a clean-Git gate.
+
+### Manual idle cleanup boundary
+
+Run `synchosts` only after **all** work is idle, including audio generation,
+retries, upload, publication and deploy continuations. It does not establish
+Queue ownership or stop Pi/Omnews. A live agent-home consumer or unavailable
+local Docker inspection blocks transient cleanup, rather than being killed.
+Deploy the updated scripts to every participating host before using this path.
+
+Before transfers, every host (including additional hosts) previews
+`clear_sannux_transients`, runs `stop_omnivoicetts`, then applies transient
+cleanup. OmniVoice stop keeps its existing process-match scope: TERM, bounded
+wait, KILL if necessary, and a final no-writer check **before** generic cache
+clearing. Inspection failure or a surviving matching writer prevents clearing.
+
+`clear_sannux_transients` defaults to preview. `--apply --idle-confirmed` is the
+explicit standalone destructive mode. It removes only generated
+`~/sannux-data/agent-homes/<name>.ephemeral-runs/run.XXXXXX` directories (six
+alphanumeric suffix characters) and the contents, including hidden entries, of
+`pi-daily-paper-sessions`. It preserves that directory, namespace directories,
+and persistent Pi/Codex auth/config homes. Canonical owned roots are mandatory;
+symlinked roots and mounted subtrees are refused. Links inside disposable
+contents are unlinked, never followed. Unexpected temporary names are reported
+and preserved; custom roots outside this fixed tree are not swept.
+
+Python with symlink-safe `shutil.rmtree`, `ps`, and a reachable local Unix-socket
+Docker context are required when candidates exist. Checks are not a launcher
+lock: the operator must keep work idle until maintenance ends. There is no
+force-bypass for an uninspectable or busy owner.
+
+Sync excludes `.scratch/`, `.cache/`, `.astro/`, transient Sannux homes, Daily
+sessions, known agent session stores, Linux Daily node_modules and legacy
+Daily hook state. Exclusions apply in both directions and **do not erase old
+copies**. Incident Scratch evidence stays on its originating host. Persistent
+auth, resources, configuration, unrelated workspaces and intentional shared
+backups keep their existing transfer behavior.
+
+Daily coordinator/worker attempts, audio, consumer logs and trusted markers are
+**not generic cache** and are not removed here. Their retention belongs to
+Daily Paper's existing `maintenance/prune-runtime-history.sh`, which currently
+covers five newest runs/briefings, current-day protection and Trash. Extending
+that tool to remote TTS bundles, with active/unresolved/retry protection and
+Linux-compatible Trash, remains separate work; do not substitute `rm -rf`
+or silently drop failed attempts to make this cleanup look complete. GIO/Trash
+moves do not empty Trash or necessarily free disk space immediately.
 
 Shared data uses neither `--delete` nor deletion markers. A file removed from
 only one host can return, including from a host that was offline. For intentional

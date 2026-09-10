@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+"""Explicit idle maintenance, not runtime-history retention or launcher cleanup."""
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import stat
+import subprocess
+
+NAMESPACE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]*\.ephemeral-runs")
+RUN = re.compile(r"run\.[A-Za-z0-9]{6}")
+
+
+def directory(path):
+    info = path.lstat()
+    if (not stat.S_ISDIR(info.st_mode) or path.resolve() != path or
+            info.st_uid != os.getuid()):
+        raise RuntimeError(f"Refusing noncanonical, symlinked or foreign directory: {path}")
+    return info.st_dev, info.st_ino
+
+
+def plan(home):
+    home = Path(home)
+    directory(home)
+    root = home / 'sannux-data' / 'agent-homes'
+    if not root.exists() and not root.is_symlink():
+        return root, [], []
+    directory(root.parent)
+    directory(root)
+    candidates, preserved = [], []
+    for namespace in sorted(root.iterdir()):
+        if NAMESPACE.fullmatch(namespace.name):
+            directory(namespace)
+            for entry in sorted(namespace.iterdir()):
+                if RUN.fullmatch(entry.name):
+                    directory(entry)
+                    candidates.append(entry)
+                else:
+                    preserved.append(entry)
+        elif namespace.name.endswith('.ephemeral-runs'):
+            preserved.append(namespace)
+        elif namespace.name == 'pi-daily-paper-sessions':
+            directory(namespace)
+            candidates.extend(sorted(namespace.iterdir()))
+    return root, candidates, preserved
+
+
+def command(*argv):
+    return subprocess.check_output(argv, text=True, timeout=15)
+
+
+def assert_idle(root):
+    # Do not signal Pi, Omnews, Docker, or user processes. Refuse ambiguity.
+    processes = command('ps', '-axo', 'pid=,command=')
+    for line in processes.splitlines():
+        fields = line.strip().split(None, 1)
+        if len(fields) != 2 or fields[0] == str(os.getpid()):
+            continue
+        args = fields[1]
+        if ('sannux_ephemeral' in args or 'run-pi-ephemeral.sh' in args or
+                str(root) in args):
+            raise RuntimeError('A launcher or process references agent homes; maintenance is not idle')
+    endpoint = command('docker', 'context', 'inspect', '--format',
+                       '{{.Endpoints.docker.Host}}').strip()
+    if not endpoint.startswith('unix://') or (os.environ.get('DOCKER_HOST') and
+            not os.environ['DOCKER_HOST'].startswith('unix://')):
+        raise RuntimeError('A reachable local Unix-socket Docker context is required')
+    ids = command('docker', 'ps', '-q').split()
+    for ident in ids:
+        records = json.loads(command('docker', 'inspect', ident))
+        if len(records) != 1:
+            raise RuntimeError('Ambiguous container inspection')
+        for mount in records[0].get('Mounts', []):
+            source = Path(mount['Source']).resolve()
+            if source == root or root in source.parents or source in root.parents:
+                raise RuntimeError(f'Container {ident} mounts agent homes; refusing cleanup')
+
+
+def validate_tree(path):
+    # Never cross a mounted filesystem or follow a link inside a disposable tree.
+    if path.is_symlink() or not path.is_dir():
+        return
+    if os.path.ismount(path):
+        raise RuntimeError(f'Refusing mounted directory: {path}')
+    for current, dirs, _ in os.walk(path, followlinks=False):
+        for name in dirs:
+            child = Path(current) / name
+            if not child.is_symlink() and os.path.ismount(child):
+                raise RuntimeError(f'Refusing mounted directory: {child}')
+
+
+def clean(home, apply=False, idle_check=assert_idle):
+    root, entries, preserved = plan(home)
+    if not entries:
+        return entries, preserved
+    idle_check(root)
+    identities = {}
+    parents = {}
+    for entry in entries:
+        parents[entry.parent] = directory(entry.parent)
+        s = entry.lstat()
+        identities[entry] = (s.st_dev, s.st_ino, s.st_mode)
+        validate_tree(entry)
+    if apply:
+        if not shutil.rmtree.avoids_symlink_attacks:
+            raise RuntimeError('This Python lacks symlink-safe directory removal')
+        idle_check(root)
+        for parent, identity in parents.items():
+            if directory(parent) != identity:
+                raise RuntimeError('Cleanup parent changed after validation')
+        # This is deliberately manual, quiescent maintenance. The checks are
+        # not a lock against a new launcher: keep all work idle until it ends.
+        for entry in entries:
+            if directory(entry.parent) != parents[entry.parent]:
+                raise RuntimeError('Cleanup parent changed after validation')
+            s = entry.lstat()
+            if (s.st_dev, s.st_ino, s.st_mode) != identities[entry]:
+                raise RuntimeError('Cleanup entry changed after validation')
+            if stat.S_ISDIR(s.st_mode):
+                shutil.rmtree(entry)
+            else:
+                entry.unlink()  # Includes symlinks themselves, never their targets.
+    return entries, preserved
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--apply', action='store_true')
+    parser.add_argument('--idle-confirmed', action='store_true',
+                        help='Operator confirms all work and publication continuations are idle')
+    args = parser.parse_args()
+    if args.apply and not args.idle_confirmed:
+        parser.error('--apply requires --idle-confirmed; this command never stops consumers')
+    try:
+        entries, preserved = clean(Path.home(), args.apply)
+    except (OSError, RuntimeError, subprocess.SubprocessError, ValueError) as error:
+        parser.exit(1, f'Cleanup refused: {error}\n')
+    verb = 'Removed' if args.apply else 'Would remove'
+    for entry in entries:
+        print(f'{verb}: {entry}')
+    for entry in preserved:
+        print(f'Preserved unexpected entry: {entry}')
+    print(f'{verb} {len(entries)} entries; persistent homes and session directory preserved.')
+
+
+if __name__ == '__main__':
+    main()

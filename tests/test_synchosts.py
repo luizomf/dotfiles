@@ -65,6 +65,8 @@ class SyncHostsTests(unittest.TestCase):
             "if name==os.environ.get('FAIL_COMMAND'): sys.exit(17)\n"
             "if name=='hostname': print(os.environ.get('FAKE_HOST','m132')); sys.exit(0)\n"
             "if name in ['sleep','pullall','prline','stop_omnivoicetts']: sys.exit(0)\n"
+            "if name=='gio':\n"
+            " assert args[:2]==['trash','--']; args=args[2:]; name='trash'\n"
             "if name in ['trash','rm']:\n"
             " if os.environ.get('FAIL_TRASH') and name=='trash': sys.exit(9)\n"
             " store=root/'trash'; store.mkdir(exist_ok=True)\n"
@@ -75,7 +77,8 @@ class SyncHostsTests(unittest.TestCase):
             " sys.exit(0)\n"
             "if name=='ssh':\n"
             " host,command=args[-2:]; home=root/'homes'/host\n"
-            " if command=='stop_omnivoicetts': sys.exit(0)\n"
+            " if 'scripts/clear_sannux_transients' in command: sys.exit(19 if os.environ.get('FAIL_IDLE') else 0)\n"
+            " if 'scripts/stop_omnivoicetts' in command: sys.exit(0)\n"
             " if '.zsh_history' in command: print(': 100:0;echo fixture'); sys.exit(0)\n"
             " env={**os.environ,'HOME':str(home),'ZDOTDIR':str(home)}\n"
             " if host==os.environ.get('FAIL_REMOTE_TRASH') and 'trash' in command: env['FAIL_TRASH']='1'\n"
@@ -92,7 +95,7 @@ class SyncHostsTests(unittest.TestCase):
             "raise SystemExit('Unexpected fixture command '+name)\n"
         )
         fake.chmod(0o755)
-        for name in ["hostname", "sleep", "pullall", "prline", "ssh", "rsync", "trash", "rm", "stop_omnivoicetts"]:
+        for name in ["hostname", "sleep", "pullall", "prline", "ssh", "rsync", "trash", "gio", "rm", "stop_omnivoicetts"]:
             (self.bin / name).symlink_to(fake)
         for name in ["python3", "python3.14"]:
             (self.bin / name).symlink_to(sys.executable)
@@ -149,6 +152,60 @@ class SyncHostsTests(unittest.TestCase):
         data_copies = [c for c in copies if "tmux/resurrect" not in c[-1]]
         phases = ["pull" if ":~/" in c[-2] else "push" for c in data_copies]
         self.assertEqual(phases, sorted(phases))
+
+    def test_transient_data_is_not_copied_but_persistent_auth_and_resources_are(self):
+        transient = [
+            'Desktop/tutoriais_e_cursos/project/.scratch/evidence',
+            'Desktop/tutoriais_e_cursos/project/.cache/data',
+            '.codex/automations/daily/hooks/state/marker',
+            '.pi/agent/sessions/conversation',
+            'sannux-data/agent-homes/pi.ephemeral-runs/run.ABC123/auth',
+            'sannux-data/agent-homes/pi-daily-paper-sessions/.hidden',
+            'sannux-data/agent-homes/pi/.pi/agent/sessions/session',
+            'sannux-data/workspaces/pi-daily-paper-node-modules/package',
+        ]
+        durable = ['sannux-data/agent-homes/pi/.pi/agent/auth.json',
+                   'sannux-data/agent-homes/codex/.codex/auth.json',
+                   'sannux-data/agent-homes/pi/.pi/agent/RESOURCE_SNAPSHOT',
+                   'sannux-data/workspaces/user-project/code']
+        origin = self.root / 'homes/m4128'
+        for rel in transient + durable:
+            f = origin / rel
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text('fixture only')
+        result = self.run_sync()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for rel in transient:
+            self.assertTrue((origin / rel).exists())
+            self.assertFalse((self.home / rel).exists(), rel)
+        for rel in durable:
+            self.assertTrue((self.home / rel).exists(), rel)
+
+    def test_gio_fallback_uses_only_mocked_trash(self):
+        # Force backend selection in this copied fixture script, never hide a
+        # real tool and accidentally invoke the operator's desktop Trash.
+        source = self.script.read_text()
+        self.assertEqual(source.count('if command -v trash >/dev/null 2>&1; then'), 2)
+        self.script.write_text(source.replace('if command -v trash >/dev/null 2>&1; then', 'if false; then'))
+        result = self.run_sync()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(any(c[0] == 'gio' for c in self.commands()))
+
+    def test_idle_failure_stops_before_stop_or_copy(self):
+        result = self.run_sync(extra_env={'FAIL_IDLE': '1'})
+        self.assertEqual(result.returncode, 19, result.stderr)
+        self.assertFalse(any(c[0] == 'rsync' or any('stop_omnivoicetts' in a for a in c)
+                             for c in self.commands()))
+
+    def test_additional_host_gets_idle_stop_and_apply_in_order(self):
+        result = self.run_sync('--additional-hosts', 'extra')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        calls = [c[-1] for c in self.commands() if c[0] == 'ssh' and c[-2] == 'extra']
+        relevant = [c for c in calls if 'scripts/clear_sannux_transients' in c or 'scripts/stop_omnivoicetts' in c]
+        self.assertEqual(len(relevant), 3)
+        self.assertNotIn('--apply', relevant[0])
+        self.assertIn('stop_omnivoicetts', relevant[1])
+        self.assertIn('--apply --idle-confirmed', relevant[2])
 
     def test_newest_file_is_collected_before_distribution(self):
         for host, text, timestamp in [("m132", "old", 100), ("m4128", "middle", 200), ("fedoraair", "newest", 300)]:
