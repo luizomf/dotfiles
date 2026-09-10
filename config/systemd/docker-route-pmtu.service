@@ -1,0 +1,15 @@
+[Unit]
+Description=Route-PMTU MSS clamp for Docker bridge forwarded TCP
+Before=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/libexec/docker-route-pmtu apply
+ExecStop=/usr/local/libexec/docker-route-pmtu remove
+TimeoutStartSec=180
+TimeoutStopSec=180
+
+[Install]
+WantedBy=docker.service

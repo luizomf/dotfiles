@@ -168,6 +168,106 @@ exclusion, timeout, waiters sharing one inode, crash/child lifetime, and failure
 cleanup. Platform-specific tests skip on the other OS. These tests do not prove
 publication, Queue ownership, or safe deployment into an active consumer.
 
+## Optional Docker route-PMTU MSS correction (Linux)
+
+[`scripts/docker-route-pmtu.py`](scripts/docker-route-pmtu.py) and
+[`config/systemd/docker-route-pmtu.service`](config/systemd/docker-route-pmtu.service)
+are **opt-in**, not installed by `install.sh`. They preserve the tested host
+helper/unit byte-for-byte; a checkout update does not replace installed copies.
+The helper's review-warning docstring is retained intentionally.
+
+Requires rootful local Docker (`/var/run/docker.sock`), Python 3, systemd,
+iptables/ip6tables with the **nf_tables** backend and the TCPMSS extension.
+Application requires firewalld to report **inactive**; it never starts it or
+changes its backend. This path was validated on Fedora Asahi, not every installer
+platform. It is not a macOS Docker Desktop or rootless Docker fix.
+
+Eight comment-owned mangle/FORWARD rules clamp forwarded TCP SYN and SYN-ACK
+using kernel source/destination route PMTU. They cover both IP families and both
+directions for `docker0` and the `br-+` interface-prefix selector. Reserve
+`docker0`/`br-*` for Docker: custom Docker bridge names outside that set are not
+covered, and non-Docker bridges using those names would be overmatched.
+`check-scope` verifies current naming, not future interface ownership. Default-
+named bridge recreation needs no rule reload. No outbound uplink, gateway,
+numeric MSS/MTU, NAT, DNS, route or sysctl change is configured.
+
+Mangle/FORWARD precedes the filter established-connection fast path, so returning
+SYN-ACKs are handled too. An already smaller MSS is not raised. This affects new
+TCP handshakes, not existing connections or UDP/QUIC. A dead VPN peer retaining
+its route **does not silently fall back** to another uplink. Kernel-known PMTU
+can still miss downstream black holes or asymmetric-path constraints.
+
+### Manual installation and checks
+
+Run from this repository root only with explicit host-change authorization.
+First retain a private before-state (`iptables-save -c`, `ip6tables-save -c`,
+routes and unit state); never commit it or restore it wholesale. Confirm trusted
+root-owned destination parents, absent installation paths (including symlinks),
+and no pre-existing `docker-route-pmtu:20260910:v1` rules. Stop on conflicts.
+Already-installed hosts need no reapplication merely because source was updated.
+
+```sh
+python3 scripts/docker-route-pmtu.py plan-apply
+python3 scripts/docker-route-pmtu.py plan-remove
+sudo python3 scripts/docker-route-pmtu.py check-scope
+sudo python3 scripts/docker-route-pmtu.py apply
+sudo iptables-save -c -t mangle
+sudo ip6tables-save -c -t mangle
+```
+
+Require exactly four owned rules per family and a real bounded Git regression
+on the original Docker network before persistence. Do not zero counters. On
+failure, use `sudo python3 scripts/docker-route-pmtu.py remove` and retain the
+incident evidence. Application reconciles attempted additions after uncertain
+command failure; cleanup errors report `ROLLBACK UNRESOLVED` without masking the
+original error. Inspect exact owned state rather than blindly retrying.
+
+After the runtime regression passes, inspect the actual Docker unit/drop-ins
+for ordering compatibility. If `/usr/local/libexec` is absent, create it
+root-owned0755; do not change an existing directory's permissions. With the two
+installation paths still absent:
+
+```sh
+sudo install -m 0755 -o root -g root scripts/docker-route-pmtu.py /usr/local/libexec/docker-route-pmtu
+sudo install -m 0644 -o root -g root config/systemd/docker-route-pmtu.service /etc/systemd/system/docker-route-pmtu.service
+sudo systemd-analyze verify /etc/systemd/system/docker-route-pmtu.service docker.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now docker-route-pmtu.service
+systemctl is-active docker-route-pmtu.service
+systemctl is-enabled docker-route-pmtu.service
+```
+
+Stop on any failed step. Verify effective unit/drop-ins before starting; do not
+restart Docker or reload firewalld. The new oneshot runs before Docker on future
+starts; `PartOf=docker.service` follows Docker stop/restart, not the reverse.
+Docker Wants rather than Requires it: a failed clamp unit does not stop Docker,
+so unit success remains a readiness check. Boot application does not query the
+not-yet-started Docker API; the naming contract must remain valid.
+
+### Rollback and validation limits
+
+For installed copies, disable only this unit, then reconcile its exact rules:
+
+```sh
+sudo systemctl disable --now docker-route-pmtu.service
+sudo /usr/local/libexec/docker-route-pmtu remove
+```
+
+Removal uses full rule specifications and the unique comment, not line numbers
+or table flushes. Verify the owned comment is absent in both families. Remove
+only verified task-owned installed files afterward and run `systemctl daemon-reload`;
+do not stop Docker or restore other operators' firewall state. The helper lock
+is `/run/docker-route-pmtu.lock`; never unlink it while a helper holds or awaits it.
+
+Focused checks: `python3 -B tests/test_docker_route_pmtu.py` (seven mocked tests,
+no firewall commands). Actual Fedora validation separately passed a full clone
+on the original bridge and confirmed both-direction MSS reduction and preservation
+of a smaller MSS. The user independently reported successful clones with and
+without WireGuard. Those observations are **not** proof of reboot behavior, IPv6
+dataplane, automatic dead-peer fallback, or support on every uplink. IPv6 rules
+do not enable IPv6 addressing/forwarding. Do not run disruptive transitions or
+production workloads merely to validate a source checkout.
+
 ## Local EdgeTTS command
 
 `edgetts` (no hyphen) is launched by `scripts/edgetts` from the local checkout at
