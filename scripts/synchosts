@@ -35,10 +35,16 @@ fi
 # or synchronization. All peers need the updated helper before this is used.
 "$host_runner" "$@" -- '"$HOME/dotfiles/scripts/clear_sannux_transients"' || exit $?
 
+# Daily owns media retention; all hosts must pass before any media is moved.
+daily_maintenance='"${PROJECTS_DIR:?}/daily-paper/maintenance/prune-runtime-history.sh"'
+"$host_runner" "$@" -- "$daily_maintenance --tts-media-check" || exit $?
+
 "$script_dir/zsh_history_sync.py" "$@" || exit $?
 "$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh || exit $?
 
 "$host_runner" "$@" -- '"$HOME/dotfiles/scripts/stop_omnivoicetts"' || exit $?
+"$host_runner" "$@" -- "$daily_maintenance --tts-media-preview" || exit $?
+"$host_runner" "$@" -- "$daily_maintenance --tts-media-apply" || exit $?
 "$host_runner" "$@" -- '"$HOME/dotfiles/scripts/clear_sannux_transients" --apply --idle-confirmed' || exit $?
 
 # Include hidden entries and symlinks, but keep the live parent directory.

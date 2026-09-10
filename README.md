@@ -401,14 +401,15 @@ copies**. Incident Scratch evidence stays on its originating host. Persistent
 auth, resources, configuration, unrelated workspaces and intentional shared
 backups keep their existing transfer behavior.
 
-Daily coordinator/worker attempts, audio, consumer logs and trusted markers are
-**not generic cache** and are not removed here. Their retention belongs to
-Daily Paper's existing `maintenance/prune-runtime-history.sh`, which currently
-covers five newest runs/briefings, current-day protection and Trash. Extending
-that tool to remote TTS bundles, with active/unresolved/retry protection and
-Linux-compatible Trash, remains separate work; do not substitute `rm -rf`
-or silently drop failed attempts to make this cleanup look complete. GIO/Trash
-moves do not empty Trash or necessarily free disk space immediately.
+Daily media cleanup is delegated to Daily Paper's existing
+`maintenance/prune-runtime-history.sh` on every fleet host. Before stops, all
+hosts must pass `--tts-media-check`; after stopping workers, preview and apply
+run on the fleet. This requires the updated Daily checkout on every host.
+Only WAV/TMP/Opus files older than 24 hours are eligible for Trash. Incomplete
+coordinator markers, consumer locks or an occupied inbox block maintenance.
+The operator must still keep the entire fleet idle; this is not a Queue lock.
+Attempt directories, inputs, logs and markers remain. Full history retention
+is separate. GIO/Trash moves do not empty Trash or free disk space immediately.
 
 Shared data uses neither `--delete` nor deletion markers. A file removed from
 only one host can return, including from a host that was offline. For intentional
