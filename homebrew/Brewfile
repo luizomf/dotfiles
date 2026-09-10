@@ -21,6 +21,8 @@ brew "btop"
 brew "cbonsai"
 # CD/DVD/Blu-ray premastering and recording software
 brew "cdrtools"
+# Versatile and fast Unicode/ASCII/ANSI graphics renderer
+brew "chafa"
 # Cross-platform make
 brew "cmake"
 # Console Matrix

@@ -457,7 +457,7 @@ It skips the local hostname and unavailable hosts, retaining the 120-second
 per-host read timeout, merge rules, atomic replacement, and ten local backups.
 Its existing Python 3.14 launcher requirement is unchanged. A host-list failure
 aborts before history is modified. `synchosts` forwards additional hosts to the
-history merge as well as rsync; service stops still use only the default fleet.
+history merge, idle maintenance sequence, and rsync transfers.
 
 No installation or reload is needed after editing this script. Running it has
 real effects, including history synchronization, tmux cleanup, service stops,
