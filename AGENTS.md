@@ -49,8 +49,7 @@ understandable.
 - These instructions apply repository-wide. `pi/agent/AGENTS.md` adds stricter
   rules for `pi/agent/`; follow the closest applicable `AGENTS.md`.
 - `README.md` is the user-facing source for supported setup and safety warnings.
-  Use its Tested systems section for the documented clean-install test matrix;
-  do not claim broader support without evidence.
+  Do not claim broader platform support than the README documents.
 - `config/paths.sh` is the documented source of truth for shared host paths.
   Preserve `OM_PATHS_FILE` overrides at callers that support them.
 - When documentation, tests, comments, and implementation disagree, trace the
@@ -69,9 +68,8 @@ understandable.
 - `pi/agent/` contains only static Pi configuration. Credentials, sessions,
   trust decisions, generated model state, and machine-specific model settings
   must remain local, as described in `README.md`.
-- `prompts/` contains reusable prompt text. `tests/` contains focused regression
-  suites for selected scripts and tmux behavior; inspect the available test files
-  for coverage relevant to a change rather than assuming repository-wide coverage.
+- `prompts/` contains reusable prompt text. `tests/` covers selected high-risk or
+  complex scripts; it is not intended to cover every command or configuration.
 
 ## Safety and public data
 
@@ -92,16 +90,21 @@ Treat every tracked file and Git commit as public.
 
 ## Engineering and verification
 
-- Whenever practical, prefer test-driven development (TDD).
 - Prefer simple, explicit changes in the existing language and style. Preserve
   Bash, Zsh, POSIX shell, Python, and Lua boundaries, including whether a shell
   file is executed or sourced.
 - Quote paths and arguments, validate untrusted input at boundaries, preserve
   useful error context, and explain non-obvious intent rather than narrating
   syntax.
-- Keep behavior changes small and reviewable. Add regression coverage when a
-  practical test boundary exists, and update affected user documentation in the
-  same change.
+- Do not add tests by default. Add them only for observable behavior with complex
+  logic or meaningful risk that review and a syntax check would not cover.
+- Do not test one-liners, simple wrappers, static values, command lists, exact
+  source text, implementation details, or scripts whose purpose is already to
+  perform a manual test or smoke check.
+- When substantial behavior genuinely needs automated tests, use TDD. Do not
+  invent low-value tests merely to claim that TDD was used.
+- Keep tests focused on outcomes and plausible regressions. Prefer a few durable
+  cases over exhaustive mocks of incidental internals.
 - There is no repository-wide build, lint, type-check, format, or CI workflow.
   Do not invent or claim gates that are not configured.
 - For changes to `scripts/bq`, run from the repository root:

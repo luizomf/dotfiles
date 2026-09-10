@@ -1,10 +1,10 @@
 # Keep user-managed toolchains ahead of Homebrew in non-interactive zsh
 # sessions. This prevents Homebrew's node/npm from shadowing nvm when a parent
 # process already exported NVM_BIN.
-path=("${(@)path:#${HOME:-/Users/luizotavio}/.local/bin}")
-path=("${HOME:-/Users/luizotavio}/.local/bin" "${path[@]}")
-path=("${HOME:-/Users/luizotavio}/dotfiles/scripts" "${path[@]}")
-path=("${HOME:-/Users/luizotavio}/.docker/bin" "${path[@]}")
+path=("${(@)path:#$HOME/.local/bin}")
+path=("$HOME/.local/bin" "${path[@]}")
+path=("$HOME/dotfiles/scripts" "${path[@]}")
+path=("$HOME/.docker/bin" "${path[@]}")
 
 path=("${(@)path:#/usr/local/bin}")
 path=("${(@)path:#/opt/homebrew/bin}")
@@ -17,7 +17,7 @@ export PATH
 # Keep non-interactive zsh sessions usable over SSH without loading the full
 # interactive config.
 # shellcheck source=../config/paths.sh
-. "${HOME:-/Users/luizotavio}/dotfiles/config/paths.sh"
+. "$HOME/dotfiles/config/paths.sh"
 export OLLAMA_HOST="${OLLAMA_HOST:-192.168.0.109:11434}"
 export OLLAMA_TIMEOUT_MS="${OLLAMA_TIMEOUT_MS:-10000}"
 export OLLAMA_LOAD_TIMEOUT="${OLLAMA_LOAD_TIMEOUT:-10m}"
