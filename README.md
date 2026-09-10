@@ -113,6 +113,18 @@ callers may select a machine-specific replacement with `OM_PATHS_FILE`.
 `omnivoice_m4128_half` also accepts `OMNIVOICE_REMOTE_APP` when the remote
 checkout differs from the local one.
 
+## Daily Paper audio logs
+
+On the configured Daily coordinator, use `watch -n 1 daily-paper-logs` for the
+last two lines of each worker log, selected post/date and recorded stage states.
+The thin `scripts/daily-paper-logs` shim requires the local Daily Paper checkout
+at `${AUTOMATION_ROOT:-${PROJECTS_DIR:-$HOME/Desktop/tutoriais_e_cursos}/daily-paper}`
+(with AUTOMATION_ROOT selecting the checkout directly). It delegates all policy
+to `maintenance/daily-paper-logs.sh` there; see that repository's README.
+Requires Bash and Python 3.9+. It does not run its own watcher, query Queue/SSH,
+start workers or clean runtime files. Without a recorded in-progress marker it
+explicitly displays last-known audio, not a claim of current generation.
+
 ## Local site Git automation lock
 
 Bash callers that mutate a shared local site checkout source

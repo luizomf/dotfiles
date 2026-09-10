@@ -84,3 +84,6 @@ Session.vim
 *.bak
 *.orig
 .scratch/
+
+# Explicit public command; all Daily status policy lives in its own repository.
+!/scripts/daily-paper-logs

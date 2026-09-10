@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# All status/log policy belongs to Daily Paper, not this PATH shim.
+set -euo pipefail
+root="${AUTOMATION_ROOT:-${PROJECTS_DIR:-${HOME}/Desktop/tutoriais_e_cursos}/daily-paper}"
+exec "$root/maintenance/daily-paper-logs.sh" "$@"
