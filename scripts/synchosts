@@ -1,5 +1,10 @@
 #!/usr/bin/env zsh
 
+# This is a personal, deliberately editable sync script—not a fixed deployment
+# pipeline. Hosts, directories, and steps may change temporarily to bootstrap a
+# machine or perform a one-off sync; those edits may be committed or reset later.
+# Do not require a clean dotfiles checkout or treat the current lists as an API.
+
 script_dir="${0:A:h}"
 host_runner="$script_dir/run_all_hosts"
 if (( $# == 1 )) && [[ "$1" == -h || "$1" == --help ]]; then
@@ -35,16 +40,16 @@ fi
 # or synchronization. All peers need the updated helper before this is used.
 "$host_runner" "$@" -- '"$HOME/dotfiles/scripts/clear_sannux_transients"' || exit $?
 
-# Daily owns media retention; all hosts must pass before any media is moved.
-daily_maintenance='"${PROJECTS_DIR:?}/daily-paper/maintenance/prune-runtime-history.sh"'
-"$host_runner" "$@" -- "$daily_maintenance --tts-media-check" || exit $?
+# Daily is optional on each host. Hosts without its checkout have nothing to prune.
+daily_maintenance='daily_script="${PROJECTS_DIR:-$HOME/Desktop/tutoriais_e_cursos}/daily-paper/maintenance/prune-runtime-history.sh"; if [[ -x "$daily_script" ]]; then "$daily_script"'
+"$host_runner" "$@" -- "$daily_maintenance --tts-media-check; fi" || exit $?
 
 "$script_dir/zsh_history_sync.py" "$@" || exit $?
 "$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh || exit $?
 
 "$host_runner" "$@" -- '"$HOME/dotfiles/scripts/stop_omnivoicetts"' || exit $?
-"$host_runner" "$@" -- "$daily_maintenance --tts-media-preview" || exit $?
-"$host_runner" "$@" -- "$daily_maintenance --tts-media-apply" || exit $?
+"$host_runner" "$@" -- "$daily_maintenance --tts-media-preview; fi" || exit $?
+"$host_runner" "$@" -- "$daily_maintenance --tts-media-apply; fi" || exit $?
 "$host_runner" "$@" -- '"$HOME/dotfiles/scripts/clear_sannux_transients" --apply --idle-confirmed' || exit $?
 
 # Include hidden entries and symlinks, but keep the live parent directory.
@@ -59,7 +64,9 @@ sleep 5 || exit $?
 
 ls -lah "$HOME"/.local/share/tmux/resurrect
 
-pullall || exit $?
+if ! pullall; then
+  print -u2 -- 'Some repositories could not be updated; continuing synchronization.'
+fi
 
 echo
 prline

@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -30,10 +31,13 @@ class SyncHostsTests(unittest.TestCase):
         self.script = scripts / "synchosts"
         # Keep fixtures independent of the operator's editable default fleet.
         runner = scripts / "run_all_hosts"
-        runner_text = runner.read_text()
-        start = runner_text.index("hosts=(")
-        end = runner_text.index(")", start) + 1
-        runner.write_text(runner_text[:start] + "hosts=(m132 m4128 fedoraair)" + runner_text[end:])
+        runner_text, replacements = re.subn(
+            r"(?m)^hosts=\([^)]*\)$",
+            "hosts=(m132 m4128 fedoraair)",
+            runner.read_text(),
+        )
+        self.assertEqual(replacements, 1)
+        runner.write_text(runner_text)
         for host in ["m132", "m4128", "fedoraair", "extra"]:
             home = self.root / "homes" / host
             for directory in [
@@ -123,6 +127,7 @@ class SyncHostsTests(unittest.TestCase):
             "PATH": f"{self.bin}{os.pathsep}{os.environ['PATH']}",
             "FIXTURE_ROOT": str(self.root),
             "COMMAND_LOG": str(self.log),
+            "PROJECTS_DIR": "",
             "REAL_RSYNC": shutil.which("rsync"),
             **(extra_env or {}),
         }
@@ -231,10 +236,11 @@ class SyncHostsTests(unittest.TestCase):
             for origin in ["m132", "m4128", "fedoraair"]:
                 self.assertEqual((self.root / "homes" / host / "sannux-data/backups/omnews" / (origin + ".db")).read_text(), origin)
 
-    def test_nonzero_prerequisite_status_stops_before_copying(self):
+    def test_pullall_failure_warns_and_continues_copying(self):
         result = self.run_sync(extra_env={"FAIL_COMMAND": "pullall"})
-        self.assertEqual(result.returncode, 17, result.stderr)
-        self.assertFalse(any(c[0] == "rsync" for c in self.commands()))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("continuing synchronization", result.stderr)
+        self.assertTrue(any(c[0] == "rsync" for c in self.commands()))
 
     def test_failed_collection_does_not_distribute_partial_data(self):
         result = self.run_sync(extra_env={"FAIL_PULL": "fedoraair"})

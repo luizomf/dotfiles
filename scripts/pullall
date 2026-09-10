@@ -1,30 +1,50 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -uo pipefail
+
+failures=0
 
 pull_repository() {
   local repository=$1
 
-  if ! git -C "$repository" status --porcelain >/dev/null 2>&1; then
+  local status
+  if ! status="$(git -C "$repository" status --porcelain 2>/dev/null)"; then
+    return 0
+  fi
+
+  if [[ -n "$status" ]]; then
+    printf 'Skipping %s (local changes).\n' "$repository"
     return 0
   fi
 
   printf '%s\n' "$repository"
-  git -C "$repository" pull --all --prune --ff-only
+  if ! git -C "$repository" pull --all --prune --ff-only; then
+    printf 'Could not update %s; continuing.\n' "$repository" >&2
+    return 1
+  fi
   prline
 }
 
 # HOME is intentionally resolved per host; macOS and Linux use different paths.
-pull_repository "${HOME}/dotfiles"
+pull_repository "${HOME}/dotfiles" || failures=1
 
-repositories_file=$(mktemp "${TMPDIR:-/tmp}/pullall.XXXXXX")
+repositories_file=$(mktemp "${TMPDIR:-/tmp}/pullall.XXXXXX") || exit 1
 cleanup() {
   rm -f -- "$repositories_file"
 }
 trap cleanup EXIT
 
-# Capture enumeration first so find failures cannot be hidden by process substitution.
-find "${PROJECTS_DIR}/" -maxdepth 1 -mindepth 1 -type d -print0 > "$repositories_file"
-while IFS= read -r -d '' repository; do
-  pull_repository "$repository"
-done < "$repositories_file"
+if [[ -d "${PROJECTS_DIR:-}" ]]; then
+  if find "${PROJECTS_DIR}/" -maxdepth 1 -mindepth 1 -type d -print0 > "$repositories_file"; then
+    while IFS= read -r -d '' repository; do
+      pull_repository "$repository" || failures=1
+    done < "$repositories_file"
+  else
+    printf 'Could not list projects under %s; continuing.\n' "$PROJECTS_DIR" >&2
+    failures=1
+  fi
+else
+  printf 'Projects directory not found; skipping: %s\n' "${PROJECTS_DIR:-<unset>}" >&2
+fi
+
+exit "$failures"
