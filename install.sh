@@ -171,7 +171,7 @@ if [[ "$OP_SYSTEM" == "ubuntu" ]]; then
   install_homebrew
   brew install fastfetch font-fira-code-nerd-font gcc neovim tree-sitter-cli rtk glow \
     bat chafa fzf tmux btop gh imagemagick just lazygit p7zip pandoc vhs trash-cli hf \
-    pi-coding-agent
+    pi-coding-agent pipes-sh cmatrix asciiquarium cbonsai nyancat
 
   mkdir -p "$HOME/.local/bin"
   if ! command -v fd > /dev/null 2>&1 && command -v fdfind > /dev/null 2>&1; then
