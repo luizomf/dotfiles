@@ -302,6 +302,25 @@ open a new shell if an existing session still resolves the old command. External
 callers with a different PATH should use `$HOME/dotfiles/scripts/edgetts` directly.
 Audio generation sends text to Microsoft's online TTS service.
 
+## Manual model checks
+
+Run `test_models` yourself on each host, with Daily/Sannux consumers idle during
+resource refresh. It first runs `sannux_ephemeral --refresh-pi-resources`, then
+checks Astra, Sol and Luna through host, ephemeral-home and persistent-home
+Codex/Pi routes. It also checks the inherited `LOCAL_MODEL` through Ollama,
+Antigravity/Gemini, and the standalone Daily wrapper (Astra and Ollama).
+The model list is explicit in the script; this is not catalog auto-discovery.
+
+Each check requires exit zero and an `OK` response. Failures remain visible and
+do not stop later checks; the final summary exits nonzero if anything failed.
+A failed refresh skips container Pi checks rather than validating stale resources.
+Persistent-home checks still disable conversation persistence. Only the uniquely
+created diagnostic workspace is removed, never the entire `~/Desktop/tmp`.
+On Fedora, the Daily wrapper selects the private `host.env`; an explicit
+`OM_PATHS_FILE` takes precedence. The Daily prompt is only a diagnostic, not a
+publication request. This checks model access, not research tools or a full Daily
+publication, and can incur provider usage charges.
+
 ## Manual host synchronization
 
 `scripts/run_all_hosts` owns the default fleet (`m132`, `m4128`, `fedoraair`),

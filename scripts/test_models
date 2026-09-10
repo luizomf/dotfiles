@@ -2,70 +2,122 @@
 
 set -euo pipefail
 
-mkdir -p ~/Desktop/tmp
-cd ~/Desktop/tmp || exit 1
-
+# Run manually on each host, with Daily/Sannux consumers idle during refresh.
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 # shellcheck disable=SC1090
-. ~/dotfiles/zsh/config/aliases
-# shellcheck disable=SC1090
-. ~/dotfiles/zsh/config/functions
+source "${OM_PATHS_FILE:-$script_dir/../config/paths.sh}"
+export PATH="$script_dir:$PATH"
+: "${PROJECTS_DIR:?Set PROJECTS_DIR before running test_models}"
 
-(
+mkdir -p "$HOME/Desktop/tmp"
+workspace="$(mktemp -d "$HOME/Desktop/tmp/test-models.XXXXXX")"
+trap 'cd "$HOME"; rm -rf -- "$workspace"' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+cd "$workspace"
+export CURDIR="$workspace"
 
-TESTING_='Testing. Answer OK'
-sannux_ephemeral --refresh-pi-resources
-prline
+prompt='Testing. Reply with exactly OK. Do not modify files or run tools.'
+cloud_models=(gpt-6-astra gpt-5.6-sol gpt-5.6-luna)
+results=()
+failures=0
+refresh_ok=false
 
-echo "CODEX:"
-sannux_ephemeral codex --model gpt-5.6-luna -c model_reasoning_effort=low \
-  exec --skip-git-repo-check --ephemeral <<< "$TESTING_"
-prline
+check_model() {
+  local label="$1" status
+  shift
+  printf '\n========== %s ==========\n' "$label"
+  if "$@" <<< "$prompt" > "$workspace/response.txt"; then
+    cat "$workspace/response.txt"
+    if grep -Eq '^[[:space:]]*OK[.!]?[[:space:]]*$' "$workspace/response.txt"; then
+      results+=("PASS: $label")
+      return 0
+    fi
+    results+=("FAIL: $label (no OK response)")
+  else
+    status=$?
+    cat "$workspace/response.txt"
+    [[ "$status" != 130 && "$status" != 143 ]] || exit "$status"
+    results+=("FAIL: $label (exit $status)")
+  fi
+  failures=$((failures + 1))
+}
 
-echo "CODEX (NOT EPHEMERAL):"
-sannux_ephemeral codex --model gpt-5.6-luna -c model_reasoning_effort=low exec \
-  --skip-git-repo-check --ephemeral <<< "$TESTING_"
-prline
+printf 'Refreshing Sannux Pi resources on %s...\n' "$(hostname -s)"
+if "$script_dir/sannux_ephemeral" --refresh-pi-resources; then
+  refresh_ok=true
+  results+=("PASS: Pi resource refresh")
+else
+  results+=("FAIL: Pi resource refresh; container Pi checks skipped")
+  failures=$((failures + 1))
+fi
 
-echo "CODEX OLLAMA:"
-sannux_ephemeral codex-ollama --model "${LOCAL_MODEL}" -c \
-  model_reasoning_effort=low exec --skip-git-repo-check --ephemeral <<< "$TESTING_"
-prline
+for model in "${cloud_models[@]}"; do
+  check_model "Codex host / $model" \
+    codex --model "$model" -c model_reasoning_effort=low \
+    exec --skip-git-repo-check --ephemeral
+  check_model "Codex ephemeral home / $model" \
+    sannux_ephemeral codex --model "$model" -c model_reasoning_effort=low \
+    exec --skip-git-repo-check --ephemeral
+  check_model "Codex persistent home / $model" \
+    sannux run codex --model "$model" -c model_reasoning_effort=low \
+    exec --skip-git-repo-check --ephemeral
 
-echo "PI:"
-sannux_ephemeral pi --no-session -p <<< "$TESTING_"
-prline
+  check_model "Pi host / $model" \
+    pi --provider openai-codex --model "$model" --thinking medium --no-session -p
+  if [[ "$refresh_ok" == true ]]; then
+    check_model "Pi ephemeral home / $model" \
+      sannux_ephemeral pi --provider openai-codex --model "$model" \
+      --thinking medium --no-session -p
+    check_model "Pi persistent home / $model" \
+      sannux run pi --provider openai-codex --model "$model" \
+      --thinking medium --no-session -p
+  fi
+done
 
-echo "PI (NOT EPHEMERAL):"
-sannux run pi -p --no-session --model openai-codex/gpt-6-astra:medium <<< "$TESTING_"
-prline
+if [[ -n "${LOCAL_MODEL:-}" ]]; then
+  check_model "Codex Ollama ephemeral home / $LOCAL_MODEL" \
+    sannux_ephemeral codex-ollama --model "$LOCAL_MODEL" \
+    -c model_reasoning_effort=low exec --skip-git-repo-check --ephemeral
+  check_model "Codex Ollama persistent home / $LOCAL_MODEL" \
+    sannux run codex-ollama --model "$LOCAL_MODEL" \
+    -c model_reasoning_effort=low exec --skip-git-repo-check --ephemeral
+  check_model "Pi host / Ollama / $LOCAL_MODEL" \
+    pi --provider ollama --model "$LOCAL_MODEL" --thinking low --no-session -p
+  if [[ "$refresh_ok" == true ]]; then
+    check_model "Pi ephemeral home / Ollama / $LOCAL_MODEL" \
+      sannux_ephemeral pi --provider ollama --model "$LOCAL_MODEL" \
+      --thinking low --no-session -p
+    check_model "Pi persistent home / Ollama / $LOCAL_MODEL" \
+      sannux run pi --provider ollama --model "$LOCAL_MODEL" \
+      --thinking low --no-session -p
+  fi
+else
+  results+=("FAIL: LOCAL_MODEL is unset; local-model checks skipped")
+  failures=$((failures + 1))
+fi
 
-echo "AGY:"
-sannux_agy_stdin --model "Gemini 3.7 Flash (High)" \
-  --dangerously-skip-permissions <<< "$TESTING_"
-prline
+check_model 'Antigravity ephemeral home / Gemini 3.7 Flash (High)' \
+  sannux_agy_stdin --model 'Gemini 3.7 Flash (High)' --dangerously-skip-permissions
 
-echo 'Local Pi'
-pi --no-session -p <<< \
-  "$TESTING_"
-prline
+if [[ "$refresh_ok" == true ]]; then
+  daily_runner="$PROJECTS_DIR/daily-paper/runners/run-pi-ephemeral.sh"
+  daily_command=("$daily_runner")
+  daily_paths="${OM_PATHS_FILE:-$HOME/.config/daily-paper/host.env}"
+  if [[ -n "${OM_PATHS_FILE:-}" || -f "$daily_paths" || "$(uname -s)" == Linux ]]; then
+    daily_command=(env "OM_PATHS_FILE=$daily_paths" "$daily_runner")
+  fi
+  check_model 'Daily Pi ephemeral home / gpt-6-astra' \
+    "${daily_command[@]}" --provider openai-codex --model gpt-6-astra \
+    --thinking medium --no-session -p
+  if [[ -n "${LOCAL_MODEL:-}" ]]; then
+    check_model "Daily Pi ephemeral home / Ollama / $LOCAL_MODEL" \
+      "${daily_command[@]}" --provider ollama --model "$LOCAL_MODEL" \
+      --thinking low --no-session -p
+  fi
+fi
 
-echo 'CODEX codex:'
-codex --model gpt-6-astra -c model_reasoning_effort=low --yolo exec --ephemeral \
-  2>/dev/null <<< "$TESTING_"
-prline
-
-echo "PI (Ephemeral):"
-sannux_ephemeral pi --no-session -p --model \
-  "${LOCAL_MODEL}" <<< "$TESTING_"
-prline
-
-echo "PI Daily (Ephemeral):"
-  ~/.codex/automations/daily-paper-llm-roundup/runners/run-pi-ephemeral.sh \
-  --model "${LOCAL_MODEL}" \
-  --provider ollama --thinking low \
-  --no-session -p <<< "$TESTING_"
-prline
-) || true
-
-cd -
-rm -r ~/Desktop/tmp
+printf '\n========== SUMMARY: %s ==========\n' "$(hostname -s)"
+printf '%s\n' "${results[@]}"
+printf 'Failures: %s\n' "$failures"
+[[ "$failures" -eq 0 ]]
