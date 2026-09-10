@@ -361,9 +361,9 @@ directory preparation, or transfers stop the script with a failing exit status.
 A failed collection prevents distribution; already completed local changes are
 not rolled back. A distribution failure can leave only some peers updated.
 Unavailable hosts therefore prevent a successful complete run; no retry is made.
-Prerequisite checks depend on helper exit statuses: `pullall` currently does not
-reliably propagate individual `git pull` failures, so inspect its output. This
-script is not a clean-Git gate.
+`pullall` updates the calling host's `~/dotfiles` checkout and immediate project
+repositories under its `$PROJECTS_DIR`; an individual pull failure stops it with
+a failing exit status. This script is not a clean-Git gate.
 
 ### Manual idle cleanup boundary
 

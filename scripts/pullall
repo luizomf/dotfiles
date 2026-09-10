@@ -2,13 +2,29 @@
 
 set -euo pipefail
 
-find "${PROJECTS_DIR}/" -maxdepth 1 -mindepth 1 -type d   \
-  -exec bash -lc '
-  set -euo pipefail
-  cd {} || exit 1
-  git status --porcelain >/dev/null 2>&1
-  echo "{}"
-  git pull --all --prune --ff-only
-  prline
-  ' \;
+pull_repository() {
+  local repository=$1
 
+  if ! git -C "$repository" status --porcelain >/dev/null 2>&1; then
+    return 0
+  fi
+
+  printf '%s\n' "$repository"
+  git -C "$repository" pull --all --prune --ff-only
+  prline
+}
+
+# HOME is intentionally resolved per host; macOS and Linux use different paths.
+pull_repository "${HOME}/dotfiles"
+
+repositories_file=$(mktemp "${TMPDIR:-/tmp}/pullall.XXXXXX")
+cleanup() {
+  rm -f -- "$repositories_file"
+}
+trap cleanup EXIT
+
+# Capture enumeration first so find failures cannot be hidden by process substitution.
+find "${PROJECTS_DIR}/" -maxdepth 1 -mindepth 1 -type d -print0 > "$repositories_file"
+while IFS= read -r -d '' repository; do
+  pull_repository "$repository"
+done < "$repositories_file"
