@@ -1,6 +1,40 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+pattern='/[o]mnivoicetts'
 
-clear_tts_cache
-pkill -9 -f '/[o]mnivoicetts' >/dev/null 2>&1 || true
+workers_running() {
+  local result=0
+  pgrep -f "$pattern" >/dev/null || result=$?
+  case "$result" in
+    0) return 0 ;;
+    1) return 1 ;;
+    *) printf 'Cannot inspect OmniVoice workers; refusing cache cleanup.\n' >&2; exit "$result" ;;
+  esac
+}
+
+signal_workers() {
+  local result=0
+  pkill "$1" -f "$pattern" >/dev/null 2>&1 || result=$?
+  [[ "$result" == 0 || "$result" == 1 ]] || return "$result"
+}
+
+# Preserve the existing match scope. Never kill Pi/Omnews to make cleanup pass.
+# Graceful stop first, then bounded escalation; never clear under a writer.
+if workers_running; then
+  signal_workers -TERM
+  for attempt in 1 2 3 4 5; do
+    sleep 1
+    workers_running || break
+  done
+  if workers_running; then
+    signal_workers -9
+    sleep 1
+  fi
+fi
+if workers_running; then
+  printf 'OmniVoice workers remain; refusing cache cleanup.\n' >&2
+  exit 1
+fi
+"$script_dir/clear_tts_cache"

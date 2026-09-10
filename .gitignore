@@ -87,3 +87,7 @@ Session.vim
 
 # Explicit public command; all Daily status policy lives in its own repository.
 !/scripts/daily-paper-logs
+
+# Static idle-maintenance command and isolated regression suite.
+!/scripts/clear_sannux_transients
+!/tests/test_idle_cleanup.py
