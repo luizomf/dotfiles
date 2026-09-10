@@ -5,7 +5,12 @@ set -euo pipefail
 export PROJECTS_DIR="${PROJECTS_DIR:-$HOME/Desktop/tutoriais_e_cursos}"
 export OMNIVOICE_DIR="${PROJECTS_DIR}/omnivoicetts"
 
+if [[ ! -d "$OMNIVOICE_DIR" ]]; then
+  printf 'OmniVoice directory not found; skipping cache cleanup: %s\n' "$OMNIVOICE_DIR"
+  exit 0
+fi
+
 (
-  cd "${OMNIVOICE_DIR}/" || (echo "Directory not found: ${OMNIVOICE_DIR}" ; exit 1)
+  cd "$OMNIVOICE_DIR"
   ./scripts/clear_cache
 )
