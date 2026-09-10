@@ -1,4 +1,6 @@
 tap "docker/tap", trusted: true
+# Aquarium animation in ASCII art
+brew "asciiquarium"
 # Cryptography and SSL/TLS Toolkit
 brew "openssl@3"
 # General-purpose data compression with high compression ratio
@@ -15,16 +17,16 @@ brew "bash-completion@2"
 brew "bat"
 # Resource monitor. C++ version and continuation of bashtop and bpytop
 brew "btop"
+# Console Bonsai is a bonsai tree generator, written in C using ncurses
+brew "cbonsai"
 # CD/DVD/Blu-ray premastering and recording software
 brew "cdrtools"
-# Versatile and fast Unicode/ASCII/ANSI graphics renderer
-brew "chafa"
 # Cross-platform make
 brew "cmake"
+# Console Matrix
+brew "cmatrix"
 # GNU File, Shell, and Text utilities
 brew "coreutils"
-# Like neofetch, but much faster because written mostly in C
-brew "fastfetch"
 # Simple, fast and user-friendly alternative to find
 brew "fd"
 # Command-line fuzzy finder written in Go
@@ -59,18 +61,28 @@ brew "nano"
 brew "tree-sitter"
 # Ambitious Vim-fork focused on extensibility and agility
 brew "neovim"
+# Renders an animated, color, ANSI-text loop of the Poptart Cat
+brew "nyancat"
 # Create, run, and share large language models (LLMs)
 brew "ollama"
 # 7-Zip (high compression file archiver) implementation
 brew "p7zip"
 # Swiss-army knife of markup format conversion
 brew "pandoc"
+# Animated pipes terminal screensaver
+brew "pipes-sh"
 # Package compiler and linker metadata toolkit
 brew "pkgconf"
+# Library like getopt(3) with a number of enhancements
+brew "popt", link: false
 # Python version management
 brew "pyenv"
 # Search tool like grep and The Silver Searcher
 brew "ripgrep"
+# Extremely fast non-cryptographic hash algorithm
+brew "xxhash", link: false
+# Utility that provides fast incremental file transfer
+brew "rsync"
 # CLI proxy to minimize LLM token consumption
 brew "rtk"
 # Static analysis and lint tool, for (ba)sh scripts
