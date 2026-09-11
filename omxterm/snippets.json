@@ -2,6 +2,12 @@
   "version": 1,
   "snippets": [
     {
+      "name": "Daily Paper Status (SSH)",
+      "body": "ssh -t fedoraair 'watch --color -n 1 python3 \"$PROJECTS_DIR\"/daily-paper/maintenance/daily-paper-status-prototype.py --color=always'",
+      "description": "Watch the read-only Daily Paper dashboard on Fedora. Requires PROJECTS_DIR in the remote shell.",
+      "execute": false
+    },
+    {
       "name": "curl pandoc html to markdown",
       "body": "export URL=\"${URL:-CHANGE URL}\" MDOUTPUT=\"${HOME}/Desktop/saved.md\" ; curl -fsSL \"${URL}\" | pandoc -f html -t gfm-raw_html-fenced_divs --wrap=none -o \"${MDOUTPUT}\"",
       "description": "Use curl and pandoc to open HTML pages and try to save it as markdown.",
