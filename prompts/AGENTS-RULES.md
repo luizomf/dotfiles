@@ -111,6 +111,10 @@ production baseline before promoted code becomes maintained product code.
 
 - Before editing, read applicable instructions, canonical docs, configuration,
   relevant code and tests, and current worktree state. Preserve unrelated work.
+- Before reviewing, updating, or commenting on a pull request, verify its current
+  state. Treat merged or closed pull requests as read-only historical records:
+  do not modify or comment on them unless explicitly requested. Record follow-up
+  work in a new issue or pull request.
 - Establish current behavior and the applicable verification path before making
   a behavior change. Reproduce reported defects when practical.
 - Prefer test-driven development for code changes: write a caller-visible test
