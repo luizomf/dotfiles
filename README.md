@@ -47,11 +47,19 @@ supported public API.
 
 ### Send a screenshot to an SSH host
 
-Run `sshot <ssh-alias>` on the Mac whose screen you want to capture, outside
-SSH. Select an area (Esc cancels); the command uploads the PNG with `scp` and
-copies its remote path to the Mac clipboard only after a successful transfer.
-Paste that path into the remote shell or agent. It uses normal SSH config,
-authentication and host-key checks; it does not discover the active SSH tab.
+Run `sshot <ssh-alias>` on the local Mac, outside SSH. It returns immediately
+and waits in the background for **one new clipboard image**, for up to 120 seconds.
+Close the tmux popup, arrange your screen, then use **Ctrl+Shift+Cmd+4** to capture
+an area to the clipboard (or copy an image with another tool). Existing clipboard
+images and changes containing only text are ignored. The previous immediate
+screen-selection mode is retired.
+
+The PNG is uploaded with `scp`; only after success does the remote path replace
+the Mac clipboard. Paste that path into the remote shell or agent. SSH config and
+host-key checks are preserved, but background SSH/SCP use `BatchMode=yes`: keys or
+an agent must work without password/passphrase or new-host confirmation prompts.
+The script does not discover the active SSH tab. Arm only one instance at a time;
+concurrent instances could send the same image to multiple destinations.
 
 ```bash
 sshot my-server
@@ -59,13 +67,22 @@ sshot my-server
 ~/dotfiles/scripts/sshot my-server
 ```
 
-Requires macOS `screencapture`/`pbcopy`, SSH/SCP, and a Unix-like remote with
-`mktemp` and writable `/tmp`. macOS may require Screen Recording permission for
-the terminal. Each capture uses a fresh private `/tmp/sshot.XXXXXXXXXX/` directory
-on the remote. Local temporary files are removed on exit; remote files remain
-for the recipient and must be removed when no longer needed. Failed uploads may
-leave a partial remote file; the script reports its path without changing the
-clipboard. Review the selected destination before capturing sensitive content.
+Uses built-in macOS `osascript` (AppKit via JavaScript for Automation), `pbcopy`,
+SSH/SCP, and a Unix-like remote with `mktemp` and writable `/tmp`. No extra runtime
+or persistent service is installed. The helper is `scripts/lib/sshot-clipboard.js`.
+
+The arming message prints a private local status-log path and a `touch` command
+to cancel while waiting; Ctrl-C after the prompt returns does not cancel it.
+Expiration or cancellation sends nothing. Esc cancels the screenshot tool, not
+the armed watcher. A new clipboard image from any application can trigger it:
+review the destination and cancel before copying sensitive images.
+
+Local image bytes are removed when the worker exits. Private temporary logs and
+cancellation files remain for troubleshooting; remove their reported directory
+once the worker is finished. Remote images remain in fresh private
+`/tmp/sshot.XXXXXXXXXX/` directories until removed or cleaned by the OS. Failed
+uploads can leave partial remote files; check the local log for the destination
+and failure. The 120-second limit covers waiting for an image, not upload time.
 
 ## Shared host paths
 
