@@ -13,6 +13,30 @@ jq --unbuffered --join-output --argjson colors "$colors" '
       $text
     end;
 
+  def token_usage($messages):
+    [
+      $messages[]?
+      | select(.role == "assistant" and .usage != null)
+      | .usage
+    ] as $usage
+    | if ($usage | length) == 0 then
+        ""
+      else
+        ($usage | map(.totalTokens // 0) | add) as $total
+        | ($usage | map(.input // 0) | add) as $input
+        | ($usage | map(.output // 0) | add) as $output
+        | ($usage | map(.cacheRead // 0) | add) as $cache_read
+        | ($usage | map(.cacheWrite // 0) | add) as $cache_write
+        | "\n" + colorize(35;
+            "tokens: \($total) total · \($input) in · \($output) out"
+            + if ($cache_read + $cache_write) > 0 then
+                " · \($cache_read) cache read · \($cache_write) cache write"
+              else
+                ""
+              end
+          ) + "\n"
+      end;
+
   if .type == "message_update" then
     .assistantMessageEvent |
     if .type == "thinking_delta" then
@@ -31,19 +55,23 @@ jq --unbuffered --join-output --argjson colors "$colors" '
       + (if .isError then colorize(31; "ERROR") else colorize(32; "ok") end)
       + "\n"
   elif .type == "agent_end" then
-    "\n"
+    token_usage(.messages) as $usage
+    | if $usage == "" then "\n" else $usage end
   elif .type == "message" and .message.role == "assistant" then
-    .message.content[] |
-    if .type == "thinking" then
-      colorize(90; .thinking)
-    elif .type == "text" then
-      .text
-    elif .type == "toolCall" then
-      "\n" + colorize(36; "→ \(.name)") + ": "
-        + colorize(33; (.arguments | tojson)) + "\n"
-    else
-      empty
-    end
+    .message as $message
+    | ([
+        $message.content[] |
+        if .type == "thinking" then
+          colorize(90; .thinking)
+        elif .type == "text" then
+          .text
+        elif .type == "toolCall" then
+          "\n" + colorize(36; "→ \(.name)") + ": "
+            + colorize(33; (.arguments | tojson)) + "\n"
+        else
+          empty
+        end
+      ] | join("")) + token_usage([$message])
   elif .type == "message" and .message.role == "toolResult" then
     "\n← \(.message.toolName): "
       + (if .message.isError then colorize(31; "ERROR") else colorize(32; "ok") end)
