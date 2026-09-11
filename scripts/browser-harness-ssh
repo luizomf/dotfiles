@@ -1,0 +1,261 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Connect browser-harness on this machine to a Chrome-family browser reachable
+# through an SSH alias. The script contains no machine names, addresses, users,
+# credentials, CDP UUIDs, or other local topology, so it is safe to publish.
+# SSH resolves HOST through the caller's private ~/.ssh/config.
+#
+# Upstream repository: https://github.com/browser-use/browser-harness
+# To restore the checkout expected by this script:
+#   git clone https://github.com/browser-use/browser-harness.git \
+#     "${PROJECTS_DIR:?PROJECTS_DIR must be set}/browserharness"
+#
+# Why a tunnel is required:
+# Chrome's DevTools Protocol (CDP) normally listens only on the remote machine's
+# 127.0.0.1. The SSH local forward preserves that protection instead of exposing
+# a browser-control endpoint to the LAN. Anyone with CDP access can act as the
+# logged-in browser, so never bind the local side to 0.0.0.0.
+#
+# Pi agent lifecycle:
+# `tunnel` is intentionally a foreground, long-running process. Start it with
+# managed_process_start, using this script as the executable and literal args
+# ["tunnel", HOST]. After acceptance, make one real browser-harness call through
+# this script as the readiness check. Keep the managed process for related browser
+# work and stop it with managed_process_stop when it is no longer needed. Do not
+# launch `tunnel` through ordinary bash with &, nohup, disown, or an unmanaged
+# detached child. Humans can run it in a dedicated terminal and stop it with Ctrl-C.
+#
+# Examples:
+#   # Terminal 1 (or Pi managed_process_start):
+#   browser-harness-ssh tunnel my-mac
+#
+#   # Terminal 2; stdin and normal browser-harness arguments pass through:
+#   browser-harness-ssh my-mac <<'PY'
+#   print(page_info())
+#   PY
+#
+# The CDP browser UUID changes when Chrome restarts. `run` discovers it on every
+# invocation and reloads only that host's named harness daemon when necessary.
+# Local runtime metadata is private and lives outside this public repository.
+
+usage() {
+  cat <<'EOF'
+Usage:
+  browser-harness-ssh tunnel HOST
+  browser-harness-ssh run HOST [BROWSER_HARNESS_ARGS...]
+  browser-harness-ssh HOST [BROWSER_HARNESS_ARGS...]
+
+Connect browser-harness to Chrome on an SSH host without exposing CDP to the LAN.
+
+`tunnel` stays in the foreground. Pi agents must start it with
+managed_process_start and stop it with managed_process_stop. Humans may keep it
+in a separate terminal and stop it with Ctrl-C.
+
+`run` (or the HOST shorthand) discovers Chrome's current CDP endpoint, exports a
+host-specific BU_NAME and BU_CDP_WS, then executes browser-harness. Browser code
+is accepted on stdin exactly like the original command.
+
+Configuration:
+  BROWSER_HARNESS_BIN  Override the browser-harness executable.
+  PROJECTS_DIR         Shared checkout root. Used as a portable fallback to
+                       $PROJECTS_DIR/browserharness/browser-harness.
+  OM_PATHS_FILE        Optional shared-path configuration file.
+EOF
+}
+
+fail() {
+  printf 'browser-harness-ssh: %s\n' "$1" >&2
+  exit 2
+}
+
+valid_host() {
+  [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]]
+}
+
+host_key() {
+  # BU_NAME allows only letters, digits, underscores, and hyphens.
+  printf 'ssh_%s' "$1" | tr -c 'A-Za-z0-9_-' '_'
+}
+
+local_port_for() {
+  local checksum
+  checksum=$(printf '%s' "$1" | cksum)
+  checksum=${checksum%% *}
+  printf '%s\n' "$((22000 + checksum % 10000))"
+}
+
+remote_endpoint() {
+  local host=$1 output remote_port remote_path
+
+  # -n prevents SSH from consuming browser-harness code waiting on this script's
+  # stdin. The remote snippet prints only the port and CDP path; it never reads or
+  # transfers browser profile data, cookies, credentials, or page content.
+  output=$(ssh -n -T \
+    -o BatchMode=yes \
+    -o ConnectTimeout=10 \
+    "$host" \
+    'for f in \
+      "$HOME/Library/Application Support/Google/Chrome/DevToolsActivePort" \
+      "$HOME/Library/Application Support/Chromium/DevToolsActivePort" \
+      "$HOME/Library/Application Support/BraveSoftware/Brave-Browser/DevToolsActivePort" \
+      "$HOME/.config/google-chrome/DevToolsActivePort" \
+      "$HOME/.config/chromium/DevToolsActivePort" \
+      "$HOME/.config/BraveSoftware/Brave-Browser/DevToolsActivePort" \
+      "$HOME/.config/microsoft-edge/DevToolsActivePort"
+    do
+      if [ -r "$f" ]; then
+        port=$(head -n 1 "$f")
+        path=$(tail -n +2 "$f" | head -n 1)
+        case "$port:$path" in
+          *[!0-9]*:*) continue ;;
+          *:/devtools/browser/*)
+            printf "%s\\n%s\\n" "$port" "$path"
+            exit 0
+            ;;
+        esac
+      fi
+    done
+    printf "%s\\n" "Chrome DevToolsActivePort was not found; open Chrome and enable remote debugging." >&2
+    exit 1') || fail "could not discover Chrome CDP through SSH host '$host'"
+
+  [[ "$output" == *$'\n'* ]] || fail "invalid CDP response from SSH host '$host'"
+  remote_port=${output%%$'\n'*}
+  remote_path=${output#*$'\n'}
+  remote_path=${remote_path%%$'\n'*}
+
+  [[ "$remote_port" =~ ^[0-9]+$ ]] || fail "invalid remote CDP port"
+  [[ "$remote_path" == /devtools/browser/* ]] || fail "invalid remote CDP path"
+  printf '%s\n%s\n' "$remote_port" "$remote_path"
+}
+
+state_root() {
+  local root=${XDG_RUNTIME_DIR:-"$HOME/.cache"}/browser-harness-ssh
+  mkdir -p "$root"
+  chmod 700 "$root"
+  printf '%s\n' "$root"
+}
+
+find_harness() {
+  local paths_file candidate
+
+  if [[ -n ${BROWSER_HARNESS_BIN:-} ]]; then
+    [[ -x "$BROWSER_HARNESS_BIN" ]] || fail "BROWSER_HARNESS_BIN is not executable"
+    printf '%s\n' "$BROWSER_HARNESS_BIN"
+    return
+  fi
+
+  if candidate=$(type -P browser-harness 2>/dev/null) && [[ -n "$candidate" ]]; then
+    printf '%s\n' "$candidate"
+    return
+  fi
+
+  if [[ -z ${PROJECTS_DIR:-} ]]; then
+    paths_file=${OM_PATHS_FILE:-"$HOME/dotfiles/config/paths.sh"}
+    if [[ -r "$paths_file" ]]; then
+      # shellcheck disable=SC1090
+      source "$paths_file"
+    fi
+  fi
+
+  candidate=${PROJECTS_DIR:-}/browserharness/browser-harness
+  [[ -n ${PROJECTS_DIR:-} && -x "$candidate" ]] || fail \
+    "browser-harness not found; set BROWSER_HARNESS_BIN or PROJECTS_DIR"
+  printf '%s\n' "$candidate"
+}
+
+write_private_file() {
+  local path=$1 content=$2 temporary="${1}.tmp.$$"
+  (umask 077; printf '%s\n' "$content" >"$temporary")
+  mv -f "$temporary" "$path"
+}
+
+run_tunnel() {
+  local host=$1 endpoint remote_port remote_path local_port root metadata
+  endpoint=$(remote_endpoint "$host")
+  remote_port=${endpoint%%$'\n'*}
+  remote_path=${endpoint#*$'\n'}
+  local_port=$(local_port_for "$host")
+  root=$(state_root)
+  metadata="$root/$(host_key "$host").tunnel"
+  write_private_file "$metadata" "$remote_port"
+
+  printf 'Forwarding Chrome CDP for %s on local 127.0.0.1:%s; stop this process when finished.\n' \
+    "$host" "$local_port" >&2
+
+  # exec is deliberate: Pi's managed_process_stop then owns the actual SSH
+  # process group instead of an intermediate shell or detached tunnel.
+  exec ssh -n -T -N \
+    -o BatchMode=yes \
+    -o ConnectTimeout=10 \
+    -o ExitOnForwardFailure=yes \
+    -o ServerAliveInterval=30 \
+    -o ServerAliveCountMax=3 \
+    -L "127.0.0.1:${local_port}:127.0.0.1:${remote_port}" \
+    "$host"
+}
+
+run_harness() {
+  local host=$1
+  shift
+
+  local endpoint remote_port remote_path local_port root key metadata daemon_state
+  local configured_port previous_endpoint ws harness
+  endpoint=$(remote_endpoint "$host")
+  remote_port=${endpoint%%$'\n'*}
+  remote_path=${endpoint#*$'\n'}
+  local_port=$(local_port_for "$host")
+  root=$(state_root)
+  key=$(host_key "$host")
+  metadata="$root/$key.tunnel"
+  daemon_state="$root/$key.daemon-endpoint"
+
+  [[ -r "$metadata" ]] || fail \
+    "no tunnel metadata for '$host'; start 'browser-harness-ssh tunnel $host' first"
+  configured_port=$(head -n 1 "$metadata")
+  [[ "$configured_port" == "$remote_port" ]] || fail \
+    "Chrome's CDP port changed; restart the managed tunnel for '$host'"
+
+  ws="ws://127.0.0.1:${local_port}${remote_path}"
+  harness=$(find_harness)
+  previous_endpoint=''
+  [[ ! -r "$daemon_state" ]] || previous_endpoint=$(head -n 1 "$daemon_state")
+
+  if [[ "$previous_endpoint" != "$ws" ]]; then
+    # A named daemon keeps the WebSocket it received at startup. Reload only when
+    # this host's endpoint changed; routine calls continue reusing the daemon.
+    BU_NAME="$key" BU_CDP_WS="$ws" "$harness" --reload >/dev/null
+    write_private_file "$daemon_state" "$ws"
+  fi
+
+  exec env BU_NAME="$key" BU_CDP_WS="$ws" "$harness" "$@"
+}
+
+(( $# )) || { usage >&2; exit 2; }
+case "$1" in
+  -h|--help)
+    usage
+    ;;
+  tunnel)
+    (( $# == 2 )) || fail "tunnel requires exactly one SSH host"
+    valid_host "$2" || fail "invalid SSH host alias: $2"
+    run_tunnel "$2"
+    ;;
+  run)
+    (( $# >= 2 )) || fail "run requires an SSH host"
+    valid_host "$2" || fail "invalid SSH host alias: $2"
+    host=$2
+    shift 2
+    run_harness "$host" "$@"
+    ;;
+  -*)
+    fail "unknown option: $1"
+    ;;
+  *)
+    valid_host "$1" || fail "invalid SSH host alias: $1"
+    host=$1
+    shift
+    run_harness "$host" "$@"
+    ;;
+esac

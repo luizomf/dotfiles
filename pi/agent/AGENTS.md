@@ -17,3 +17,7 @@ Prefix supported commands with `rtk` (e.g. `rtk ls -lah`). Use
 `rtk proxy <command>` when bypassing RTK is necessary.
 
 RTK docs: `@~/.pi/agent/RTK.md`
+
+For Chrome running on an authorized SSH host, use `browser-harness-ssh` rather
+than exposing CDP to the network. Read `browser-harness-ssh --help` before use;
+its `tunnel` subcommand documents the required managed-process lifecycle.
