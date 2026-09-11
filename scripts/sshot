@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# Capture on the local Mac, upload through an SSH alias, copy the remote path.
+set -euo pipefail
+
+usage() {
+  printf 'Usage: sshot <ssh-alias>\nSelect an area on this Mac; upload with scp and copy the remote path.\n'
+}
+
+if [[ ${1:-} == --help || ${1:-} == -h ]]; then
+  usage
+  exit 0
+fi
+if [[ $# != 1 || ! $1 =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]*$ ]]; then
+  usage >&2
+  printf 'Use an SSH config alias (not a URL, option, or user@host).\n' >&2
+  exit 64
+fi
+if [[ $(uname -s) != Darwin ]]; then
+  printf 'sshot: run this on the Mac whose screen you want to capture, not inside SSH.\n' >&2
+  exit 1
+fi
+for tool in screencapture ssh scp pbcopy mktemp; do
+  command -v "$tool" >/dev/null || { printf 'sshot: missing command: %s\n' "$tool" >&2; exit 1; }
+done
+
+host=$1
+umask 077
+local_dir=$(mktemp -d "${TMPDIR:-/tmp}/sshot.XXXXXXXXXX")
+image="$local_dir/screenshot.png"
+cleanup() {
+  rm -f -- "$image"
+  rmdir -- "$local_dir"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+printf 'Select an area to send to %s (Esc cancels).\n' "$host" >&2
+if ! screencapture -i -x -t png "$image"; then
+  printf 'sshot: capture cancelled or failed; nothing uploaded.\n' >&2
+  exit 1
+fi
+if [[ ! -s $image ]]; then
+  printf 'sshot: no capture; nothing uploaded.\n' >&2
+  exit 0
+fi
+
+# A fixed remote command and restricted alias avoid interpolating shell input.
+# Keep normal SSH authentication/host-key checks and ~/.ssh/config routing.
+remote_dir=$(ssh -o ConnectTimeout=10 "$host" 'umask 077; mktemp -d /tmp/sshot.XXXXXXXXXX')
+if [[ ! $remote_dir =~ ^/tmp/sshot\.[a-zA-Z0-9]{10}$ ]]; then
+  printf 'sshot: unexpected remote temporary path; refusing upload.\n' >&2
+  exit 1
+fi
+remote_file="$remote_dir/screenshot.png"
+if ! scp -o ConnectTimeout=10 "$image" "$host:$remote_file"; then
+  printf 'sshot: upload failed; clipboard unchanged. A partial file may remain at %s:%s\n' \
+    "$host" "$remote_file" >&2
+  exit 1
+fi
+
+# Print the usable path even if clipboard access fails after a successful upload.
+printf '%s\n' "$remote_file"
+if ! printf '%s' "$remote_file" | pbcopy; then
+  printf 'sshot: uploaded to %s, but clipboard copy failed; use the path above.\n' "$host" >&2
+  exit 1
+fi
+printf 'sshot: uploaded to %s; remote path copied. Paste it into your remote session.\n' "$host" >&2

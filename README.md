@@ -45,6 +45,28 @@ delete data, corrupt shared state, break installation, or leave background work
 in a bad state. Tests use isolated fixtures; they do not make these scripts a
 supported public API.
 
+### Send a screenshot to an SSH host
+
+Run `sshot <ssh-alias>` on the Mac whose screen you want to capture, outside
+SSH. Select an area (Esc cancels); the command uploads the PNG with `scp` and
+copies its remote path to the Mac clipboard only after a successful transfer.
+Paste that path into the remote shell or agent. It uses normal SSH config,
+authentication and host-key checks; it does not discover the active SSH tab.
+
+```bash
+sshot my-server
+# Or, if scripts/ is not on PATH:
+~/dotfiles/scripts/sshot my-server
+```
+
+Requires macOS `screencapture`/`pbcopy`, SSH/SCP, and a Unix-like remote with
+`mktemp` and writable `/tmp`. macOS may require Screen Recording permission for
+the terminal. Each capture uses a fresh private `/tmp/sshot.XXXXXXXXXX/` directory
+on the remote. Local temporary files are removed on exit; remote files remain
+for the recipient and must be removed when no longer needed. Failed uploads may
+leave a partial remote file; the script reports its path without changing the
+clipboard. Review the selected destination before capturing sensitive content.
+
 ## Shared host paths
 
 `config/paths.sh` defines the shared `PROJECTS_DIR` used by shells and unattended
