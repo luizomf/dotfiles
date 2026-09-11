@@ -75,10 +75,10 @@ ping_agents() {
     set -- --model "$KEEPWARM_CODEX_MODEL"
   fi
   run_ping codex sannux run \
-    codex exec --yolo - --ephemeral "$@" -c model_reasoning_effort=low --color never
+    codex exec --yolo - --ephemeral "$@" --model gpt-5.6-luna -c model_reasoning_effort=low --color never
 
   run_ping pi sannux run \
-    pi -p --no-session --model openai-codex/gpt-5.6-sol:high
+    pi -p --no-session --model openai-codex/gpt-5.6-luna:low
 }
 
 reload_loop() {
