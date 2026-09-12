@@ -49,11 +49,20 @@ supported public API.
 
 Python tooling lives in `pyproject.toml`, with versions locked in `uv.lock`.
 This is a **development-only** environment, not a package containing the
-dotfiles. Use uv and Python 3.10 or newer to set it up:
+dotfiles. The installer creates or updates the checkout's `.venv` from the
+lockfile after setting up Python, including on reruns. It does not upgrade the
+lockfile or activate that environment globally. `OM_INSTALL_SKIP_TOOLCHAINS=1`
+skips this step with an explicit reminder.
+
+For an existing checkout, use uv and Python 3.10 or newer to update only the
+development tools, without rerunning the installer:
 
 ```sh
 uv sync --locked
 ```
+
+This is a dedicated environment: sync can remove packages not declared in the
+lockfile. Keep unrelated project dependencies in their own virtual environments.
 
 The local `.venv` is ignored. Do not add it to the global PATH or use it for
 installed scripts, tmux hooks, Queue payloads or host maintenance. Each command

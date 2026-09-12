@@ -289,6 +289,13 @@ if [[ "${OM_INSTALL_SKIP_TOOLCHAINS:-0}" != "1" ]]; then
   if ! uv tool list | grep -q '^ruff '; then
     uv tool install ruff
   fi
+
+  loginfo "Syncing the dotfiles development environment from uv.lock..."
+  # Always target this checkout, not the caller's cwd or another active venv.
+  UV_PROJECT_ENVIRONMENT="$REPO_DIR/.venv" uv sync \
+    --project "$REPO_DIR" --locked --python "$(pyenv which python)"
+else
+  loginfo "Toolchain setup skipped; run 'uv sync --locked' in $REPO_DIR to prepare development tools."
 fi
 
 loginfo "Criando links de configuração..."
@@ -385,6 +392,12 @@ if [[ "$OP_SYSTEM" == "ubuntu" ]]; then
 fi
 if [[ "${OM_INSTALL_SKIP_TOOLCHAINS:-0}" != "1" ]]; then
   required_commands+=(node npm prettier pyenv python uv pyright ruff)
+  for development_tool in python pyright ruff; do
+    if [[ ! -x "$REPO_DIR/.venv/bin/$development_tool" ]]; then
+      logerror "Development tool not found: $REPO_DIR/.venv/bin/$development_tool"
+      exit 1
+    fi
+  done
 fi
 for required_command in "${required_commands[@]}"; do
   if ! command -v "$required_command" > /dev/null 2>&1; then
