@@ -144,8 +144,38 @@ scope, authorize side effects, or change the test policy below.
   invent low-value tests merely to claim that TDD was used.
 - Keep tests focused on outcomes and plausible regressions. Prefer a few durable
   cases over exhaustive mocks of incidental internals.
-- There is no repository-wide build, lint, type-check, format, or CI workflow.
-  Do not invent or claim gates that are not configured.
+- Development feedback is configured in `pyproject.toml`: Ruff for Python lint
+  and formatting, Pyright for type diagnostics. See
+  [Development feedback in the README](README.md#development-feedback) for setup
+  and commands. This does not make the dotfiles an application/package or add a
+  repository-wide build or CI gate. Keep using the focused tests below.
+- Tools are guardrails for clearer, safer code, not a score to optimize. Use
+  diagnostics to catch questionable calls, types, imports and common mistakes.
+  Do not add abstractions, casts, blanket suppressions or configuration
+  exclusions merely to make a report green. Investigate a warning; fix a
+  relevant defect or explain a narrow, justified exception. Do not enable every
+  rule just for rigor.
+- For Python changes, run Ruff lint, Ruff format checks and Pyright on the
+  affected files using `uv run --locked`. Compare pre-existing diagnostics when
+  working on legacy code; report remaining issues rather than hiding them or
+  claiming the whole repository passes. New code should follow the configured
+  conventions. A real unrelated defect can be reported for a separate change;
+  this is not permission to ignore new issues introduced by the current task.
+- Use the editor's formatting policy, not a personal default: `pyproject.toml`
+  for Python, `nvim/config_files/prettierrc.json` for Prettier-supported files,
+  and `nvim/config_files/stylua.toml` for Lua. Root `.prettierrc.json` and
+  `.stylua.toml` are links to those existing sources of truth. Format new/changed
+  files only; do not run repository-wide auto-fixes or reformat unrelated files.
+  If a legacy file would produce substantial unrelated formatting churn,
+  separate that normalization from the functional change rather than weakening
+  the formatter.
+- `.venv` and `uv.lock` serve development tools only. Never add the virtualenv
+  to the global PATH or make deployed scripts, installers, hooks or unattended
+  jobs depend on it. Preserve each script's runtime interpreter contract; the
+  dev environment's Python version is not permission to raise runtime
+  requirements. When adding extensionless Python commands, update both tools'
+  discovery lists in `pyproject.toml`; update version overrides only with
+  supporting evidence.
 - For changes to `scripts/bq`, run from the repository root:
   `python3 -m unittest tests/test_bq.py`.
 - For other changes, use focused interpreter-specific syntax or behavior checks

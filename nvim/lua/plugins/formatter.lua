@@ -1,4 +1,12 @@
 -- lua/plugins/formatter.lua
+local function ruff_command(self, ctx)
+  -- Use the project's locked formatter when available, without changing PATH.
+  return require("conform.util").find_executable({ ".venv/bin/ruff" }, "ruff")(
+    self,
+    ctx
+  )
+end
+
 return {
   {
     "stevearc/conform.nvim",
@@ -6,6 +14,9 @@ return {
     cmd = { "ConformInfo" },
     opts = {
       formatters = {
+        ruff_fix = { command = ruff_command },
+        ruff_format = { command = ruff_command },
+        ruff_organize_imports = { command = ruff_command },
         custom_stylua = {
           command = "stylua",
           args = {

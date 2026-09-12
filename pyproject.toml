@@ -1,0 +1,82 @@
+# Development tools only: these dotfiles are not an installable Python package.
+# Runtime commands must not depend on this checkout's .venv.
+[project]
+name = "dotfiles-dev"
+version = "0.0.0"
+requires-python = ">=3.10"
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+  "pyright==1.1.414",
+  "ruff==0.16.7",
+]
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+target-version = "py39"
+fix = false
+unsafe-fixes = false
+force-exclude = true
+extend-exclude = [".scratch"]
+# Ruff does not discover extensionless Python commands by suffix.
+include = [
+  "scripts/**/*.py",
+  "tmux/**/*.py",
+  "tests/**/*.py",
+  "scripts/binunicode",
+  "scripts/bq",
+  "scripts/clear_sannux_transients",
+  "scripts/password_generator",
+  "scripts/termbench",
+]
+
+[tool.ruff.per-file-target-version]
+# Match explicit interpreter requirements, not the developer's current Python.
+"scripts/binunicode" = "py314"
+"scripts/password_generator" = "py314"
+"scripts/termbench" = "py314"
+"scripts/zsh_history_sync.py" = "py314"
+# bq evaluates PEP 604 union annotations at runtime.
+"scripts/bq" = "py310"
+
+[tool.ruff.lint]
+# Errors, undefined/unused names, imports, common bugs and compatible upgrades.
+# Avoid ALL: annotations/docstrings, print bans and stylistic simplification are
+# not reasons to make these standalone commands harder to read.
+select = ["E4", "E7", "E9", "F", "I", "B", "UP", "RUF100"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.pyright]
+typeCheckingMode = "standard"
+pythonVersion = "3.9"
+venvPath = "."
+venv = ".venv"
+include = [
+  "scripts",
+  "tmux",
+  "tests",
+  "scripts/binunicode",
+  "scripts/bq",
+  "scripts/clear_sannux_transients",
+  "scripts/password_generator",
+  "scripts/termbench",
+]
+exclude = ["**/__pycache__", "**/.venv", ".scratch"]
+# File-specific environments precede the conservative fallback. This preserves
+# useful diagnostics without pretending every deployed host runs Python 3.14.
+executionEnvironments = [
+  { root = "scripts/binunicode", pythonVersion = "3.14" },
+  { root = "scripts/password_generator", pythonVersion = "3.14" },
+  { root = "scripts/termbench", pythonVersion = "3.14" },
+  { root = "scripts/zsh_history_sync.py", pythonVersion = "3.14" },
+  { root = "scripts/bq", pythonVersion = "3.10" },
+  { root = ".", pythonVersion = "3.9" },
+]
