@@ -115,12 +115,17 @@ locks and local focus remain on their host; newer peer timestamps do not overrid
 an explicit publication from the caller. Rsync stages replacement with
 `--delay-updates --checksum`; other data retains the script's previous update rules.
 
-This is publication, not a merge, fleet transaction or coordination with a peer's
-concurrent save. Use `synchosts` as the existing manual idle maintenance command,
-not while peers are actively saving. All participating hosts need this updated
-checkout before relying on the new snapshot. The personal script targets
-`~/.local/share/tmux/lazy/` on peers; adjust its policy for nondefault state/XDG
-paths instead of assuming those overrides are discovered remotely.
+This is publication, not a merge, fleet transaction or coordination with a
+peer's concurrent save. Ordinary `synchosts` no longer stops services or
+performs idle cleanup; see
+[the sync scope and failure policy](../README.md#host-synchronization-and-idle-maintenance).
+Keep peer saves quiescent during publication, without stopping their running
+panes or unrelated services. A failed local save/export blocks tmux publication,
+not independent file transfers; a failed tmux push does not block other peers.
+All participating hosts need this updated checkout before relying on the
+snapshot. The personal script targets `~/.local/share/tmux/lazy/` on peers;
+adjust its policy for nondefault state/XDG paths instead of assuming those
+overrides are discovered remotely.
 
 ```sh
 # Export to a NEW directory; only portable state.json is emitted.

@@ -2,49 +2,88 @@
 
 set -uo pipefail
 
-failures=0
+failures=()
+updated=0
+dirty=0
+non_repository=0
+repositories_file=''
+
+fail() {
+  failures+=("$1 (exit $2)")
+  printf 'Failed: %s (exit %s); continuing.\n' "$1" "$2" >&2
+}
+
+# Invoked by the EXIT trap, including handled setup failures.
+# shellcheck disable=SC2329
+finish() {
+  local result=$? item
+  trap - EXIT
+  if [[ -n "$repositories_file" ]]; then
+    rm -f -- "$repositories_file" || fail 'repository list cleanup' "$?"
+  fi
+  printf '\npullall summary: %s updated, %s dirty, %s non-repository, %s failed.\n' \
+    "$updated" "$dirty" "$non_repository" "${#failures[@]}"
+  for item in ${failures[@]+"${failures[@]}"}; do
+    printf '  FAILED: %s\n' "$item"
+  done
+  if (( ${#failures[@]} && result == 0 )); then result=1; fi
+  exit "$result"
+}
+trap 'finish' EXIT
+trap 'fail "interrupted; remaining repositories not attempted" 130; exit 130' INT
+trap 'fail "terminated; remaining repositories not attempted" 143; exit 143' TERM
 
 pull_repository() {
-  local repository=$1
+  local repository=$1 required=${2:-0} status
 
-  local status
-  if ! status="$(git -C "$repository" status --porcelain 2>/dev/null)"; then
-    return 0
+  # A .git file is also a checkout (worktree/submodule). Do not mistake an
+  # ordinary child directory inside a parent repository for its own checkout.
+  if [[ ! -e "$repository/.git" && ! -L "$repository/.git" ]]; then
+    if (( required )); then
+      fail "required checkout missing: $repository" 1
+    else
+      printf 'Skipping %s (non-repository).\n' "$repository"
+      (( non_repository += 1 ))
+    fi
+    return
   fi
-
-  if [[ -n "$status" ]]; then
-    printf 'Skipping %s (local changes).\n' "$repository"
-    return 0
+  if status="$(git -C "$repository" status --porcelain)"; then
+    if [[ -n "$status" ]]; then
+      printf 'Skipping %s (local changes).\n' "$repository"
+      (( dirty += 1 ))
+      return
+    fi
+  else
+    fail "inspection: $repository" "$?"
+    return
   fi
 
   printf '%s\n' "$repository"
-  if ! git -C "$repository" pull --all --prune --ff-only; then
-    printf 'Could not update %s; continuing.\n' "$repository" >&2
-    return 1
+  if git -C "$repository" pull --all --prune --ff-only; then
+    (( updated += 1 ))
+  else
+    fail "pull: $repository" "$?"
   fi
   prline
 }
 
 # HOME is intentionally resolved per host; macOS and Linux use different paths.
-pull_repository "${HOME}/dotfiles" || failures=1
+pull_repository "${HOME}/dotfiles" 1
 
-repositories_file=$(mktemp "${TMPDIR:-/tmp}/pullall.XXXXXX") || exit 1
-cleanup() {
-  rm -f -- "$repositories_file"
-}
-trap cleanup EXIT
-
+if ! repositories_file=$(mktemp "${TMPDIR:-/tmp}/pullall.XXXXXX"); then
+  fail 'repository list creation; projects not attempted' 1
+  exit 1
+fi
 if [[ -d "${PROJECTS_DIR:-}" ]]; then
   if find "${PROJECTS_DIR}/" -maxdepth 1 -mindepth 1 -type d -print0 > "$repositories_file"; then
     while IFS= read -r -d '' repository; do
-      pull_repository "$repository" || failures=1
+      pull_repository "$repository"
     done < "$repositories_file"
   else
-    printf 'Could not list projects under %s; continuing.\n' "$PROJECTS_DIR" >&2
-    failures=1
+    fail "project enumeration: $PROJECTS_DIR" "$?"
   fi
 else
-  printf 'Projects directory not found; skipping: %s\n' "${PROJECTS_DIR:-<unset>}" >&2
+  fail "projects directory unavailable: ${PROJECTS_DIR:-<unset>}" 1
 fi
 
-exit "$failures"
+exit 0

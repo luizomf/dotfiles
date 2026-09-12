@@ -5,6 +5,14 @@
 # machine or perform a one-off sync; those edits may be committed or reset later.
 # Do not require a clean dotfiles checkout or treat the current lists as an API.
 
+failures=()
+blocked=()
+succeeded=0
+report_failure() {
+  failures+=("$1 (exit $2)")
+  print -u2 -r -- "Failed: ${failures[-1]}; continuing independent work."
+}
+
 script_dir="${0:A:h}"
 host_runner="$script_dir/run_all_hosts"
 if (( $# == 1 )) && [[ "$1" == -h || "$1" == --help ]]; then
@@ -12,10 +20,48 @@ if (( $# == 1 )) && [[ "$1" == -h || "$1" == --help ]]; then
   print -r -- 'Collect shared data from all peers, then distribute it to all peers.'
   exit 0
 fi
+tmux_stage=''
+finish() {
+  local result=$? item
+  trap - EXIT
+  if [[ -n "$tmux_stage" && -d "$tmux_stage" ]]; then
+    "${trash_command[@]}" "$tmux_stage" || report_failure "tmux stage cleanup: $tmux_stage" "$?"
+  fi
+  print -r -- "synchosts summary: $succeeded successful operations, ${#failures} failed, ${#blocked} blocked."
+  for item in "${failures[@]}"; do print -r -- "  FAILED: $item"; done
+  for item in "${blocked[@]}"; do print -r -- "  BLOCKED: $item"; done
+  if (( ${#failures} && result == 0 )); then result=1; fi
+  exit "$result"
+}
+trap finish EXIT
+trap 'report_failure "interrupted (publication may be incomplete)" 130; exit 130' INT
+trap 'report_failure "terminated (publication may be incomplete)" 143; exit 143' TERM
+run_step() {
+  local label="$1" result
+  shift
+  if "$@"; then
+    (( succeeded += 1 ))
+    return 0
+  else
+    result=$?
+    report_failure "$label" "$result"
+    return "$result"
+  fi
+}
 # Delegate validation and fleet membership before any side effects.
-host_output="$("$host_runner" --list "$@")" || exit $?
-sync_hosts=("${(@f)host_output}")
-local_host="$(hostname -s)" || exit $?
+if host_output="$("$host_runner" --list "$@")"; then
+  sync_hosts=("${(@f)host_output}")
+else
+  result=$?
+  report_failure 'host list' "$result"
+  blocked+=('all synchronization: invalid or unavailable host list')
+  exit "$result"
+fi
+if ! local_host="$(hostname -s)"; then
+  report_failure 'local hostname' 1
+  blocked+=('all synchronization: local host unknown')
+  exit 1
+fi
 peers=()
 for host in "${sync_hosts[@]}"; do
   [[ "${host:l}" == "${local_host:l}" ]] || peers+=("$host")
@@ -27,41 +73,45 @@ if command -v trash >/dev/null 2>&1; then
 elif command -v gio >/dev/null 2>&1; then
   trash_command=(gio trash --)
 else
-  print -u2 -- 'trash or gio is required; no synchronization was started.'
-  exit 1
+  trash_command=()
+  report_failure 'tmux staging requires trash or gio' 1
 fi
 
 # An executed script has no interactive history to flush.
 if [[ -o interactive ]]; then
-  fc -W || exit $?
+  run_step 'local history flush' fc -W
 fi
 
-# Manual idle maintenance only. Refuse live agent-home consumers before stops
-# or synchronization. All peers need the updated helper before this is used.
-"$host_runner" "$@" -- '"$HOME/dotfiles/scripts/clear_sannux_transients"' || exit $?
-
-# Daily is optional on each host. Hosts without its checkout have nothing to prune.
-daily_maintenance='daily_script="${PROJECTS_DIR:-$HOME/Desktop/tutoriais_e_cursos}/daily-paper/maintenance/prune-runtime-history.sh"; if [[ -x "$daily_script" ]]; then "$daily_script"'
-"$host_runner" "$@" -- "$daily_maintenance --tts-media-check; fi" || exit $?
-
-"$script_dir/zsh_history_sync.py" "$@" || exit $?
+# Ordinary sync never stops services or prunes their state. Idle maintenance
+# remains a separate explicit operation with its own guards (see README).
+run_step 'history merge (offline peers are optional)' "$script_dir/zsh_history_sync.py" "$@"
 # Publish the default server, not an incidental custom/agent socket inherited
-# from the terminal running this maintenance command.
-env -u TMUX -u TMUX_PANE "$script_dir/tmux-lazy" save --quiet --if-running || exit $?
-
-"$host_runner" "$@" -- '"$HOME/dotfiles/scripts/stop_omnivoicetts"' || exit $?
-"$host_runner" "$@" -- "$daily_maintenance --tts-media-preview; fi" || exit $?
-"$host_runner" "$@" -- "$daily_maintenance --tts-media-apply; fi" || exit $?
-"$host_runner" "$@" -- '"$HOME/dotfiles/scripts/clear_sannux_transients" --apply --idle-confirmed' || exit $?
-
-if ! pullall; then
-  print -u2 -- 'Some repositories could not be updated; continuing synchronization.'
+# from the terminal running this command. Never export an old save after failure.
+tmux_saved=0
+if run_step 'tmux save' env -u TMUX -u TMUX_PANE "$script_dir/tmux-lazy" save --quiet --if-running; then
+  tmux_saved=1
 fi
+
+run_step 'pullall' pullall
 
 echo
 prline
 
 project_excludes=(
+  --exclude='.git'
+  --exclude='.pi'
+  --exclude='.codex'
+  --exclude='.claude'
+  --exclude='*.db'
+  --exclude='*.db-*'
+  --exclude='*.sqlite'
+  --exclude='*.sqlite-*'
+  --exclude='*.sqlite3'
+  --exclude='*.sqlite3-*'
+  --exclude='/omnivoicetts/data/'
+  --exclude='/omnivoicetts/output/'
+  --exclude='/omnivoicetts/outputs/'
+  --exclude='/loudterm/output/'
   --exclude='.scratch/'
   --exclude='.cache/'
   --exclude='.astro/'
@@ -80,36 +130,23 @@ project_excludes=(
 # Paths are relative to each machine's own home, never the sender's absolute home.
 projects_directory='Desktop/tutoriais_e_cursos'
 tmux_directory='.local/share/tmux/lazy/'
-pi_directory='.pi/'
-shared_directories=(
-  'sannux-data/'
-  '.agents/'
-  '.ollama/service/'
-  '.config/omxterm/'
-  '.codex/automations/'
-)
-
-data_directories=("$projects_directory" "$pi_directory" "${shared_directories[@]}")
+# Do not merge live agent homes, auth, automations, service state or mutable
+# Sannux workspaces/backups. Static Pi/terminal configuration comes from Git.
+data_directories=("$projects_directory" '.agents/skills/')
 
 # Export only validated portable state, never sockets, locks, focus or runtime files.
-tmux_stage="$(mktemp -d "${TMPDIR:-/tmp}/synchosts-tmux-lazy.XXXXXX")" || exit 1
-tmux_stage="${tmux_stage:A}"
-cleanup_stage() {
-  local result=$?
-  trap - EXIT
-  if [[ -d "$tmux_stage" ]] && ! "${trash_command[@]}" "$tmux_stage"; then
-    print -u2 -- "Cannot move staged tmux snapshot to Trash: $tmux_stage"
-    (( result != 0 )) || result=1
-  fi
-  exit "$result"
-}
-trap cleanup_stage EXIT
 tmux_ready=0
-if env -u TMUX -u TMUX_PANE "$script_dir/tmux-lazy" export "$tmux_stage/snapshot"; then
-  tmux_ready=1
-else
-  print -u2 -- 'Cannot prepare tmux snapshot; skipping tmux transfers.'
+if (( tmux_saved && ${#trash_command} )); then
+  if tmux_stage="$(mktemp -d "${TMPDIR:-/tmp}/synchosts-tmux-lazy.XXXXXX")"; then
+    tmux_stage="${tmux_stage:A}"
+    if run_step 'tmux export' env -u TMUX -u TMUX_PANE "$script_dir/tmux-lazy" export "$tmux_stage/snapshot"; then
+      tmux_ready=1
+    fi
+  else
+    report_failure 'tmux staging directory' "$?"
+  fi
 fi
+(( tmux_ready )) || blocked+=('tmux publication: save or staging unavailable')
 
 # Usage: sync_home <home-relative directory> <push:host|pull:host> [rsync options...]
 sync_home() {
@@ -143,7 +180,7 @@ sync_home() {
   # Empty peers can contribute nothing and still receive the collected result.
   # Expand ~ on the peer; never send the caller's absolute home.
   if ! "$host_runner" --host "$host" --no-tty "mkdir -p -- ~/${(qq)directory}"; then
-    print -u2 -- "Cannot prepare directory on $host: ~/$directory; stopping synchronization."
+    print -u2 -- "Cannot prepare directory on $host: ~/$directory; skipping this transfer."
     return 1
   fi
   rsync "$copy_flags" --progress --stats "$@" "$source" "$destination"
@@ -154,33 +191,38 @@ sync_data_home() {
   local -a excludes=("${project_excludes[@]}")
   if [[ "$directory" == "$projects_directory" ]]; then
     excludes+=(--exclude='tutoriais_e_cursos/')
-  elif [[ "$directory" == "$pi_directory" ]]; then
-    excludes+=(--exclude='agent/extensions/**/node_modules/'
-      --exclude='/agent/sessions/')
-  elif [[ "$directory" == 'sannux-data/' ]]; then
-    excludes+=(--exclude='/agent-homes/*.ephemeral-runs/'
-      --exclude='/agent-homes/pi-daily-paper-sessions/'
-      --exclude='/agent-homes/*/.pi-resources.*/'
-      --exclude='/agent-homes/*/.pi/agent/sessions/'
-      --exclude='/agent-homes/*/.codex/sessions/'
-      --exclude='/agent-homes/*/.codex/archived_sessions/'
-      --exclude='/workspaces/pi-daily-paper-node-modules/')
-  elif [[ "$directory" == '.codex/automations/' ]]; then
-    excludes+=(--exclude='/*/hooks/state/'
-      --exclude='/*/hooks/on-end/tts/*.json')
   fi
   sync_home "$directory" "$route" "${excludes[@]}"
 }
 
-# Complete collection before publishing any data. A failed pull leaves the
-# caller potentially partially updated, but must not spread that partial copy.
-for direction in pull push; do
-  for directory in "${data_directories[@]}"; do
-    for host in "${sync_hosts[@]}"; do
-      sync_data_home "$directory" "$direction:$host" || exit $?
-    done
+# Complete collection before publishing collected data. A failed pull leaves
+# the caller potentially partially updated, but must not spread that partial copy.
+# Keep a global barrier: projects and skills can depend on one another. The
+# caller-only tmux export below is independent of this collection.
+collection_failed=0
+for directory in "${data_directories[@]}"; do
+  for host in "${sync_hosts[@]}"; do
+    if sync_data_home "$directory" "pull:$host"; then
+      (( succeeded += 1 ))
+    else
+      report_failure "pull $host $directory" "$?"
+      collection_failed=1
+    fi
   done
 done
+if (( collection_failed )); then
+  blocked+=('data publication to all peers: collection incomplete; local data may be partial')
+else
+  for directory in "${data_directories[@]}"; do
+    for host in "${sync_hosts[@]}"; do
+      if sync_data_home "$directory" "push:$host"; then
+        (( succeeded += 1 ))
+      else
+        report_failure "push $host $directory" "$?"
+      fi
+    done
+  done
+fi
 
 # Publish only the caller's snapshot, not a merge. Delay replacement until the
 # transfer completes; omit -u so newer peer state cannot win (rsync has no
@@ -188,9 +230,8 @@ done
 # Never clear the destination: its other files belong to the peer's live runtime.
 if (( tmux_ready )); then
   for host in "${sync_hosts[@]}"; do
-    sync_home "$tmux_directory" "push:$host" \
-      --delay-updates --checksum || exit $?
+    run_step "tmux push $host" sync_home "$tmux_directory" "push:$host" \
+      --delay-updates --checksum
   done
-else
-  exit 1
 fi
+exit 0

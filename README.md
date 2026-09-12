@@ -45,6 +45,87 @@ delete data, corrupt shared state, break installation, or leave background work
 in a bad state. Tests use isolated fixtures; they do not make these scripts a
 supported public API.
 
+## Host synchronization and idle maintenance
+
+`scripts/pullall` updates `~/dotfiles` and direct-child Git checkouts under the
+inherited `PROJECTS_DIR`, using `git pull --all --prune --ff-only`. Dirty
+checkouts and non-repository directories are skips, not failures. Broken Git
+inspection, pull failures, a missing required dotfiles checkout, or
+missing/unreadable project listing make the final exit nonzero. Independent
+repositories still run. Its final summary counts updates/skips and lists
+failures with paths and exit codes.
+
+`scripts/synchosts [--additional-hosts HOST ...]` is ordinary file sync, **not
+idle maintenance**. It keeps services running and does not invoke agent-home
+cleanup, OmniVoice stops/cache deletion, or Daily Paper media pruning. It merges
+local Zsh history through the existing helper (offline history peers remain
+optional), runs `pullall`, collects files from every peer, then distributes the
+collected result. Hosts still come from the editable `scripts/run_all_hosts`
+fleet.
+
+The intentionally conservative transfer scope is:
+
+- Project working files under `~/Desktop/tutoriais_e_cursos` on each host and
+  `~/.agents/skills/`. This home-relative sync path is still a personal fixed
+  policy, not discovery of remote `PROJECTS_DIR` or `OM_PATHS_FILE` overrides.
+- **No `.git` entries**, whether directories, worktree/submodule files, or
+  links, at any depth. Existing Git metadata is not removed or repaired. Git
+  owns each host's branches, objects, stashes, reflogs and configuration. An
+  empty peer must get a real checkout through explicit Git bootstrap; rsync
+  alone no longer creates one. Working-file synchronization can still make
+  checkouts dirty.
+- No `~/.pi`, `~/sannux-data` (including persistent homes, workspaces and
+  backups), `~/.ollama/service`, `~/.config/omxterm`, or `~/.codex/automations`.
+  No other `~/.agents` state. These may have live writers, credentials,
+  machine-specific state or publication continuations; an arbitrary backup file
+  is not a verified consistent snapshot. Static Pi/terminal configuration
+  remains Git-managed.
+- Within transferred trees: no `.pi`, `.codex`, `.claude`, SQLite-style `*.db`,
+  `*.sqlite`, `*.sqlite3` files or their `-*` companions. Existing scratch,
+  cache, dependency/build, `.omnews-data` and website `run_dir` exclusions
+  remain. OmniVoice `data/`, `output/`, `outputs/` and Loudterm `output/` also
+  stay local. Daily Paper's `~/.local/state` runtime/media is outside the
+  transfer roots.
+- Only the caller's validated staged tmux `state.json` is published separately;
+  see [tmux synchronization](tmux/README.md#migration-and-synchronization).
+
+A failed collection still allows other collections to finish, but blocks **all
+collected-data pushes** in that run: projects and skills may depend on each
+other. The caller may already contain partially received files; there is no
+rollback. The caller-only tmux snapshot is independent. Save/export/staging
+failures block only tmux publication; a failed push does not block other peers.
+`pullall` failure is reported but does not block file collection/publication (it
+is not the rsync collection phase). The final summary lists failures and blocked
+phases and exits nonzero for incomplete work, including staging cleanup
+failures. Interruptions report incomplete work, not a transaction rollback.
+History's optional offline skips retain the helper's separate best-effort
+contract.
+
+There is no `--delete`, fleet transaction, live database backup, conflict
+resolver or protection against simultaneous source edits/peer tmux saves. Keep
+transferred working files quiescent during sync, without stopping unrelated
+services. Review custom runtime/output locations before using this personal
+script: unknown state inside project trees is not automatically classified or
+snapshotted. Exclusions do not delete old copies on peers. Deploy the updated
+script to **all callers** before relying on the Git exclusion; existing
+duplicate packs require separate, explicitly authorized idle Git maintenance,
+not metadata deletion or rsync repair.
+
+Destructive maintenance remains opt-in through the existing standalone commands:
+`clear_sannux_transients` previews and requires `--apply --idle-confirmed` to
+remove eligible transients; its process/container guards remain intact.
+`stop_omnivoicetts` stops workers before clearing caches. Daily Paper's
+`maintenance/prune-runtime-history.sh --tts-media-*` workflow requires checking
+**every host before applying on any host**, with publication continuations idle;
+follow that checkout's maintenance instructions. None is a prerequisite for
+ordinary sync, and running them is not a verification step.
+
+Focused isolated checks (no real SSH, synchronization or service stops):
+
+```sh
+python3 -m unittest tests.test_pullall tests.test_synchosts tests.test_idle_cleanup
+```
+
 ## Development feedback
 
 Python tooling lives in `pyproject.toml`, with versions locked in `uv.lock`.

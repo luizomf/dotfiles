@@ -40,7 +40,7 @@ class SyncHostsTests(unittest.TestCase):
                 "Desktop/tutoriais_e_cursos/project/.omnews-data",
                 "sannux-data/backups/omnews",
                 ".pi/agent",
-                ".agents",
+                ".agents/skills",
                 ".ollama/service",
                 ".config/omxterm",
                 ".codex/automations",
@@ -88,6 +88,7 @@ class SyncHostsTests(unittest.TestCase):
             "if name=='rsync':\n"
             " src,dst=args[-2:]\n"
             " if src.startswith(os.environ.get('FAIL_PULL','!')+':'): sys.exit(23)\n"
+            " if dst.startswith(os.environ.get('FAIL_PUSH','!')+':'): sys.exit(23)\n"
             " def local(value):\n"
             "  if ':~/' in value:\n"
             "   host,path=value.split(':~/',1); value=str(root/'homes'/host/path)+('/' if value.endswith('/') else '')\n"
@@ -144,7 +145,8 @@ class SyncHostsTests(unittest.TestCase):
         for host in ["m132", "m4128", "fedoraair"]:
             directory = self.root / "homes" / host / ".local/share/tmux/lazy"
             (directory / "state.json").write_text(expected if host == "m132" else "old peer state\n")
-            os.utime(directory / "state.json", (100 if host == "m132" else 2000000000,) * 2)
+            timestamp = 100 if host == "m132" else 2000000000
+            os.utime(directory / "state.json", (timestamp, timestamp))
             for name in ["focus.json", "lazy.lock", "runtime.json", "socket-marker"]:
                 (directory / name).write_text(host)
         result = self.run_sync(extra_env={'TMUX': '/fixture/custom,12,0', 'TMUX_PANE': '%0'})
@@ -162,8 +164,6 @@ class SyncHostsTests(unittest.TestCase):
             home = self.root / "homes" / host
             for origin in ["m132", "m4128", "fedoraair"]:
                 for directory, suffix in [
-                    ("sannux-data/backups/omnews", ".db"),
-                    (".pi/agent", ".txt"),
                     ("Desktop/tutoriais_e_cursos/project", ".txt"),
                 ]:
                     self.assertEqual((home / directory / (origin + suffix)).read_text(), origin)
@@ -174,7 +174,7 @@ class SyncHostsTests(unittest.TestCase):
         phases = ["pull" if ":~/" in c[-2] else "push" for c in data_copies]
         self.assertEqual(phases, sorted(phases))
 
-    def test_transient_data_is_not_copied_but_persistent_auth_and_resources_are(self):
+    def test_agent_homes_are_not_copied_but_static_skills_are(self):
         transient = [
             'Desktop/tutoriais_e_cursos/project/.scratch/evidence',
             'Desktop/tutoriais_e_cursos/project/.cache/data',
@@ -185,10 +185,13 @@ class SyncHostsTests(unittest.TestCase):
             'sannux-data/agent-homes/pi/.pi/agent/sessions/session',
             'sannux-data/workspaces/pi-daily-paper-node-modules/package',
         ]
-        durable = ['sannux-data/agent-homes/pi/.pi/agent/auth.json',
-                   'sannux-data/agent-homes/codex/.codex/auth.json',
-                   'sannux-data/agent-homes/pi/.pi/agent/RESOURCE_SNAPSHOT',
-                   'sannux-data/workspaces/user-project/code']
+        transient += [
+            "sannux-data/agent-homes/pi/.pi/agent/auth.json",
+            "sannux-data/agent-homes/codex/.codex/auth.json",
+            "sannux-data/agent-homes/pi/.pi/agent/RESOURCE_SNAPSHOT",
+            "sannux-data/workspaces/user-project/code",
+        ]
+        durable = [".agents/skills/example/SKILL.md"]
         origin = self.root / 'homes/m4128'
         for rel in transient + durable:
             f = origin / rel
@@ -202,6 +205,28 @@ class SyncHostsTests(unittest.TestCase):
         for rel in durable:
             self.assertTrue((self.home / rel).exists(), rel)
 
+    def test_git_metadata_stays_on_its_host_including_worktree_files(self):
+        for host in ["m132", "m4128", "fedoraair"]:
+            project = self.root / "homes" / host / "Desktop/tutoriais_e_cursos/project"
+            pack = project / ".git/objects/pack" / (host + ".pack")
+            pack.parent.mkdir(parents=True)
+            pack.write_text(host)
+            worktree = project / host
+            worktree.mkdir()
+            (worktree / ".git").write_text("gitdir: /host-local/fixture")
+            (worktree / "source.txt").write_text(host)
+        result = self.run_sync()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for host in ["m132", "m4128", "fedoraair"]:
+            project = self.root / "homes" / host / "Desktop/tutoriais_e_cursos/project"
+            self.assertEqual(
+                [p.name for p in (project / ".git/objects/pack").iterdir()],
+                [host + ".pack"],
+            )
+            for origin in ["m132", "m4128", "fedoraair"]:
+                self.assertEqual((project / origin / "source.txt").read_text(), origin)
+                self.assertEqual((project / origin / ".git").exists(), origin == host)
+
     def test_gio_fallback_uses_only_mocked_trash(self):
         # Force backend selection in this copied fixture script, never hide a
         # real tool and accidentally invoke the operator's desktop Trash.
@@ -212,31 +237,71 @@ class SyncHostsTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(any(c[0] == 'gio' for c in self.commands()))
 
-    def test_idle_failure_stops_before_stop_or_copy(self):
-        result = self.run_sync(extra_env={'FAIL_IDLE': '1'})
-        self.assertEqual(result.returncode, 19, result.stderr)
-        self.assertFalse(any(c[0] == 'rsync' or any('stop_omnivoicetts' in a for a in c)
-                             for c in self.commands()))
+    def test_live_services_need_no_maintenance_and_keep_their_state_local(self):
+        live = [
+            ".pi/agent/auth.json",
+            ".pi/agent/models.json",
+            "sannux-data/agent-homes/pi/.pi/agent/auth.json",
+            "sannux-data/workspaces/project/source.py",
+            "sannux-data/backups/omnews/current.db",
+            ".ollama/service/server.log",
+            ".config/omxterm/runtime.json",
+            ".codex/automations/daily/automation.toml",
+            ".agents/runtime.json",
+            "Desktop/tutoriais_e_cursos/omnivoicetts/data/job.json",
+            "Desktop/tutoriais_e_cursos/omnivoicetts/outputs/audio.wav",
+            "Desktop/tutoriais_e_cursos/loudterm/output/audio.wav",
+            "Desktop/tutoriais_e_cursos/project/local.db-wal",
+            "Desktop/tutoriais_e_cursos/project/.pi/session.json",
+        ]
+        for host in ["m132", "m4128", "fedoraair"]:
+            for rel in live:
+                target = self.root / "homes" / host / rel
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(host)
+                timestamp = 100 if host == "m132" else 200
+                os.utime(target, (timestamp, timestamp))
+        result = self.run_sync(extra_env={"FAIL_IDLE": "1"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(
+            any(
+                any(
+                    token in arg
+                    for token in [
+                        "clear_sannux_transients",
+                        "stop_omnivoicetts",
+                        "tts-media-",
+                    ]
+                )
+                for call in self.commands()
+                for arg in call
+            )
+        )
+        for host in ["m132", "m4128", "fedoraair"]:
+            for rel in live:
+                self.assertEqual(
+                    (self.root / "homes" / host / rel).read_text(), host, rel
+                )
 
-    def test_additional_host_gets_idle_stop_and_apply_in_order(self):
+    def test_additional_host_does_not_trigger_idle_maintenance(self):
         result = self.run_sync('--additional-hosts', 'extra')
         self.assertEqual(result.returncode, 0, result.stderr)
         calls = [c[-1] for c in self.commands() if c[0] == 'ssh' and c[-2] == 'extra']
         relevant = [c for c in calls if 'scripts/clear_sannux_transients' in c or 'scripts/stop_omnivoicetts' in c]
-        self.assertEqual(len(relevant), 3)
-        self.assertNotIn('--apply', relevant[0])
-        self.assertIn('stop_omnivoicetts', relevant[1])
-        self.assertIn('--apply --idle-confirmed', relevant[2])
+        self.assertEqual(relevant, [])
 
     def test_newest_file_is_collected_before_distribution(self):
         for host, text, timestamp in [("m132", "old", 100), ("m4128", "middle", 200), ("fedoraair", "newest", 300)]:
-            file = self.root / "homes" / host / ".agents/version"
+            file = self.root / "homes" / host / ".agents/skills/version"
             file.write_text(text)
             os.utime(file, (timestamp, timestamp))
         result = self.run_sync()
         self.assertEqual(result.returncode, 0, result.stderr)
         for host in ["m132", "m4128", "fedoraair"]:
-            self.assertEqual((self.root / "homes" / host / ".agents/version").read_text(), "newest")
+            self.assertEqual(
+                (self.root / "homes" / host / ".agents/skills/version").read_text(),
+                "newest",
+            )
 
     def test_fedora_can_be_the_caller_without_copying_to_itself(self):
         self.home = self.root / "homes/fedoraair"
@@ -246,40 +311,102 @@ class SyncHostsTests(unittest.TestCase):
         self.assertFalse(any("fedoraair:~/" in arg for c in copies for arg in c))
         for host in ["m132", "m4128", "fedoraair"]:
             for origin in ["m132", "m4128", "fedoraair"]:
-                self.assertEqual((self.root / "homes" / host / "sannux-data/backups/omnews" / (origin + ".db")).read_text(), origin)
+                self.assertEqual(
+                    (
+                        self.root
+                        / "homes"
+                        / host
+                        / "Desktop/tutoriais_e_cursos/project"
+                        / (origin + ".txt")
+                    ).read_text(),
+                    origin,
+                )
 
     def test_pullall_failure_warns_and_continues_copying(self):
         result = self.run_sync(extra_env={"FAIL_COMMAND": "pullall"})
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("continuing synchronization", result.stderr)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("FAILED: pullall", result.stdout)
         self.assertTrue(any(c[0] == "rsync" for c in self.commands()))
 
     def test_failed_collection_does_not_distribute_partial_data(self):
         result = self.run_sync(extra_env={"FAIL_PULL": "fedoraair"})
-        self.assertEqual(result.returncode, 23, result.stderr)
-        copies = [c for c in self.commands() if c[0] == "rsync" and "--server" not in c]
-        self.assertTrue(copies)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        copies = [
+            c
+            for c in self.commands()
+            if c[0] == "rsync" and "--server" not in c and "tmux/lazy" not in c[-1]
+        ]
         self.assertTrue(all(":~/" in c[-2] for c in copies))
+        self.assertTrue(any(".agents/" in c[-2] for c in copies))
+        self.assertIn("synchosts summary", result.stdout)
+        self.assertIn("FAILED: pull fedoraair", result.stdout)
+        self.assertIn("BLOCKED: data publication", result.stdout)
 
-    def test_failed_save_stops_before_copying(self):
-        result = self.run_sync(extra_env={"FAIL_SAVE": "1"})
-        self.assertEqual(result.returncode, 18, result.stderr)
-        self.assertFalse(any(c[0] == "rsync" for c in self.commands()))
+    def test_failed_prerequisites_and_pushes_report_and_continue_independent_work(self):
+        result = self.run_sync(
+            extra_env={
+                "FAIL_SAVE": "1",
+                "FAIL_COMMAND": "pullall",
+                "FAIL_PUSH": "m4128",
+            }
+        )
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("synchosts summary", result.stdout)
+        for failure in ["tmux save", "pullall", "push m4128"]:
+            self.assertIn("FAILED: " + failure, result.stdout)
+        self.assertIn("BLOCKED: tmux publication", result.stdout)
+        self.assertFalse(
+            any(c[0] == "rsync" and "tmux/lazy" in c[-1] for c in self.commands())
+        )
+        self.assertTrue(
+            (
+                self.root
+                / "homes/fedoraair/Desktop/tutoriais_e_cursos/project/m132.txt"
+            ).exists()
+        )
 
     def test_failed_export_does_not_publish_snapshot_but_keeps_data_sync(self):
         peer_state = self.root / "homes/fedoraair/.local/share/tmux/lazy/state.json"
         peer_state.write_text('previous peer snapshot\n')
         result = self.run_sync(extra_env={"FAIL_EXPORT": "1"})
         self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertIn('skipping tmux transfers', result.stderr)
+        self.assertIn("BLOCKED: tmux publication", result.stdout)
         self.assertEqual(peer_state.read_text(), 'previous peer snapshot\n')
         self.assertFalse(any(c[0] == "rsync" and "tmux/lazy" in c[-1] for c in self.commands()))
-        self.assertTrue((self.root / "homes/fedoraair/.pi/agent/m132.txt").exists())
+        self.assertTrue(
+            (
+                self.root
+                / "homes/fedoraair/Desktop/tutoriais_e_cursos/project/m132.txt"
+            ).exists()
+        )
+
+    def test_failed_tmux_push_does_not_block_other_peers(self):
+        peer = self.root / "homes/fedoraair/.local/share/tmux/lazy/state.json"
+        peer.write_text("old peer snapshot")
+        result = self.run_sync(extra_env={"FAIL_PUSH": "m4128"})
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("FAILED: tmux push m4128", result.stdout)
+        self.assertEqual(
+            peer.read_text(),
+            (self.home / ".local/share/tmux/lazy/state.json").read_text(),
+        )
+
+    def test_failed_staging_keeps_independent_data_sync(self):
+        result = self.run_sync(extra_env={"TMPDIR": str(self.root / "missing")})
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("FAILED: tmux staging directory", result.stdout)
+        self.assertIn("BLOCKED: tmux publication", result.stdout)
+        self.assertTrue(
+            (
+                self.root
+                / "homes/fedoraair/Desktop/tutoriais_e_cursos/project/m132.txt"
+            ).exists()
+        )
 
     def test_failed_stage_cleanup_reports_failure_after_publication(self):
         result = self.run_sync(extra_env={"FAIL_TRASH": "1"})
         self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertIn('Cannot move staged tmux snapshot to Trash', result.stderr)
+        self.assertIn("FAILED: tmux stage cleanup", result.stdout)
         self.assertTrue(any(c[0] == "rsync" and "tmux/lazy" in c[-1] for c in self.commands()))
 
     def test_help_and_invalid_arguments_have_no_operational_effects(self):
@@ -292,8 +419,12 @@ class SyncHostsTests(unittest.TestCase):
         result = self.run_sync("--additional-hosts", "extra")
         self.assertEqual(result.returncode, 0, result.stderr)
         for origin in ["m132", "m4128", "fedoraair"]:
-            backup = self.root / "homes/extra/sannux-data/backups/omnews" / (origin + ".db")
-            self.assertEqual(backup.read_text(), origin)
+            source = (
+                self.root
+                / "homes/extra/Desktop/tutoriais_e_cursos/project"
+                / (origin + ".txt")
+            )
+            self.assertEqual(source.read_text(), origin)
         self.assertTrue((self.root / "homes/extra/.local/share/tmux/lazy/state.json").exists())
 
     def test_only_disposable_stage_is_trashed(self):
