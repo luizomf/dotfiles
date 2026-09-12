@@ -116,8 +116,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# Virtualenv libraries are covered by the environment rules above.
+# Do not ignore lib/ globally: scripts/lib/ contains maintained source.
 parts/
 sdist/
 var/
