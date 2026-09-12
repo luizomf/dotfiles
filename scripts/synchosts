@@ -83,7 +83,7 @@ if [[ -o interactive ]]; then
 fi
 
 # Ordinary sync never stops services or prunes their state. Idle maintenance
-# remains a separate explicit operation with its own guards (see README).
+# remains a separate explicit operation with its own guards (see docs/scripts/).
 run_step 'history merge (offline peers are optional)' "$script_dir/zsh_history_sync.py" "$@"
 # Publish the default server, not an incidental custom/agent socket inherited
 # from the terminal running this command. Never export an old save after failure.

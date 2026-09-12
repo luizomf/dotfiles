@@ -57,8 +57,10 @@ they are not a mandate to turn personal dotfiles into a supported product.
 
 - These instructions apply repository-wide. `pi/agent/AGENTS.md` adds stricter
   rules for `pi/agent/`; follow the closest applicable `AGENTS.md`.
-- `README.md` is the user-facing source for supported setup and safety warnings.
-  Do not claim broader platform support than the README documents.
+- `README.md` is the user-facing source for supported installation and safety
+  warnings. Keep it limited to installation; put technical and maintenance notes
+  under `docs/`, using one page per script when applicable. Do not claim broader
+  platform support than the README documents.
 - `config/paths.sh` is the documented source of truth for shared host paths.
   Preserve `OM_PATHS_FILE` overrides at callers that support them.
 - When documentation, tests, comments, and implementation disagree, trace the
@@ -146,9 +148,9 @@ scope, authorize side effects, or change the test policy below.
   cases over exhaustive mocks of incidental internals.
 - Development feedback is configured in `pyproject.toml`: Ruff for Python lint
   and formatting, Pyright for type diagnostics. See
-  [Development feedback in the README](README.md#development-feedback) for setup
-  and commands. This does not make the dotfiles an application/package or add a
-  repository-wide build or CI gate. Keep using the focused tests below.
+  [Development tools](docs/development.md) for setup and commands. This does not
+  make the dotfiles an application/package or add a repository-wide build or CI
+  gate. Keep using the focused tests below.
 - Tools are guardrails for clearer, safer code, not a score to optimize. Use
   diagnostics to catch questionable calls, types, imports and common mistakes.
   Do not add abstractions, casts, blanket suppressions or configuration

@@ -118,7 +118,7 @@ an explicit publication from the caller. Rsync stages replacement with
 This is publication, not a merge, fleet transaction or coordination with a
 peer's concurrent save. Ordinary `synchosts` no longer stops services or
 performs idle cleanup; see
-[the sync scope and failure policy](../README.md#host-synchronization-and-idle-maintenance).
+[the sync scope and failure policy](../docs/scripts/synchosts.md).
 Keep peer saves quiescent during publication, without stopping their running
 panes or unrelated services. A failed local save/export blocks tmux publication,
 not independent file transfers; a failed tmux push does not block other peers.
