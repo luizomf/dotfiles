@@ -24,10 +24,6 @@ class SyncHostsTests(unittest.TestCase):
         (scripts / "lib").mkdir(parents=True)
         for name in ["synchosts", "run_all_hosts", "zsh_history_sync.py"]:
             shutil.copy2(REPOSITORY / "scripts" / name, scripts / name)
-        shutil.copy2(
-            REPOSITORY / "scripts/lib/prepare_tmux_resurrect.py",
-            scripts / "lib/prepare_tmux_resurrect.py",
-        )
         self.script = scripts / "synchosts"
         # Keep fixtures independent of the operator's editable default fleet.
         runner = scripts / "run_all_hosts"
@@ -48,7 +44,7 @@ class SyncHostsTests(unittest.TestCase):
                 ".ollama/service",
                 ".config/omxterm",
                 ".codex/automations",
-                ".local/share/tmux/resurrect",
+                ".local/share/tmux/lazy",
             ]:
                 (home / directory).mkdir(parents=True)
             (home / ".zshrc").write_text("# isolated shell fixture\n")
@@ -57,7 +53,9 @@ class SyncHostsTests(unittest.TestCase):
             (home / ".pi/agent" / f"{host}.txt").write_text(host)
             (home / "Desktop/tutoriais_e_cursos/project" / f"{host}.txt").write_text(host)
             (home / "Desktop/tutoriais_e_cursos/project/.omnews-data/local.db").write_text(host)
-            (home / ".local/share/tmux/resurrect/.old-marker").write_text(host)
+            (home / ".local/share/tmux/lazy/state.json").write_text(
+                '{"version": 1, "sessions": [{"name": "fixture"}]}\n'
+            )
         (self.root / "tmp").mkdir()
         fake = self.bin / "fake-command"
         fake.write_text(
@@ -103,19 +101,21 @@ class SyncHostsTests(unittest.TestCase):
             (self.bin / name).symlink_to(fake)
         for name in ["python3", "python3.14"]:
             (self.bin / name).symlink_to(sys.executable)
-        save = self.home / ".tmux/plugins/tmux-resurrect/scripts/save.sh"
-        save.parent.mkdir(parents=True)
-        save.write_text(
+        cli = scripts / "tmux-lazy"
+        cli.write_text(
             f"#!{sys.executable}\n"
-            "import os,pathlib\n"
-            "home=pathlib.Path(os.environ['HOME']); directory=home/'.local/share/tmux/resurrect'\n"
-            "directory.mkdir(parents=True,exist_ok=True)\n"
-            "counter=home/'save-count'; count=int(counter.read_text())+1 if counter.exists() else 1\n"
-            "counter.write_text(str(count)); snapshot=directory/f'save-{count}.txt'\n"
-            "snapshot.write_text('pane\\tfixture\\t1\\t:\\t0\\t:\\t:\\t:'+str(home)+'/project\\t:sh\\t:\\t:\\n')\n"
-            "last=directory/'last'; last.unlink(missing_ok=True); last.symlink_to(snapshot.name)\n"
+            "import json, os, pathlib, shutil, sys\n"
+            "assert 'TMUX' not in os.environ and 'TMUX_PANE' not in os.environ\n"
+            "source=pathlib.Path(os.environ['HOME'])/'.local/share/tmux/lazy/state.json'\n"
+            "if sys.argv[1:]==['save','--quiet','--if-running']:\n"
+            " sys.exit(18 if os.environ.get('FAIL_SAVE') else 0)\n"
+            "assert sys.argv[1]=='export' and len(sys.argv)==3\n"
+            "if os.environ.get('FAIL_EXPORT'): sys.exit(19)\n"
+            "json.loads(source.read_text())\n"
+            "destination=pathlib.Path(sys.argv[2]); destination.mkdir()\n"
+            "shutil.copy2(source,destination/'state.json')\n"
         )
-        save.chmod(0o755)
+        cli.chmod(0o755)
 
     def run_sync(self, *args, extra_env=None):
         env = {
@@ -139,6 +139,22 @@ class SyncHostsTests(unittest.TestCase):
     def commands(self):
         return [json.loads(line) for line in self.log.read_text().splitlines()] if self.log.exists() else []
 
+    def test_explicit_snapshot_replaces_newer_peer_state_without_touching_runtime(self):
+        expected = '{"version": 1, "sessions": [{"name": "fixture"}]}\n'
+        for host in ["m132", "m4128", "fedoraair"]:
+            directory = self.root / "homes" / host / ".local/share/tmux/lazy"
+            (directory / "state.json").write_text(expected if host == "m132" else "old peer state\n")
+            os.utime(directory / "state.json", (100 if host == "m132" else 2000000000,) * 2)
+            for name in ["focus.json", "lazy.lock", "runtime.json", "socket-marker"]:
+                (directory / name).write_text(host)
+        result = self.run_sync(extra_env={'TMUX': '/fixture/custom,12,0', 'TMUX_PANE': '%0'})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for host in ["m132", "m4128", "fedoraair"]:
+            directory = self.root / "homes" / host / ".local/share/tmux/lazy"
+            self.assertEqual((directory / "state.json").read_text(), expected)
+            for name in ["focus.json", "lazy.lock", "runtime.json", "socket-marker"]:
+                self.assertEqual((directory / name).read_text(), host)
+
     def test_new_files_from_each_peer_reach_every_host_in_one_run(self):
         result = self.run_sync()
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -154,7 +170,7 @@ class SyncHostsTests(unittest.TestCase):
             self.assertEqual((home / "Desktop/tutoriais_e_cursos/project/.omnews-data/local.db").read_text(), host)
         copies = [c for c in self.commands() if c[0] == "rsync" and "--server" not in c]
         self.assertFalse(any("m132:~/" in arg for c in copies for arg in c))
-        data_copies = [c for c in copies if "tmux/resurrect" not in c[-1]]
+        data_copies = [c for c in copies if "tmux/lazy" not in c[-1]]
         phases = ["pull" if ":~/" in c[-2] else "push" for c in data_copies]
         self.assertEqual(phases, sorted(phases))
 
@@ -190,7 +206,7 @@ class SyncHostsTests(unittest.TestCase):
         # Force backend selection in this copied fixture script, never hide a
         # real tool and accidentally invoke the operator's desktop Trash.
         source = self.script.read_text()
-        self.assertEqual(source.count('if command -v trash >/dev/null 2>&1; then'), 2)
+        self.assertEqual(source.count('if command -v trash >/dev/null 2>&1; then'), 1)
         self.script.write_text(source.replace('if command -v trash >/dev/null 2>&1; then', 'if false; then'))
         result = self.run_sync()
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -223,11 +239,7 @@ class SyncHostsTests(unittest.TestCase):
             self.assertEqual((self.root / "homes" / host / ".agents/version").read_text(), "newest")
 
     def test_fedora_can_be_the_caller_without_copying_to_itself(self):
-        original_save = self.home / ".tmux/plugins/tmux-resurrect/scripts/save.sh"
         self.home = self.root / "homes/fedoraair"
-        save = self.home / ".tmux/plugins/tmux-resurrect/scripts/save.sh"
-        save.parent.mkdir(parents=True)
-        shutil.copy2(original_save, save)
         result = self.run_sync(extra_env={"FAKE_HOST": "fedoraair"})
         self.assertEqual(result.returncode, 0, result.stderr)
         copies = [c for c in self.commands() if c[0] == "rsync" and "--server" not in c]
@@ -249,23 +261,26 @@ class SyncHostsTests(unittest.TestCase):
         self.assertTrue(copies)
         self.assertTrue(all(":~/" in c[-2] for c in copies))
 
-    def test_failed_local_trash_stops_before_copying(self):
-        result = self.run_sync(extra_env={"FAIL_TRASH": "1"})
-        self.assertEqual(result.returncode, 9, result.stderr)
+    def test_failed_save_stops_before_copying(self):
+        result = self.run_sync(extra_env={"FAIL_SAVE": "1"})
+        self.assertEqual(result.returncode, 18, result.stderr)
         self.assertFalse(any(c[0] == "rsync" for c in self.commands()))
-        self.assertTrue((self.home / ".local/share/tmux/resurrect/.old-marker").exists())
 
-    def test_nonzero_profile_status_does_not_block_available_trash(self):
-        (self.root / "homes/fedoraair/.zshrc").write_text("false\n")
-        result = self.run_sync()
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertFalse((self.root / "homes/fedoraair/.local/share/tmux/resurrect/.old-marker").exists())
+    def test_failed_export_does_not_publish_snapshot_but_keeps_data_sync(self):
+        peer_state = self.root / "homes/fedoraair/.local/share/tmux/lazy/state.json"
+        peer_state.write_text('previous peer snapshot\n')
+        result = self.run_sync(extra_env={"FAIL_EXPORT": "1"})
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn('skipping tmux transfers', result.stderr)
+        self.assertEqual(peer_state.read_text(), 'previous peer snapshot\n')
+        self.assertFalse(any(c[0] == "rsync" and "tmux/lazy" in c[-1] for c in self.commands()))
+        self.assertTrue((self.root / "homes/fedoraair/.pi/agent/m132.txt").exists())
 
-    def test_failed_remote_trash_preserves_that_snapshot(self):
-        result = self.run_sync(extra_env={"FAIL_REMOTE_TRASH": "fedoraair"})
-        self.assertEqual(result.returncode, 9, result.stderr)
-        self.assertTrue((self.root / "homes/fedoraair/.local/share/tmux/resurrect/.old-marker").exists())
-        self.assertFalse(any(c[0] == "rsync" and c[-1] == "fedoraair:~/.local/share/tmux/resurrect/" for c in self.commands()))
+    def test_failed_stage_cleanup_reports_failure_after_publication(self):
+        result = self.run_sync(extra_env={"FAIL_TRASH": "1"})
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn('Cannot move staged tmux snapshot to Trash', result.stderr)
+        self.assertTrue(any(c[0] == "rsync" and "tmux/lazy" in c[-1] for c in self.commands()))
 
     def test_help_and_invalid_arguments_have_no_operational_effects(self):
         self.assertEqual(self.run_sync("--help").returncode, 0)
@@ -279,21 +294,18 @@ class SyncHostsTests(unittest.TestCase):
         for origin in ["m132", "m4128", "fedoraair"]:
             backup = self.root / "homes/extra/sannux-data/backups/omnews" / (origin + ".db")
             self.assertEqual(backup.read_text(), origin)
-        self.assertTrue((self.root / "homes/extra/.local/share/tmux/resurrect/last").exists())
+        self.assertTrue((self.root / "homes/extra/.local/share/tmux/lazy/state.json").exists())
 
-    def test_tmux_replacement_uses_trash_without_permanent_deletion(self):
+    def test_only_disposable_stage_is_trashed(self):
         result = self.run_sync()
         self.assertEqual(result.returncode, 0, result.stderr)
         commands = self.commands()
         self.assertFalse(any(c[0] == "rm" for c in commands))
         self.assertFalse(any("--delete" in c for c in commands if c[0] == "rsync"))
-        markers = list((self.root / "trash").glob("*-.old-marker"))
-        self.assertEqual({p.read_text() for p in markers}, {"m132", "m4128", "fedoraair"})
-        self.assertTrue(list((self.root / "trash").glob("*-synchosts-resurrect.*")))
-        for host in ["m4128", "fedoraair"]:
-            snapshot = self.root / "homes" / host / ".local/share/tmux/resurrect"
-            self.assertFalse((snapshot / ".old-marker").exists())
-            self.assertIn(":#{HOME}/project", (snapshot / "last").read_text())
+        trashed = list((self.root / "trash").iterdir())
+        self.assertEqual(len(trashed), 1)
+        self.assertIn('-synchosts-tmux-lazy.', trashed[0].name)
+        self.assertEqual([p.name for p in (trashed[0] / 'snapshot').iterdir()], ['state.json'])
 
 
 if __name__ == "__main__":

@@ -45,24 +45,14 @@ daily_maintenance='daily_script="${PROJECTS_DIR:-$HOME/Desktop/tutoriais_e_curso
 "$host_runner" "$@" -- "$daily_maintenance --tts-media-check; fi" || exit $?
 
 "$script_dir/zsh_history_sync.py" "$@" || exit $?
-"$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh || exit $?
+# Publish the default server, not an incidental custom/agent socket inherited
+# from the terminal running this maintenance command.
+env -u TMUX -u TMUX_PANE "$script_dir/tmux-lazy" save --quiet --if-running || exit $?
 
 "$host_runner" "$@" -- '"$HOME/dotfiles/scripts/stop_omnivoicetts"' || exit $?
 "$host_runner" "$@" -- "$daily_maintenance --tts-media-preview; fi" || exit $?
 "$host_runner" "$@" -- "$daily_maintenance --tts-media-apply; fi" || exit $?
 "$host_runner" "$@" -- '"$HOME/dotfiles/scripts/clear_sannux_transients" --apply --idle-confirmed' || exit $?
-
-# Include hidden entries and symlinks, but keep the live parent directory.
-resurrect_entries=("$HOME"/.local/share/tmux/resurrect/*(DN))
-if (( ${#resurrect_entries[@]} )); then
-  "${trash_command[@]}" "${resurrect_entries[@]}" || exit $?
-fi
-
-sleep 5 || exit $?
-
-"$HOME"/.tmux/plugins/tmux-resurrect/scripts/save.sh || exit $?
-
-ls -lah "$HOME"/.local/share/tmux/resurrect
 
 if ! pullall; then
   print -u2 -- 'Some repositories could not be updated; continuing synchronization.'
@@ -89,7 +79,7 @@ project_excludes=(
 
 # Paths are relative to each machine's own home, never the sender's absolute home.
 projects_directory='Desktop/tutoriais_e_cursos'
-tmux_directory='.local/share/tmux/resurrect/'
+tmux_directory='.local/share/tmux/lazy/'
 pi_directory='.pi/'
 shared_directories=(
   'sannux-data/'
@@ -101,23 +91,22 @@ shared_directories=(
 
 data_directories=("$projects_directory" "$pi_directory" "${shared_directories[@]}")
 
-# Only the staged snapshot is made portable; never edit the live save or last link.
-resurrect_stage="$(mktemp -d "${TMPDIR:-/tmp}/synchosts-resurrect.XXXXXX")" || exit 1
-resurrect_stage="${resurrect_stage:A}"
+# Export only validated portable state, never sockets, locks, focus or runtime files.
+tmux_stage="$(mktemp -d "${TMPDIR:-/tmp}/synchosts-tmux-lazy.XXXXXX")" || exit 1
+tmux_stage="${tmux_stage:A}"
 cleanup_stage() {
   local result=$?
   trap - EXIT
-  if [[ -d "$resurrect_stage" ]] && ! "${trash_command[@]}" "$resurrect_stage"; then
-    print -u2 -- "Cannot move staged tmux snapshot to Trash: $resurrect_stage"
+  if [[ -d "$tmux_stage" ]] && ! "${trash_command[@]}" "$tmux_stage"; then
+    print -u2 -- "Cannot move staged tmux snapshot to Trash: $tmux_stage"
     (( result != 0 )) || result=1
   fi
   exit "$result"
 }
 trap cleanup_stage EXIT
-resurrect_ready=0
-if python3 "$script_dir/lib/prepare_tmux_resurrect.py" \
-  "$HOME/$tmux_directory" "$resurrect_stage/resurrect" "$HOME"; then
-  resurrect_ready=1
+tmux_ready=0
+if env -u TMUX -u TMUX_PANE "$script_dir/tmux-lazy" export "$tmux_stage/snapshot"; then
+  tmux_ready=1
 else
   print -u2 -- 'Cannot prepare tmux snapshot; skipping tmux transfers.'
 fi
@@ -126,6 +115,7 @@ fi
 sync_home() {
   local directory="$1" route="$2"
   local host="${route#*:}" source destination
+  local copy_flags=-havzu
   shift 2
   (( ${sync_hosts[(Ie)$host]} )) || return 0
 
@@ -133,8 +123,9 @@ sync_home() {
     push:*)
       source="$HOME/${directory%/}/"
       if [[ "$directory" == "$tmux_directory" ]]; then
-        (( resurrect_ready )) || return 1
-        source="$resurrect_stage/resurrect/"
+        (( tmux_ready )) || return 1
+        source="$tmux_stage/snapshot/state.json"
+        copy_flags=-havz
       fi
       destination="$host:~/$directory"
       ;;
@@ -155,7 +146,7 @@ sync_home() {
     print -u2 -- "Cannot prepare directory on $host: ~/$directory; stopping synchronization."
     return 1
   fi
-  rsync -havzu --progress --stats "$@" "$source" "$destination"
+  rsync "$copy_flags" --progress --stats "$@" "$source" "$destination"
 }
 
 sync_data_home() {
@@ -191,36 +182,14 @@ for direction in pull push; do
   done
 done
 
-# Tmux remains a publication of the caller's portable snapshot, not a merge.
-# Load the peer's environment: Linuxbrew trash may not be on the SSH PATH.
-trash_remote_tmux() {
-  local host="$1"
-  local remote_script='
-if [[ -f "$HOME/.zshrc" ]]; then
-  # A non-interactive title/prompt hook can return nonzero after PATH is loaded.
-  # Check the required executable below instead of trusting the profile status.
-  source "$HOME/.zshrc" >/dev/null 2>&1 || :
-fi
-if command -v trash >/dev/null 2>&1; then
-  trash_command=(trash)
-elif command -v gio >/dev/null 2>&1; then
-  trash_command=(gio trash --)
-else
-  print -u2 "trash or gio is required on this host"; exit 1
-fi
-directory="$HOME/.local/share/tmux/resurrect"
-mkdir -p "$directory" || exit 1
-entries=("$directory"/*(DN))
-if (( ${#entries[@]} )); then
-  "${trash_command[@]}" "${entries[@]}"
-fi'
-  "$host_runner" --host "$host" --no-tty "zsh -f -c ${(qq)remote_script}"
-}
-
-if (( resurrect_ready )); then
+# Publish only the caller's snapshot, not a merge. Delay replacement until the
+# transfer completes; omit -u so newer peer state cannot win (rsync has no
+# --no-update option). Other data transfers retain their existing -u behavior.
+# Never clear the destination: its other files belong to the peer's live runtime.
+if (( tmux_ready )); then
   for host in "${sync_hosts[@]}"; do
-    trash_remote_tmux "$host" || exit $?
-    sync_home "$tmux_directory" "push:$host" || exit $?
+    sync_home "$tmux_directory" "push:$host" \
+      --delay-updates --checksum || exit $?
   done
 else
   exit 1

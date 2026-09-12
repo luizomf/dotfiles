@@ -34,6 +34,17 @@ logerror() {
 # OMXTerm supports synchronized output, but its generic TERM identity cannot
 # advertise that capability to tmux. Scope the hint to this client only.
 tmux() {
+  # Only the ordinary interactive entry points restore saved structure. Explicit
+  # tmux commands/socket arguments used by scripts and agents stay native.
+  if [[ -z "${TMUX:-}" ]]; then
+    case "$#:${1:-}" in
+      0:|1:a|1:attach|1:attach-session)
+        "${HOME}/dotfiles/scripts/tmux-lazy" start
+        return
+        ;;
+    esac
+  fi
+
   if [[ -z "${TMUX:-}" && "${TERM_PROGRAM:-}" == "OMXTerm" ]]; then
     command tmux -T sync "$@"
     return

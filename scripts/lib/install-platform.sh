@@ -38,8 +38,10 @@ install_fedora_packages() {
     vim-enhanced wget xz-devel zlib-devel zsh fastfetch tmux just
 
   install_homebrew
+  # Keep the distro tmux fallback for explicit/non-interactive callers, while
+  # also installing the preferred interactive Homebrew version.
   # Keep the same providers used by the interactive environment on fedoraair.
   # Personal services/projects (Ollama, EdgeTTS, etc.) are not provisioned here.
   brew install bash-completion@2 bat fzf gh glow hf lazygit neovim rtk \
-    trash-cli tree-sitter-cli pi-coding-agent
+    trash-cli tree-sitter-cli tmux pi-coding-agent
 }

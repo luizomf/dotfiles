@@ -238,11 +238,6 @@ if [[ ! -d "$LAZY_PATH" ]]; then
   git clone https://github.com/folke/lazy.nvim.git --filter=blob:none "$LAZY_PATH"
 fi
 
-loginfo "Instalando TPM..."
-if [[ ! -d "$HOME/.tmux/plugins/tpm" ]]; then
-  git clone https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
-fi
-
 if ! command -v pyenv > /dev/null 2>&1; then
   loginfo "Instalando pyenv..."
   require_new_toolchain_dir "$HOME/.pyenv"
@@ -381,12 +376,10 @@ if [[ "${OM_INSTALL_SKIP_PLUGINS:-0}" != "1" ]]; then
     -c "lua require('settings.tooling').bootstrap()" \
     -c 'qall'
 
-  loginfo "Instalando plugins do Tmux..."
-  "$HOME/.tmux/plugins/tpm/bin/install_plugins"
 fi
 
 loginfo "Verificando a instalação..."
-required_commands=(git nvim vim zsh tmux brew fastfetch fd fzf bat)
+required_commands=(git nvim vim zsh tmux python3 brew fastfetch fd fzf bat)
 if [[ "$OP_SYSTEM" == "ubuntu" ]]; then
   required_commands+=(ghostty)
 fi

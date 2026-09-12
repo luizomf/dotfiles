@@ -45,6 +45,18 @@ delete data, corrupt shared state, break installation, or leave background work
 in a bad state. Tests use isolated fixtures; they do not make these scripts a
 supported public API.
 
+## Tmux
+
+Tmux now saves structure and restores shells lazily by window, without Resurrect,
+Continuum or a persistence daemon. Prefix Ctrl-s saves; the existing fzf picker
+marks pending windows with `Z`. Start a new Zsh login shell to use the normal
+`tmux`/`tmux a` entry points, or run `tmux-lazy start` explicitly.
+
+See [tmux/README.md](tmux/README.md) for migration, quiet/Queue-friendly saves,
+`synchosts`, prerequisites and safe cold-restart instructions. Reloading config
+never restarts existing panes; do not kill a server containing useful services or
+agents merely to enable the new configuration.
+
 ## Shared host paths
 
 `config/paths.sh` defines the shared `PROJECTS_DIR` used by shells and

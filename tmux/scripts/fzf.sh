@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 # The target remains searchable, but only the fixed-width row is displayed.
-LIST_FORMAT=$'#S:#I\t#{?window_active,✚, }  #{=16;p16:#{session_name}:#{window_index}}  #{=36;p36:#{?#{@pi_status},#{@pi_status},#{pane_title}}}  #{=16;p16:window_name}'
+# Z is picker-only: tmux's real Z (zoom) flag is not modified.
+LIST_FORMAT=$'#S:#I\t#{?@lazy_pending,Z,#{?window_active,✚, }}  #{=16;p16:#{session_name}:#{window_index}}  #{=36;p36:#{?#{@pi_status},#{@pi_status},#{pane_title}}}  #{=16;p16:window_name}'
 # Strip the hidden rank after sorting; unvisited windows fall back to session/index.
 LIST="$(tmux list-windows -a -F "#{?@window_mru,#{@window_mru},0}"$'\t'"$LIST_FORMAT" |
   LC_ALL=C sort -t $'\t' -k1,1nr -k2,2V |

@@ -1,64 +1,19 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
+# Explicitly destructive maintenance; never run this as an automatic restore.
+set -euo pipefail
 
-set -eo pipefail
+if [[ ${1:-} != --yes || $# != 1 ]]; then
+  printf 'Usage: tmux_respawn_all --yes\nResets every loaded pane to a login shell, killing its running commands. Pending panes stay pending.\n' >&2
+  exit 2
+fi
 
-respawn_all() {
-  echo "Starting  Clean & Respawn Tmux Panes"
-
-  [[ "$(pgrep tmux)" ]] || (echo "tmux server not started." ; exit 1)
-
-  sync
-  echo "Saving history: fc -W"
-  fc -W
-
-  echo "Sourcing .zshrc"
-  # shellcheck source=../.zshrc
-  . "${HOME}/.zshrc"
-
-  echo "Cleaning nvim echos"
-  cleanNeovimLogs
-
-  echo "Synchronizing zsh history"
-  "${HOME}/dotfiles/scripts/zsh_history_sync.py"
-
-  echo "Removing old tmux sessions..."
-  rm -Rfv "${HOME}/.local/share/tmux/resurrect"/*.*
-  rm -Rfv "${HOME}/.local/share/tmux/resurrect/last"
-
-  echo "Nap a bit..."
-  sleep 1
-
-  echo "Saving current session"
-  "${HOME}/.tmux/plugins/tmux-resurrect/scripts/save.sh"
-
-  echo "Nap a bit again..."
-  sleep 1
-
-  echo "Tmux resurrect cleaned!"
-  echo "Restoring sessions now"
-
-  "${HOME}/.tmux/plugins/tmux-resurrect/scripts/restore.sh"
-
-  echo "Nap again, last time..."
-  sleep 1
-
-  echo "Respawning all panes"
-  for pane in $(tmux list-panes -a -F '#D'); do
-    tmux respawn-pane -k -t "$pane";
-  done
-
-  sleep 1
-
-  echo "Saving sessions after respawn..."
-  "${HOME}/.tmux/plugins/tmux-resurrect/scripts/save.sh"
-
-  echo "All done. I hope it helps."
-
-  echo "Proof"
-  for pane in $(tmux list-panes -a -F '#D'); do
-    tmux send-keys -t "$pane" "echo \"Respawned: ${pane}\"" C-m
-  done
-}
-
-respawn_all
-
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+"$script_dir/tmux-lazy" save --quiet
+shell="$(tmux show-option -gqv default-shell)"
+while IFS= read -r pane; do
+  [[ -n "$pane" ]] || continue
+  cwd="$(tmux display-message -p -t "$pane" '#{pane_current_path}')"
+  # -c expands tmux formats; preserve literal # characters in directory names.
+  tmux respawn-pane -k -t "$pane" -c "${cwd//#/##}" "$shell" -l
+done < <(tmux list-panes -a -F '#{?@lazy_cwd,,#{pane_id}}')
+"$script_dir/tmux-lazy" save --quiet

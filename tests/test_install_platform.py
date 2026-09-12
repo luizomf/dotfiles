@@ -82,6 +82,7 @@ class InstallPlatformTests(unittest.TestCase):
             self.assertIn(f'<{package}>', lines[0])
         self.assertEqual(lines[1], 'load-homebrew')
         self.assertTrue(lines[2].startswith('brew <install>'))
+        self.assertIn('<tmux>', lines[2])
         for forbidden in ('apt-get', 'ghostty-ubuntu', 'systemctl', 'kernel', 'bootloader'):
             self.assertNotIn(forbidden, result.stdout)
 
