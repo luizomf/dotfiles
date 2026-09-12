@@ -1,4 +1,4 @@
-# Repository Guidelines
+# Dotfiles Guidelines
 
 ## Required checklist for every change
 
@@ -46,6 +46,15 @@ automation for macOS, Ubuntu, and traditional Fedora/Asahi. Other people also us
 it, so preserve personal preferences while keeping shared setup behavior safe and
 understandable.
 
+Treat this as a personal collection of dotfiles, setup automation, and standalone
+utilities—not as a unified application, product, or framework. Work on the
+specific config or script requested, following its existing conventions. Do not
+impose repository-wide architecture, uniform layouts, or a shared toolchain just
+to make the collection look like a software project. Shared helpers are justified
+by concrete needs in existing consumers, not by a desire to standardize everything.
+The safety requirements here protect the real environments these files affect;
+they are not a mandate to turn personal dotfiles into a supported product.
+
 - These instructions apply repository-wide. `pi/agent/AGENTS.md` adds stricter
   rules for `pi/agent/`; follow the closest applicable `AGENTS.md`.
 - `README.md` is the user-facing source for supported setup and safety warnings.
@@ -90,7 +99,7 @@ Treat every tracked file and Git commit as public.
 
 ## Maintainable code and change boundaries
 
-These guidelines apply within the project constraints above and do not expand
+These guidelines apply within the dotfiles constraints above and do not expand
 scope, authorize side effects, or change the test policy below.
 
 - Solve the current requirement by simplifying existing code when practical.
