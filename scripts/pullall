@@ -33,8 +33,23 @@ trap 'finish' EXIT
 trap 'fail "interrupted; remaining repositories not attempted" 130; exit 130' INT
 trap 'fail "terminated; remaining repositories not attempted" 143; exit 143' TERM
 
+# GNU coreutils: timeout on Linux/gnubin PATH, gtimeout on Homebrew macOS.
+# Refuse a missing or incompatible utility rather than doing unbounded pulls.
+timeout_command=''
+for candidate in timeout gtimeout; do
+  if command -v "$candidate" >/dev/null 2>&1 &&
+    [[ "$("$candidate" --version 2>/dev/null)" == *'GNU coreutils'* ]]; then
+    timeout_command="$candidate"
+    break
+  fi
+done
+if [[ -z "$timeout_command" ]]; then
+  fail 'GNU timeout/gtimeout required (coreutils); no repositories attempted' 1
+  exit 1
+fi
+
 pull_repository() {
-  local repository=$1 required=${2:-0} status
+  local repository=$1 required=${2:-0} status result
 
   # A .git file is also a checkout (worktree/submodule). Do not mistake an
   # ordinary child directory inside a parent repository for its own checkout.
@@ -59,10 +74,19 @@ pull_repository() {
   fi
 
   printf '%s\n' "$repository"
-  if git -C "$repository" pull --all --prune --ff-only; then
+  # No --foreground: GNU timeout signals the subprocess group as well.
+  if "$timeout_command" --signal=TERM --kill-after=5s 60s git -C "$repository" pull --all --prune --ff-only; then
     (( updated += 1 ))
   else
-    fail "pull: $repository" "$?"
+    result=$?
+    if (( result == 124 )); then
+      fail "pull timeout after 60s: $repository" "$result"
+    elif (( result == 137 )); then
+      # GNU timeout cannot distinguish its KILL escalation from an external KILL.
+      fail "pull timeout or SIGKILL (60s + up to 5s grace): $repository" "$result"
+    else
+      fail "pull: $repository" "$result"
+    fi
   fi
   prline
 }

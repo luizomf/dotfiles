@@ -55,6 +55,22 @@ missing/unreadable project listing make the final exit nonzero. Independent
 repositories still run. Its final summary counts updates/skips and lists
 failures with paths and exit codes.
 
+Each Git pull has a **60-second deadline**, then TERM and up to **5 additional
+seconds** before KILL if Git is still running; this is not a hard 60-second
+wall-clock guarantee. Requires GNU coreutils `timeout` or `gtimeout` on PATH
+(already in `homebrew/Brewfile` on macOS; Linux uses coreutils). A missing or
+incompatible utility aborts with a dependency failure summary, never an
+unbounded fallback. Timeout failures name the repository and do not stop later
+pulls. Exit 124 identifies a timeout; 137 is reported as timeout or SIGKILL
+because GNU timeout cannot distinguish escalation from an external KILL.
+
+Timeout signals the subprocess group, without `--foreground`. This is not full
+descendant supervision: detached children, or TERM-ignoring descendants
+outliving Git itself, may survive. Interrupted Git operations are not rolled
+back, and no lock files, packs or other Git metadata are automatically deleted.
+Inspect an affected checkout and remaining processes before retrying. Only the
+pull is timed, not Git status, project enumeration, or the entire `pullall` run.
+
 `scripts/synchosts [--additional-hosts HOST ...]` is ordinary file sync, **not
 idle maintenance**. It keeps services running and does not invoke agent-home
 cleanup, OmniVoice stops/cache deletion, or Daily Paper media pruning. It merges
