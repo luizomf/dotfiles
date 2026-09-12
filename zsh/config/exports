@@ -36,27 +36,22 @@ export FZF_RG_LIMIT=100
 export FZF_RG_DEPTH=8
 export FZF_RG_MAX_FILESIZE=1M
 
-# BE SURE TO FIX THE ENV VARIABLES
-# brew install libpq --build-from-source
-# brew install mysql-client
-# brew install openssl
-# brew install curl
-
-# PKG_CONFIG_PATH acumulado corretamente
-export PKG_CONFIG_PATH="/opt/homebrew/opt/curl/lib/pkgconfig:$PKG_CONFIG_PATH"
-export PKG_CONFIG_PATH="/opt/homebrew/opt/sqlite/lib/pkgconfig:$PKG_CONFIG_PATH"
-
-# LDFLAGS (links de bibliotecas nativas)
-export LDFLAGS="-L/opt/homebrew/lib -L/opt/homebrew/opt/openssl/lib -L/opt/homebrew/opt/openssl@3/lib -L/opt/homebrew/opt/curl/lib -L/opt/homebrew/opt/mysql-client/lib -L/opt/homebrew/opt/libpq/lib -L/opt/homebrew/opt/sqlite/lib"
-
-# CPPFLAGS (cabeçalhos de compilação)
-export CPPFLAGS="-I/opt/homebrew/include -I/opt/homebrew/opt/openssl/include -I/opt/homebrew/opt/openssl@3/include -I/opt/homebrew/opt/curl/include -I/opt/homebrew/opt/mysql-client/include -I/opt/homebrew/opt/libpq/include -I/opt/homebrew/opt/sqlite/include"
+# These native-build overrides belong to Apple Silicon Homebrew only.
+# Linux keeps its inherited flags and distro-provided library discovery.
+if [[ "$OSTYPE" == darwin* ]]; then
+  export PKG_CONFIG_PATH="/opt/homebrew/opt/curl/lib/pkgconfig:$PKG_CONFIG_PATH"
+  export PKG_CONFIG_PATH="/opt/homebrew/opt/sqlite/lib/pkgconfig:$PKG_CONFIG_PATH"
+  export LDFLAGS="-L/opt/homebrew/lib -L/opt/homebrew/opt/openssl/lib -L/opt/homebrew/opt/openssl@3/lib -L/opt/homebrew/opt/curl/lib -L/opt/homebrew/opt/mysql-client/lib -L/opt/homebrew/opt/libpq/lib -L/opt/homebrew/opt/sqlite/lib"
+  export CPPFLAGS="-I/opt/homebrew/include -I/opt/homebrew/opt/openssl/include -I/opt/homebrew/opt/openssl@3/include -I/opt/homebrew/opt/curl/include -I/opt/homebrew/opt/mysql-client/include -I/opt/homebrew/opt/libpq/include -I/opt/homebrew/opt/sqlite/include"
+fi
 
 # bat command
 export BAT_STYLE="header"
 export BAT_THEME="ansi"
 
-PATH="/opt/homebrew/opt/curl/bin:/opt/homebrew/opt/mysql-client/bin:/opt/homebrew/opt/libpq/bin:${PATH}"
+if [[ "$OSTYPE" == darwin* ]]; then
+  PATH="/opt/homebrew/opt/curl/bin:/opt/homebrew/opt/mysql-client/bin:/opt/homebrew/opt/libpq/bin:${PATH}"
+fi
 
 if [ "$(uname -s)" = "Linux" ]; then
   PATH="/home/linuxbrew/.linuxbrew/bin:${PATH}"

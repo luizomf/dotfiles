@@ -7,9 +7,13 @@ path=("$HOME/dotfiles/scripts" "${path[@]}")
 path=("$HOME/.docker/bin" "${path[@]}")
 
 path=("${(@)path:#/usr/local/bin}")
-path=("${(@)path:#/opt/homebrew/bin}")
-path=("${(@)path:#/opt/homebrew/sbin}")
-path=("${path[@]}" /usr/local/bin /opt/homebrew/bin /opt/homebrew/sbin)
+if [[ "$OSTYPE" == darwin* ]]; then
+  path=("${(@)path:#/opt/homebrew/bin}")
+  path=("${(@)path:#/opt/homebrew/sbin}")
+  path=("${path[@]}" /usr/local/bin /opt/homebrew/bin /opt/homebrew/sbin)
+else
+  path=("${path[@]}" /usr/local/bin)
+fi
 typeset -gU path
 
 export PATH

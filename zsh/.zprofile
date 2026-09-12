@@ -1,5 +1,7 @@
-# The following lines were added by Docker Desktop to add commands to your PATH.
-export PATH="$PATH:/Users/luizotavio/.docker/bin"
+# Docker Desktop's macOS path must not leak into Linux login shells.
+if [[ "$OSTYPE" == darwin* ]]; then
+  export PATH="$PATH:$HOME/.docker/bin"
+fi
 # End of Docker Desktop section.
 
 # Set PATH, MANPATH, etc., for Homebrew.

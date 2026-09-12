@@ -51,6 +51,13 @@ supported public API.
 unattended scripts. Supported callers can load machine-specific values with
 `OM_PATHS_FILE`; `omnivoice_m4128_half` also accepts `OMNIVOICE_REMOTE_APP`.
 
+The Zsh configuration adds Apple Silicon Homebrew paths and native-build flags
+only on macOS. Linux preserves inherited build flags; it does not substitute
+Linuxbrew libraries globally. Existing shells and daemons are not reloaded by
+these file changes, and inherited flags are not automatically scrubbed.
+Queue jobs can use a different PATH from interactive terminals: do not remove
+distro packages merely because Homebrew shadows them in your shell.
+
 ## Pi Coding Agent
 
 The installer links the static configuration under `pi/agent/` into
