@@ -88,6 +88,36 @@ Treat every tracked file and Git commit as public.
 - Preserve unrelated personal configuration. Do not generalize, reformat, or
   "clean up" preferences outside the requested scope.
 
+## Maintainable code and change boundaries
+
+These guidelines apply within the project constraints above and do not expand
+scope, authorize side effects, or change the test policy below.
+
+- Solve the current requirement by simplifying existing code when practical.
+  Write the minimum clear code needed; reduce what a maintainer must understand,
+  not just the line count. Do not hide behavior in dense expressions or compressed
+  formatting. Preserve required behavior, safety checks, and platform support.
+- Make the smallest coherent change. Avoid parallel implementations, speculative
+  extension points, unrelated cleanup, and new dependencies or tooling without a
+  concrete need in the task.
+- Use abstractions only to remove a present difficulty in use or maintenance.
+  Prefer direct code over layers that merely forward calls or rename concepts.
+  A function or concrete module is often enough; do not impose an application
+  architecture on a small script or configuration file.
+- Where scripts mix substantial decision logic with command execution, remote
+  access, or storage, separate those responsibilities at a useful boundary.
+  Keep external formats and execution mechanics there rather than spreading them
+  through internal decisions. Use small explicit inputs and results; do not
+  introduce a wrapper for every command.
+- Reuse the existing configuration source for values already intended to vary by
+  host or operator, preserving supported overrides and validation. Do not scatter
+  duplicate defaults through callers or make every literal configurable. Shared
+  host paths remain governed by `config/paths.sh` as described above.
+- When a small feature requires edits across unrelated parts of the repository,
+  check for unnecessary coupling. Simplify the narrow boundary when it is within
+  the task; report larger cleanup separately instead of turning the change into
+  a rewrite.
+
 ## Engineering and verification
 
 - Prefer simple, explicit changes in the existing language and style. Preserve
