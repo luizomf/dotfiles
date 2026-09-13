@@ -17,7 +17,7 @@ The command:
 5. collects project and skill files from every peer; and
 6. publishes the collected files only if every collection succeeded.
 
-The caller's tmux snapshot is published separately. See
+The local host's tmux snapshot is published separately. See
 [tmux synchronization](../../tmux/README.md#migration-and-synchronization).
 
 ## Transfer scope
@@ -26,10 +26,10 @@ The synchronized roots are:
 
 - `~/Desktop/tutoriais_e_cursos`;
 - `~/.agents/skills/`; and
-- the caller's staged tmux `state.json`.
+- the local host's staged tmux `state.json`.
 
-The project path is an intentional home-relative policy. The script does not
-discover a peer's `PROJECTS_DIR` or `OM_PATHS_FILE` override.
+The project path is resolved relative to each host's home directory. The script
+does not discover a peer's `PROJECTS_DIR` or `OM_PATHS_FILE` override.
 
 The rsync filters exclude:
 
@@ -38,9 +38,9 @@ The rsync filters exclude:
 - dependency, cache, scratch, build, and known runtime-output directories; and
 - OmniVoice and Loudterm output directories.
 
-Git metadata remains owned by Git on each host. An empty peer needs a real clone;
-rsync does not create one. Existing excluded files are not deleted because the
-sync does not use `--delete`.
+Git metadata remains owned by Git on each host. An empty peer needs a real
+clone; rsync does not create one. Existing excluded files are not deleted
+because the sync does not use `--delete`.
 
 The script does not synchronize `~/.pi`, other `~/.agents` state,
 `~/sannux-data`, `~/.ollama/service`, `~/.config/omxterm`, or
@@ -54,17 +54,18 @@ inside a transferred project is not automatically recognized.
 
 All collections are attempted. If any collection fails, publication of collected
 projects and skills is blocked for every peer. Files already received by the
-caller are not rolled back.
+local host are not rolled back.
 
 Tmux staging and publication are independent: a save or staging failure blocks
-tmux publication only, and one failed tmux push does not stop the others.
-A `pullall` failure is reported but does not block file collection. The final
+tmux publication only, and one failed tmux push does not stop the others. A
+`pullall` failure is reported but does not block file collection. The final
 summary reports failures and blocked phases and exits nonzero for incomplete
 work.
 
 There is no conflict resolution or protection from simultaneous source edits and
 peer tmux saves. Keep transferred files and peer tmux saves quiet during sync.
-Deploy script changes to every caller before relying on new exclusions.
+Each participating host runs its own copy of the script, so update all
+participating hosts before relying on new exclusions.
 
 `synchosts` does not stop services or run destructive cleanup. Those remain
 explicit operations; see [`clear_sannux_transients`](clear_sannux_transients.md)
@@ -78,5 +79,5 @@ From the repository root:
 python3 -m unittest tests.test_synchosts
 ```
 
-The test uses fake remote commands and local fixtures. Do not run real SSH or
-synchronization as a verification step.
+The test uses fake remote commands and local fixtures; real SSH and
+synchronization are not required for verification.
