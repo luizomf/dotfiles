@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, TypedDict, Union
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+
     from typing_extensions import TypeGuard
 
 REPO = Path(__file__).resolve().parents[2]
