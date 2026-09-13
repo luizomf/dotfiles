@@ -104,17 +104,23 @@ Treat every tracked file and Git commit as public.
 These guidelines apply within the dotfiles constraints above and do not expand
 scope, authorize side effects, or change the test policy below.
 
-- Solve the current requirement by simplifying existing code when practical.
-  Write the minimum clear code needed; reduce what a maintainer must understand,
-  not just the line count. Do not hide behavior in dense expressions or compressed
-  formatting. Preserve required behavior, safety checks, and platform support.
+- Prefer simplicity where it improves the solution, not as an absolute rule.
+  Evaluate each case by correctness, clarity, safety, and ease of maintenance.
+  Choose the simplest design that serves those needs well; fewer lines or fewer
+  abstractions do not necessarily mean less complexity. Judge the whole solution
+  by what a maintainer must understand, not by how sophisticated or compact it
+  looks. Preserve required behavior, safety checks, and platform support.
 - Make the smallest coherent change. Avoid parallel implementations, speculative
   extension points, unrelated cleanup, and new dependencies or tooling without a
   concrete need in the task.
-- Use abstractions only to remove a present difficulty in use or maintenance.
-  Prefer direct code over layers that merely forward calls or rename concepts.
-  A function or concrete module is often enough; do not impose an application
-  architecture on a small script or configuration file.
+- Use interfaces, types, modules, and other abstractions when their concrete
+  benefits outweigh the complexity they introduce. A little more structure can
+  make the whole solution simpler by centralizing validation, protecting
+  invariants, reducing coupling, or making changes easier to reason about.
+  Prefer direct code when it already serves those needs; avoid layers that
+  merely forward calls, rename concepts, or anticipate hypothetical needs.
+  Neither reject a useful abstraction for being an abstraction nor add one just
+  to satisfy a tool or imitate an application architecture.
 - Where scripts mix substantial decision logic with command execution, remote
   access, or storage, separate those responsibilities at a useful boundary.
   Keep external formats and execution mechanics there rather than spreading them
