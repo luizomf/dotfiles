@@ -34,9 +34,18 @@ uv run --locked ruff format --check
 uv run --locked pyright
 ```
 
+Ruff follows the owner's loudterm policy: `ALL` except docstrings (`D`) and
+`print` calls (`T201`), with `ANN201` and `S101` ignored in tests. Pyright uses
+`strict` mode without requiring third-party type stubs. Dotfiles-specific file
+discovery and Python runtime-version overrides remain independent of loudterm.
+
 Ruff and Pyright are diagnostics, not substitutes for behavior tests. Existing
 code has known diagnostics and formatting differences; compare affected files
-before and after a change instead of hiding warnings with casts or broad ignores.
+before and after a change instead of hiding warnings with casts or broad
+ignores. Plain Ruff checks do not apply fixes (`fix = false`,
+`unsafe-fixes = false`). Neovim's explicit `ruff_fix` save step can still apply
+safe fixes, so review the diff after saving Python files under the expanded
+rules. Do not bulk-fix legacy code merely to make the stricter report green.
 
 Extensionless Python commands are listed in `pyproject.toml`. Update both tool
 lists when adding one. Python-version overrides should follow known runtime

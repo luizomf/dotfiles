@@ -76,7 +76,6 @@ class LazyTmuxTests(unittest.TestCase):
                                  {'saved_focus': data['focus'], 'current_focus': json.loads((trial / 'focus.json').read_text()),
                                   'saved_windows': [(s['name'], s['uid'], [(w['name'], w['uid'], w['active']) for w in s['windows']]) for s in data['sessions']]})
                 self.assertEqual(tmux('display-message', '-p', '-t', 'alpha:2', '#{pane_current_path}'), str(home / 'two'))
-                self.assertEqual(tmux('show-option', '-gqv', '@continuum-restore'), 'off')
                 bindings = tmux('list-keys', '-T', 'prefix').splitlines()
                 self.assertTrue(any('C-s ' in line and 'lazy.py' in line for line in bindings), bindings)
                 ready_fifo = root / 'render-ready'

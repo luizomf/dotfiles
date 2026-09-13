@@ -44,10 +44,12 @@ include = [
 "scripts/bq" = "py310"
 
 [tool.ruff.lint]
-# Errors, undefined/unused names, imports, common bugs and compatible upgrades.
-# Avoid ALL: annotations/docstrings, print bans and stylistic simplification are
-# not reasons to make these standalone commands harder to read.
-select = ["E4", "E7", "E9", "F", "I", "B", "UP", "RUF100"]
+# Match the owner's loudterm lint policy; review diagnostics without bulk fixes.
+select = ["ALL"]
+ignore = ["D", "T201"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["ANN201", "S101"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -55,7 +57,10 @@ indent-style = "space"
 line-ending = "lf"
 
 [tool.pyright]
-typeCheckingMode = "standard"
+typeCheckingMode = "strict"
+useLibraryCodeForTypes = true
+reportMissingImports = true
+reportMissingTypeStubs = false
 pythonVersion = "3.9"
 venvPath = "."
 venv = ".venv"
