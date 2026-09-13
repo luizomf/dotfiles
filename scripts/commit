@@ -180,7 +180,7 @@ while IFS= read -r -d '' staged_file; do
   fi
 
   case "$staged_file" in
-    .prettierrc|*.md|*.mdx|*.json|*.jsonc|*.json5|*.toml|*.yaml|*.yml|*.html|*.css|*.scss|*.js|*.jsx|*.ts|*.tsx|*.vue|*.astro)
+    .prettierrc|*.md|*.mdx|*.json|*.jsonc|*.json5|*.yaml|*.yml|*.html|*.css|*.scss|*.js|*.jsx|*.ts|*.tsx|*.vue|*.astro)
       prettier_file=true
       if [[ "$prettier_configured" != true && -f package.json && \
         "$prettier_package_checked" != true ]]; then

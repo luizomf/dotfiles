@@ -201,6 +201,24 @@ class CommitCommandTests(unittest.TestCase):
             (self.repo / "check.log").read_text(),
         )
 
+    def test_staged_pyproject_is_not_sent_to_prettier(self) -> None:
+        self.write(".prettierrc.json", "{}\n")
+        self.run_git("add", ".prettierrc.json")
+        self.run_git("commit", "-qm", "configure prettier")
+        self.write("pyproject.toml", "[tool.pyright]\n")
+        self.run_git("add", "pyproject.toml")
+        self.make_command("uv", 'printf "%s\\n" "$*" >>"$CHECK_LOG"')
+        self.make_command("prettier", 'case "$*" in *toml*) exit 23;; esac')
+
+        result = self.run_commit()
+
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertEqual(
+            "run --locked --no-sync pyright\n",
+            (self.repo / "check.log").read_text(),
+        )
+        self.assertEqual("pyproject.toml\n", (self.repo / "model.log").read_text())
+
     def test_prettierrc_javascript_configuration_blocks_on_failure(self) -> None:
         self.write(".prettierrc.js", "module.exports = {};\n")
         self.write("README.md", "unformatted\n")
