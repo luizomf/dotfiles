@@ -1,3 +1,7 @@
+# Copyright (c) 2026 Luiz Otávio Miranda
+
+from __future__ import annotations
+
 import json
 import os
 import re
@@ -6,9 +10,11 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from collections.abc import Mapping
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 
@@ -73,9 +79,11 @@ class SyncHostsTests(unittest.TestCase):
             "import json, os, pathlib, shutil, subprocess, sys\n"
             "name=pathlib.Path(sys.argv[0]).name; args=sys.argv[1:]\n"
             "root=pathlib.Path(os.environ['FIXTURE_ROOT'])\n"
-            "with open(os.environ['COMMAND_LOG'],'a') as f: f.write(json.dumps([name,*args])+'\\n')\n"
+            "with open(os.environ['COMMAND_LOG'],'a') as f: "
+            "f.write(json.dumps([name,*args])+'\\n')\n"
             "if name==os.environ.get('FAIL_COMMAND'): sys.exit(17)\n"
-            "if name=='hostname': print(os.environ.get('FAKE_HOST','m132')); sys.exit(0)\n"
+            "if name=='hostname': "
+            "print(os.environ.get('FAKE_HOST','m132')); sys.exit(0)\n"
             "if name in ['sleep','pullall','prline','stop_omnivoicetts']: sys.exit(0)\n"
             "if name=='gio':\n"
             " assert args[:2]==['trash','--']; args=args[2:]; name='trash'\n"
@@ -85,15 +93,19 @@ class SyncHostsTests(unittest.TestCase):
             " for arg in args:\n"
             "  if arg.startswith('-'): continue\n"
             "  p=pathlib.Path(arg); assert p.is_absolute() and p.is_relative_to(root)\n"
-            "  if p.exists() or p.is_symlink(): shutil.move(str(p),str(store/(str(len(list(store.iterdir())))+'-'+p.name)))\n"
+            "  if p.exists() or p.is_symlink(): "
+            "shutil.move(str(p),str(store/(str(len(list(store.iterdir())))+'-'+p.name)))\n"
             " sys.exit(0)\n"
             "if name=='ssh':\n"
             " host,command=args[-2:]; home=root/'homes'/host\n"
-            " if 'scripts/clear_sannux_transients' in command: sys.exit(19 if os.environ.get('FAIL_IDLE') else 0)\n"
+            " if 'scripts/clear_sannux_transients' in command: "
+            "sys.exit(19 if os.environ.get('FAIL_IDLE') else 0)\n"
             " if 'scripts/stop_omnivoicetts' in command: sys.exit(0)\n"
-            " if '.zsh_history' in command: print(': 100:0;echo fixture'); sys.exit(0)\n"
+            " if '.zsh_history' in command: "
+            "print(': 100:0;echo fixture'); sys.exit(0)\n"
             " env={**os.environ,'HOME':str(home),'ZDOTDIR':str(home)}\n"
-            " if host==os.environ.get('FAIL_REMOTE_TRASH') and 'trash' in command: env['FAIL_TRASH']='1'\n"
+            " if host==os.environ.get('FAIL_REMOTE_TRASH') and 'trash' in command: "
+            "env['FAIL_TRASH']='1'\n"
             " sys.exit(subprocess.call(['/bin/zsh','-fc',command],env=env))\n"
             "if name=='rsync':\n"
             " src,dst=args[-2:]\n"
@@ -101,10 +113,12 @@ class SyncHostsTests(unittest.TestCase):
             " if dst.startswith(os.environ.get('FAIL_PUSH','!')+':'): sys.exit(23)\n"
             " def local(value):\n"
             "  if ':~/' in value:\n"
-            "   host,path=value.split(':~/',1); value=str(root/'homes'/host/path)+('/' if value.endswith('/') else '')\n"
+            "   host,path=value.split(':~/',1); "
+            "value=str(root/'homes'/host/path)+('/' if value.endswith('/') else '')\n"
             "  assert pathlib.Path(value).resolve().is_relative_to(root)\n"
             "  return value\n"
-            " os.execv(os.environ['REAL_RSYNC'],[os.environ['REAL_RSYNC'],*args[:-2],local(src),local(dst)])\n"
+            " os.execv(os.environ['REAL_RSYNC'],"
+            "[os.environ['REAL_RSYNC'],*args[:-2],local(src),local(dst)])\n"
             "raise SystemExit('Unexpected fixture command '+name)\n"
         )
         fake.chmod(0o755)
@@ -140,7 +154,7 @@ class SyncHostsTests(unittest.TestCase):
         cli.chmod(0o755)
 
     def run_sync(
-        self, *args: str, extra_env: Optional[Mapping[str, str]] = None
+        self, *args: str, extra_env: Mapping[str, str] | None = None
     ) -> subprocess.CompletedProcess[str]:
         env = {
             **os.environ,
@@ -155,7 +169,8 @@ class SyncHostsTests(unittest.TestCase):
             "REAL_RSYNC": self.real_rsync,
             **(extra_env or {}),
         }
-        return subprocess.run(
+        # Fixed interpreter, fixture-owned script/argv and fake external commands.
+        return subprocess.run(  # noqa: S603
             ["/bin/zsh", "-f", str(self.script), *args],
             cwd=self.root,
             env=env,
@@ -217,24 +232,121 @@ class SyncHostsTests(unittest.TestCase):
         phases = ["pull" if ":~/" in c[-2] else "push" for c in data_copies]
         self.assertEqual(phases, sorted(phases))
 
-    def test_agent_homes_are_not_copied_but_static_skills_are(self):
+    def test_whole_ollama_service_travels_with_shared_exclusions(self):
+        portable = [
+            "ollama_models.json",
+            "CATALOGS.md",
+            "sync-model-catalogs.py",
+            "homebrew.mxcl.ollama.plist",
+            "patches/runner.go",
+            "bin/ollama-hotfix",
+            "backups/previous.env",
+            "server.log",
+            "daemon.pid",
+            "daemon.lock",
+        ]
+        local_only = [
+            "local.sqlite-wal",
+            ".git/config",
+        ]
+        origin = self.root / "homes/m4128/.ollama/service"
+        for relative in portable + local_only:
+            path = origin / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("synthetic fixture")
+        result = self.run_sync()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for host in ["m132", "fedoraair"]:
+            destination = self.root / "homes" / host / ".ollama/service"
+            for relative in portable:
+                self.assertTrue((destination / relative).is_file(), relative)
+            for relative in local_only:
+                self.assertFalse((destination / relative).exists(), relative)
+        for relative in local_only:
+            self.assertTrue((origin / relative).is_file(), relative)
+
+    def test_whole_private_roots_travel_with_only_shared_exclusions(self):
+        portable = [
+            ".config/omxterm/config.json",
+            ".config/omxterm/snippets.json",
+            ".config/omxterm/themes/custom.json",
+            ".config/omxterm/assets/icon.svg",
+            ".config/omxterm/runtime.json",
+            ".pi/agent/models.json",
+            "sannux-data/agent-homes/pi/.pi/agent/models.json",
+            "sannux-data/agent-homes/pi/.pi/agent/settings.json",
+            "sannux-data/agent-homes/pi/.pi/agent/extensions/example/index.ts",
+            "sannux-data/agent-homes/pi/.pi/agent/skills/example/SKILL.md",
+            "sannux-data/agent-homes/pi/.local/bin/codex_search",
+            "sannux-data/agent-homes/codex/.codex/config.toml",
+            "sannux-data/agent-homes/codex/.codex/rules/personal.rules",
+            ".pi/agent/trust.json",
+            ".pi/new-directory/unlisted-file.txt",
+            "sannux-data/new-private-directory/unlisted-file.txt",
+            "sannux-data/agent-homes/pi/.pi/agent/models-store.json",
+            "sannux-data/agent-homes/pi/.pi/agent/private/runtime.json",
+            "sannux-data/agent-homes/codex/.codex/hooks/state/lock",
+            "sannux-data/agent-homes/codex/.codex/skills/.system/generated",
+            "sannux-data/agent-homes/codex/.ssh/id_ed25519",
+            "sannux-data/worktrees/project/.codex/config.toml",
+            "sannux-data/backups/omnews/export.db",
+        ]
+        local_only = [
+            "sannux-data/agent-homes/pi/.pi/agent/extensions/example/node_modules/native.node",
+            "sannux-data/agent-homes/pi/.local/node_modules/native.node",
+            "sannux-data/agent-homes/codex.ephemeral-runs/run.ABC/.codex/config.toml",
+            "sannux-data/worktrees/project/.git",
+            "sannux-data/live/queue.sqlite3",
+            "sannux-data/backups/omnews/export.db-wal",
+        ]
+        origin = self.root / "homes/m4128"
+        for relative in portable + local_only:
+            path = origin / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("synthetic fixture")
+        link_path = Path(".pi/agent/extensions/shared")
+        relative_target = "../../new-directory/unlisted-file.txt"
+        (origin / link_path).parent.mkdir(parents=True, exist_ok=True)
+        (origin / link_path).symlink_to(relative_target)
+        result = self.run_sync()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for host in ["m132", "fedoraair"]:
+            destination = self.root / "homes" / host
+            self.assertTrue((destination / link_path).is_symlink())
+            self.assertEqual(
+                (destination / link_path).readlink(), Path(relative_target)
+            )
+            self.assertEqual((destination / link_path).read_text(), "synthetic fixture")
+            for relative in portable:
+                self.assertTrue((destination / relative).is_file(), relative)
+            for relative in local_only:
+                self.assertFalse((destination / relative).exists(), relative)
+
+    def test_known_auth_and_ephemeral_runs_stay_out_of_normal_data_sync(self):
         transient = [
-            "Desktop/tutoriais_e_cursos/project/.scratch/evidence",
             "Desktop/tutoriais_e_cursos/project/.cache/data",
+            "Desktop/tutoriais_e_cursos/edgetts/.cache/edgetts/chunk.mp3",
             ".codex/automations/daily/hooks/state/marker",
-            ".pi/agent/sessions/conversation",
+            ".codex/auth.json",
+            ".pi/agent/auth.json",
             "sannux-data/agent-homes/pi.ephemeral-runs/run.ABC123/auth",
+            "sannux-data/agent-homes/pi/.pi/agent/auth.json",
+            "sannux-data/agent-homes/codex/.codex/auth.json",
+        ]
+        durable = [
+            "Desktop/tutoriais_e_cursos/project/.scratch/evidence",
+            "sannux-data/.scratch/handoff.md",
+            ".pi/.scratch/notes.md",
+            "Desktop/tutoriais_e_cursos/omnivoicetts/samples/reference.wav",
+            "Desktop/tutoriais_e_cursos/loudterm/assets/reference.wav",
+            ".agents/skills/example/SKILL.md",
+            ".pi/agent/sessions/conversation",
             "sannux-data/agent-homes/pi-daily-paper-sessions/.hidden",
             "sannux-data/agent-homes/pi/.pi/agent/sessions/session",
             "sannux-data/workspaces/pi-daily-paper-node-modules/package",
-        ]
-        transient += [
-            "sannux-data/agent-homes/pi/.pi/agent/auth.json",
-            "sannux-data/agent-homes/codex/.codex/auth.json",
             "sannux-data/agent-homes/pi/.pi/agent/RESOURCE_SNAPSHOT",
             "sannux-data/workspaces/user-project/code",
         ]
-        durable = [".agents/skills/example/SKILL.md"]
         origin = self.root / "homes/m4128"
         for rel in transient + durable:
             f = origin / rel
@@ -247,6 +359,62 @@ class SyncHostsTests(unittest.TestCase):
             self.assertFalse((self.home / rel).exists(), rel)
         for rel in durable:
             self.assertTrue((self.home / rel).exists(), rel)
+
+    def test_auth_sync_uses_caller_not_newer_peer_credentials(self):
+        paths = [
+            ".codex/auth.json",
+            ".pi/agent/auth.json",
+            "sannux-data/agent-homes/codex/.codex/auth.json",
+            "sannux-data/agent-homes/pi/.pi/agent/auth.json",
+        ]
+        for host in ["m132", "m4128", "fedoraair"]:
+            for relative in paths:
+                path = self.root / "homes" / host / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("synthetic-" + host)
+                path.chmod(0o644)
+                timestamp = 100 if host == "m132" else 300
+                os.utime(path, (timestamp, timestamp))
+        result = self.run_sync("--sync-auth")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for host in ["m132", "m4128", "fedoraair"]:
+            for relative in paths:
+                path = self.root / "homes" / host / relative
+                self.assertEqual(path.read_text(), "synthetic-m132")
+                if host != "m132":
+                    self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+
+    def test_auth_sync_keeps_machine_identity_and_absent_or_failed_auth(self):
+        identity_paths = [
+            ".codex/installation-id",
+            ".codex/config.toml",
+            ".codex/state.sqlite3",
+            ".codex/sessions/conversation.jsonl",
+        ]
+        for host in ["m132", "m4128", "fedoraair"]:
+            home = self.root / "homes" / host
+            for relative in identity_paths:
+                path = home / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(host)
+            (home / ".codex/auth.json").write_text("synthetic-" + host)
+            if host != "m132":
+                (home / ".pi/agent/auth.json").write_text("synthetic-" + host)
+        result = self.run_sync("--sync-auth", extra_env={"FAIL_PUSH": "m4128"})
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("FAILED: auth push m4128", result.stdout)
+        for host in ["m132", "m4128", "fedoraair"]:
+            home = self.root / "homes" / host
+            for relative in identity_paths:
+                self.assertEqual((home / relative).read_text(), host, relative)
+            expected = "m4128" if host == "m4128" else "m132"
+            self.assertEqual(
+                (home / ".codex/auth.json").read_text(), "synthetic-" + expected
+            )
+            if host != "m132":
+                self.assertEqual(
+                    (home / ".pi/agent/auth.json").read_text(), "synthetic-" + host
+                )
 
     def test_git_metadata_stays_on_its_host_including_worktree_files(self):
         for host in ["m132", "m4128", "fedoraair"]:
@@ -287,12 +455,8 @@ class SyncHostsTests(unittest.TestCase):
     def test_live_services_need_no_maintenance_and_keep_their_state_local(self):
         live = [
             ".pi/agent/auth.json",
-            ".pi/agent/models.json",
             "sannux-data/agent-homes/pi/.pi/agent/auth.json",
-            "sannux-data/workspaces/project/source.py",
-            "sannux-data/backups/omnews/current.db",
-            ".ollama/service/server.log",
-            ".config/omxterm/runtime.json",
+            "sannux-data/live/current.db",
             ".codex/automations/daily/automation.toml",
             ".agents/runtime.json",
             "Desktop/tutoriais_e_cursos/omnivoicetts/data/job.json",
@@ -385,7 +549,8 @@ class SyncHostsTests(unittest.TestCase):
         self.assertTrue(any(c[0] == "rsync" for c in self.commands()))
 
     def test_failed_collection_does_not_distribute_partial_data(self):
-        result = self.run_sync(extra_env={"FAIL_PULL": "fedoraair"})
+        (self.home / ".codex/auth.json").write_text("synthetic-caller")
+        result = self.run_sync("--sync-auth", extra_env={"FAIL_PULL": "fedoraair"})
         self.assertEqual(result.returncode, 1, result.stderr)
         copies = [
             c
@@ -471,6 +636,7 @@ class SyncHostsTests(unittest.TestCase):
 
     def test_help_and_invalid_arguments_have_no_operational_effects(self):
         self.assertEqual(self.run_sync("--help").returncode, 0)
+        self.assertEqual(self.run_sync("--sync-auth", "--help").returncode, 0)
         self.assertEqual(self.run_sync("--invalid").returncode, 2)
         self.assertEqual(self.commands(), [])
 

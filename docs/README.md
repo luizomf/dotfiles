@@ -15,4 +15,5 @@ maintenance guidance.
 - [Development tools](development.md)
 - [Shared host paths](shared-host-paths.md)
 - [Pi Coding Agent configuration](pi.md)
+- [Local Ollama models: defaults, catalogs, and runners](local-models.md)
 - [Tmux lazy restore](../tmux/README.md)

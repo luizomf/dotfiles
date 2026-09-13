@@ -15,9 +15,21 @@ report_failure() {
 
 script_dir="${0:A:h}"
 host_runner="$script_dir/run_all_hosts"
+sync_auth=0
+host_args=()
+for argument in "$@"; do
+  if [[ "$argument" == '--sync-auth' ]]; then
+    sync_auth=1
+  else
+    host_args+=("$argument")
+  fi
+done
+set -- "${host_args[@]}"
 if (( $# == 1 )) && [[ "$1" == -h || "$1" == --help ]]; then
-  print -r -- "Usage: ${0:t} [--additional-hosts HOST [HOST ...]]"
+  print -r -- "Usage: ${0:t} [--sync-auth] [--additional-hosts HOST [HOST ...]]"
   print -r -- 'Collect shared data from all peers, then distribute it to all peers.'
+  print -r -- '--sync-auth also publishes Pi/Codex auth files from this caller to trusted peers.'
+  print -r -- 'Keep consumers idle. Auth is never collected; absent files do not log peers out.'
   exit 0
 fi
 tmux_stage=''
@@ -99,9 +111,6 @@ prline
 
 project_excludes=(
   --exclude='.git'
-  --exclude='.pi'
-  --exclude='.codex'
-  --exclude='.claude'
   --exclude='*.db'
   --exclude='*.db-*'
   --exclude='*.sqlite'
@@ -112,7 +121,6 @@ project_excludes=(
   --exclude='/omnivoicetts/output/'
   --exclude='/omnivoicetts/outputs/'
   --exclude='/loudterm/output/'
-  --exclude='.scratch/'
   --exclude='.cache/'
   --exclude='.astro/'
   --exclude='node_modules/'
@@ -125,14 +133,17 @@ project_excludes=(
   --exclude='.pytest_cache/'
   --exclude='.mypy_cache/'
   --exclude='.ruff_cache/'
+  --exclude='*.ephemeral-runs/'
 )
 
 # Paths are relative to each machine's own home, never the sender's absolute home.
 projects_directory='Desktop/tutoriais_e_cursos'
 tmux_directory='.local/share/tmux/lazy/'
-# Do not merge live agent homes, auth, automations, service state or mutable
-# Sannux workspaces/backups. Static Pi/terminal configuration comes from Git.
-data_directories=("$projects_directory" '.agents/skills/')
+# Copy whole roots with the shared exclusions; only known auth uses its own flow.
+data_directories=(
+  "$projects_directory" '.agents/skills/' '.ollama/service/'
+  '.pi/' 'sannux-data/' '.config/omxterm/'
+)
 
 # Export only validated portable state, never sockets, locks, focus or runtime files.
 tmux_ready=0
@@ -190,9 +201,41 @@ sync_data_home() {
   local directory="$1" route="$2"
   local -a excludes=("${project_excludes[@]}")
   if [[ "$directory" == "$projects_directory" ]]; then
-    excludes+=(--exclude='tutoriais_e_cursos/')
+    excludes+=(
+      --exclude='tutoriais_e_cursos/'
+      --exclude='.pi' --exclude='.codex' --exclude='.claude'
+    )
+  elif [[ "$directory" == '.pi/' ]]; then
+    excludes+=(--exclude='/agent/auth.json')
+  elif [[ "$directory" == 'sannux-data/' ]]; then
+    # Completed DB backups travel; live DBs and sidecars keep the shared filters.
+    # The operator keeps these snapshots and other sources idle during sync.
+    excludes=(
+      --include='/backups/**.db'
+      --include='/backups/**.sqlite'
+      --include='/backups/**.sqlite3'
+      "${excludes[@]}"
+      --exclude='/agent-homes/*/.codex/auth.json'
+      --exclude='/agent-homes/*/.pi/agent/auth.json'
+    )
   fi
   sync_home "$directory" "$route" "${excludes[@]}"
+}
+
+# Auth is a separate, explicit caller-owned publication, never an mtime merge.
+# rsync stages replacements; no --inplace, --append or --delete is permitted.
+sync_auth_home() {
+  local directory="$1" host="$2"
+  local source="$HOME/${directory%/}/auth.json"
+  if [[ ! -f "$source" || -L "$source" ]]; then
+    print -r -- "Skipping auth $directory: no regular caller auth.json; peer remains unchanged."
+    return 0
+  fi
+  "$host_runner" --host "$host" --no-tty \
+    "umask 077; mkdir -p -- ~/${(qq)directory}" || return $?
+  rsync -havz --checksum --delay-updates --chmod=F600 \
+    --include='/auth.json' --exclude='*' \
+    "$HOME/${directory%/}/" "$host:~/$directory"
 }
 
 # Complete collection before publishing collected data. A failed pull leaves
@@ -222,6 +265,22 @@ else
       fi
     done
   done
+  if (( sync_auth )); then
+    print -r -- 'Publishing caller-owned Pi/Codex credentials; consumers must remain idle.'
+    auth_directories=('.codex/' '.pi/agent/')
+    for auth_file in \
+      "$HOME"/sannux-data/agent-homes/*/.codex/auth.json(N.) \
+      "$HOME"/sannux-data/agent-homes/*/.pi/agent/auth.json(N.); do
+      [[ "$auth_file" == */*.ephemeral-runs/* ]] && continue
+      auth_directory="${auth_file:h}"
+      auth_directories+=("${auth_directory#"$HOME"/}/")
+    done
+    for host in "${sync_hosts[@]}"; do
+      for directory in "${auth_directories[@]}"; do
+        run_step "auth push $host $directory" sync_auth_home "$directory" "$host"
+      done
+    done
+  fi
 fi
 
 # Publish only the caller's snapshot, not a merge. Delay replacement until the

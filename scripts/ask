@@ -13,7 +13,7 @@ Prompt input:
   stdin                 Read the prompt from a pipe or heredoc
 
 Options:
-  -m, --model <model>   Model alias/name (default: \${MODEL:-qwen3.6:35b-a3b-mxfp8})
+  -m, --model <model>   Model alias/name (default: \$MODEL, aliased from \$LOCAL_MODEL in Zsh)
   -t, --tts             Enable TTS
   -l, --lang <lang>     TTS language: a/en -> voiceen, p/pt -> voicept (default: a)
   -v, --voice <value>   Legacy option; a/p/en/pt also select the TTS language
