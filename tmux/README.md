@@ -10,12 +10,13 @@ supervision.
 
 ## Requirements and limits
 
-Requires **tmux >= 3.5** and **Python >= 3.9** from the standard library. The
-launcher finds tmux through `PATH`. The installer uses Homebrew tmux on macOS
-and Linux; Fedora also keeps its distro tmux package for explicit or
-non-interactive callers. This configuration does not load or install TPM,
-Resurrect, or Continuum. Existing plugin directories and old Resurrect snapshots
-are left untouched.
+Requires **tmux >= 3.5** and **Python >= 3.9**; no third-party Python packages
+are required. Prefer Homebrew tmux on macOS and Linux; the launcher respects
+`PATH`. The installer provisions Python/toolchains and installs Homebrew tmux on
+Fedora, while retaining the distro fallback for explicit or non-interactive
+callers. This configuration does not load or install TPM, Resurrect, or
+Continuum. Existing plugin directories and old Resurrect snapshots are left
+untouched.
 
 Saved structure includes sessions, windows, panes, layouts, titles, working
 directories, active locations, and zoom state. It does not include process
@@ -76,9 +77,12 @@ when it is safe.
 
 Home-relative working directories resolve against each host's home; paths
 outside home stay absolute. Do not assume external mounts or project paths exist
-on another host. `focus.json` records the last visited location separately from
-the manually saved structure. Only portable `state.json` is exported or
-synchronized; socket-specific data, focus, and locks stay local.
+on another host. Save captures new objects and explicit deletions; unvisited
+panes retain their saved working directories. `state.lock` serializes local
+operations, and JSON writes replace files atomically. `focus.json` records the
+last visited location separately from the manually saved structure. Only
+portable `state.json` is exported or synchronized; socket-specific data, focus,
+and locks stay local.
 
 All CLI actions accept `--quiet` before or after the action. It suppresses
 confirmations, not errors, warnings, or requested `status` JSON. It does not
@@ -156,7 +160,10 @@ concurrent save. Keep peer saves quiescent during publication, without stopping
 their running panes or unrelated services. All participating hosts need this
 updated checkout before relying on the snapshot. The sync script targets
 `~/.local/share/tmux/lazy/` on peers; adjust its policy for nondefault state or
-XDG paths instead of assuming those overrides are discovered remotely. See
+XDG paths instead of assuming those overrides are discovered remotely. A newer
+peer timestamp does not override an explicit published snapshot. Snapshot rsync
+uses `--delay-updates --checksum`; other data transfers retain their existing
+update rules. See
 [the sync scope and failure policy](../docs/scripts/synchosts.md).
 
 ```sh
@@ -179,3 +186,14 @@ tmux-lazy export /path/to/new-staging-directory
   pane. Direct external `send-keys` callers must likewise target a loaded pane.
 - `restart_terminal` remains a separate explicit destructive maintenance
   command; it is not part of lazy startup or restore.
+
+## Tests
+
+From the repository root:
+
+```sh
+python3 -m unittest tests/test_tmux_lazy.py tests/test_synchosts.py tests/test_install_platform.py
+```
+
+The focused tests use private tmux sockets and temporary homes/fixtures; no
+shared live server is needed.
