@@ -18,12 +18,68 @@ import tempfile
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict, Union
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from typing_extensions import TypeGuard
 
 REPO = Path(__file__).resolve().parents[2]
+
+
+class HomeCwd(TypedDict):
+    home: str
+
+
+class AbsoluteCwd(TypedDict):
+    absolute: str
+
+
+Cwd = Union[HomeCwd, AbsoluteCwd]
+
+
+class PaneRecord(TypedDict):
+    cwd: Cwd
+    title: str
+    active: bool
+
+
+class WindowRecord(TypedDict):
+    uid: str
+    index: int
+    name: str
+    active: bool
+    zoom: bool
+    layout: str
+    panes: list[PaneRecord]
+
+
+class SessionRecord(TypedDict):
+    uid: str
+    name: str
+    windows: list[WindowRecord]
+
+
+class FocusRecord(TypedDict):
+    session: object
+    window: object
+
+
+SnapshotVersion = Union[bool, int, float]
+
+
+class Snapshot(TypedDict):
+    version: SnapshotVersion
+    sessions: list[SessionRecord]
+    focus: FocusRecord
+
+
+def is_object_mapping(value: object) -> TypeGuard[dict[object, object]]:
+    return isinstance(value, dict)
+
+
+def is_object_list(value: object) -> TypeGuard[list[object]]:
+    return isinstance(value, list)
 
 
 def default_socket() -> Path:
@@ -79,50 +135,101 @@ def atomic_json(path: Path, value: object) -> None:
         temporary.unlink(missing_ok=True)
 
 
-def validate_state(state):
-    if (
-        not isinstance(state, dict)
-        or state.get("version") != 1
-        or not state.get("sessions")
-    ):
+def read_json_object(path: Path) -> dict[object, object]:
+    value: object = json.loads(path.read_text())
+    if not is_object_mapping(value):
+        raise TypeError("Expected a JSON object")
+    return value
+
+
+def validate_version(value: object) -> SnapshotVersion:
+    if value != 1 or not isinstance(value, (bool, int, float)):
         raise ValueError("Unsupported or empty lazy snapshot")
-    if set(state) != {"version", "sessions", "focus"} or not isinstance(
-        state["sessions"], list
+    return value
+
+
+def validate_cwd(value: object) -> Cwd:
+    if not is_object_mapping(value):
+        raise ValueError("cwd must be explicitly home-relative or absolute")
+    cwd_values = value
+    if set(cwd_values) not in ({"home"}, {"absolute"}):
+        raise ValueError("cwd must be explicitly home-relative or absolute")
+    path = next(iter(cwd_values.values()))
+    if not isinstance(path, str) or any(c in path for c in "\t\r\n\0"):
+        raise ValueError("cwd containing control characters is not supported")
+    if "home" in cwd_values:
+        if Path(path).is_absolute() or ".." in Path(path).parts:
+            raise ValueError("Home-relative cwd must remain inside home")
+        return {"home": path}
+    if not Path(path).is_absolute():
+        raise ValueError("Absolute cwd must be absolute")
+    return {"absolute": path}
+
+
+def validate_focus(value: object) -> FocusRecord:
+    if not is_object_mapping(value):
+        raise ValueError("Invalid saved focus")
+    fields = value
+    if set(fields) != {"session", "window"}:
+        raise ValueError("Invalid saved focus")
+    return {"session": fields["session"], "window": fields["window"]}
+
+
+def validate_identity(
+    values: dict[object, object], identities: set[str]
+) -> tuple[str, str]:
+    uid = values["uid"]
+    name = values["name"]
+    if not isinstance(uid, str) or not uid or uid in identities:
+        raise ValueError("Snapshot identities must be nonempty and unique")
+    identities.add(uid)
+    if not isinstance(name, str) or any(c in name for c in "\t\r\n\0"):
+        raise ValueError("Names containing tabs/newlines are not supported")
+    return uid, name
+
+
+def validate_state(state: object) -> Snapshot:
+    if not is_object_mapping(state):
+        raise ValueError("Unsupported or empty lazy snapshot")
+    record = state
+    version = validate_version(record.get("version"))
+    sessions_value = record.get("sessions")
+    if not sessions_value:
+        raise ValueError("Unsupported or empty lazy snapshot")
+    if set(record) != {"version", "sessions", "focus"} or not is_object_list(
+        sessions_value
     ):
         raise ValueError("Unexpected snapshot fields")
-    if not isinstance(state["focus"], dict) or set(state["focus"]) != {
-        "session",
-        "window",
-    }:
-        raise ValueError("Invalid saved focus")
-    identities = set()
-    for session in state["sessions"]:
-        if set(session) != {"uid", "name", "windows"} or not isinstance(
-            session["windows"], list
+    raw_sessions = sessions_value
+    focus = validate_focus(record["focus"])
+
+    identities: set[str] = set()
+    sessions: list[SessionRecord] = []
+    for raw_session in raw_sessions:
+        if not is_object_mapping(raw_session):
+            raise ValueError("Invalid session record")
+        session_values = raw_session
+        raw_windows = session_values.get("windows")
+        if set(session_values) != {"uid", "name", "windows"} or not is_object_list(
+            raw_windows
         ):
             raise ValueError("Invalid session record")
-        for item in [session, *session["windows"]]:
-            if (
-                not isinstance(item["uid"], str)
-                or not item["uid"]
-                or item["uid"] in identities
-            ):
-                raise ValueError("Snapshot identities must be nonempty and unique")
-            identities.add(item["uid"])
-            if not isinstance(item["name"], str) or any(
-                c in item["name"] for c in "\t\r\n\0"
-            ):
-                raise ValueError("Names containing tabs/newlines are not supported")
+        session_uid, session_name = validate_identity(session_values, identities)
         if (
-            not session["windows"]
-            or not session["name"]
-            or ":" in session["name"]
-            or "." in session["name"]
+            not raw_windows
+            or not session_name
+            or ":" in session_name
+            or "." in session_name
         ):
             raise ValueError("Invalid session name or empty session")
-        indices = set()
-        for window in session["windows"]:
-            if set(window) != {
+
+        indices: set[int] = set()
+        windows: list[WindowRecord] = []
+        for raw_window in raw_windows:
+            if not is_object_mapping(raw_window):
+                raise ValueError("Invalid window record")
+            window_values = raw_window
+            if set(window_values) != {
                 "uid",
                 "index",
                 "name",
@@ -132,51 +239,55 @@ def validate_state(state):
                 "panes",
             }:
                 raise ValueError("Invalid window record")
-            if not isinstance(window["active"], bool) or not isinstance(
-                window["zoom"], bool
-            ):
+            window_uid, window_name = validate_identity(window_values, identities)
+            active = window_values["active"]
+            zoom = window_values["zoom"]
+            if not isinstance(active, bool) or not isinstance(zoom, bool):
                 raise ValueError("Invalid window active/zoom flags")
-            index = window["index"]
-            if (
+            index = window_values["index"]
+            raw_panes = window_values["panes"]
+            if not is_object_list(raw_panes) or (
                 not isinstance(index, int)
                 or index < 0
                 or index in indices
-                or not window["panes"]
+                or not raw_panes
             ):
                 raise ValueError("Invalid window index or empty window")
             indices.add(index)
-            layout = window["layout"]
+            layout = window_values["layout"]
             if not isinstance(layout, str) or (
                 layout and not re.fullmatch(r"[0-9a-f]+,[0-9x,{}\[\]]+", layout)
             ):
                 raise ValueError("Invalid saved layout")
-            for pane in window["panes"]:
-                if set(pane) != {"cwd", "title", "active"} or not isinstance(
-                    pane["active"], bool
+
+            panes: list[PaneRecord] = []
+            for raw_pane in raw_panes:
+                if not is_object_mapping(raw_pane):
+                    raise ValueError("Invalid pane record")
+                pane_values = raw_pane
+                active_pane = pane_values.get("active")
+                if set(pane_values) != {"cwd", "title", "active"} or not isinstance(
+                    active_pane, bool
                 ):
                     raise ValueError("Invalid pane record")
-                cwd = pane["cwd"]
-                if not isinstance(cwd, dict) or set(cwd) not in (
-                    {"home"},
-                    {"absolute"},
-                ):
-                    raise ValueError("cwd must be explicitly home-relative or absolute")
-                value = next(iter(cwd.values()))
-                if not isinstance(value, str) or any(c in value for c in "\t\r\n\0"):
-                    raise ValueError(
-                        "cwd containing control characters is not supported"
-                    )
-                if "home" in cwd and (
-                    Path(value).is_absolute() or ".." in Path(value).parts
-                ):
-                    raise ValueError("Home-relative cwd must remain inside home")
-                if "absolute" in cwd and not Path(value).is_absolute():
-                    raise ValueError("Absolute cwd must be absolute")
-                if not isinstance(pane["title"], str) or any(
-                    c in pane["title"] for c in "\t\r\n"
-                ):
+                cwd = validate_cwd(pane_values["cwd"])
+                title = pane_values["title"]
+                if not isinstance(title, str) or any(c in title for c in "\t\r\n"):
                     raise ValueError("Invalid pane title")
-    return state
+                panes.append({"cwd": cwd, "title": title, "active": active_pane})
+            windows.append(
+                {
+                    "uid": window_uid,
+                    "index": index,
+                    "name": window_name,
+                    "active": active,
+                    "zoom": zoom,
+                    "layout": layout,
+                    "panes": panes,
+                }
+            )
+        sessions.append({"uid": session_uid, "name": session_name, "windows": windows})
+    return {"version": version, "sessions": sessions, "focus": focus}
 
 
 class LazyTmux:
@@ -253,14 +364,14 @@ class LazyTmux:
             else:
                 print(message)
 
-    def encode_cwd(self, cwd: str) -> dict[str, str]:
+    def encode_cwd(self, cwd: str) -> Cwd:
         path = Path(cwd)
         try:
             return {"home": str(path.relative_to(self.home))}
         except ValueError:
             return {"absolute": str(path)}
 
-    def decode_cwd(self, cwd: dict[str, str]) -> str:
+    def decode_cwd(self, cwd: Cwd) -> str:
         path = self.home / cwd["home"] if "home" in cwd else Path(cwd["absolute"])
         if not path.is_dir():
             raise RuntimeError(f"Missing cwd; activation refused: {path}")
@@ -280,16 +391,18 @@ class LazyTmux:
             raise ValueError("Pane data contains unsupported tabs/newlines")
         return rows
 
-    def load(self):
-        return validate_state(json.loads(self.state_file.read_text()))
+    def load(self) -> Snapshot:
+        value: object = json.loads(self.state_file.read_text())
+        return validate_state(value)
 
     def import_snapshot(self, snapshot: Path) -> None:
         if self.state_file.exists():
             raise RuntimeError(
                 "A lazy snapshot already exists; refusing to overwrite it"
             )
-        sessions, panes = {}, {}
-        selected = None
+        sessions: dict[str, SessionRecord] = {}
+        panes: dict[tuple[str, int], list[list[str]]] = {}
+        selected: str | None = None
         for line in Path(snapshot).read_text().splitlines():
             f = line.split("\t")
             if f[0] == "grouped_session":
@@ -325,6 +438,7 @@ class LazyTmux:
                     key=lambda p: int(p[5]),
                 ):
                     raw = p[7].removeprefix(":")
+                    cwd: Cwd
                     if raw == "#{HOME}" or raw.startswith("#{HOME}/"):
                         cwd = {"home": raw[len("#{HOME}") :].lstrip("/") or "."}
                     elif raw == "~" or raw.startswith("~/"):
@@ -336,11 +450,15 @@ class LazyTmux:
                     )
         if not sessions:
             raise ValueError("No sessions in the supplied snapshot")
-        chosen = sessions.get(selected, next(iter(sessions.values())))
+        chosen = (
+            sessions[selected]
+            if selected in sessions
+            else next(iter(sessions.values()))
+        )
         window = next(
             (w for w in chosen["windows"] if w["active"]), chosen["windows"][0]
         )
-        state = {
+        state: Snapshot = {
             "version": 1,
             "sessions": list(sessions.values()),
             "focus": {"session": chosen["uid"], "window": window["uid"]},
@@ -493,14 +611,16 @@ class LazyTmux:
                 )
             raise
 
-    def restore_structure(self, state) -> tuple[str, str]:
-        targets = {}
+    def restore_structure(self, state: Snapshot) -> tuple[str, str]:
+        targets: dict[tuple[object, object], tuple[str, str]] = {}
         focus_path = self.root / "focus.json"
-        focus = (
-            json.loads(focus_path.read_text())
-            if focus_path.exists()
-            else state.get("focus", {})
+        focus_values = (
+            read_json_object(focus_path) if focus_path.exists() else state["focus"]
         )
+        focus: FocusRecord = {
+            "session": focus_values.get("session"),
+            "window": focus_values.get("window"),
+        }
         for session in state["sessions"]:
             if session["name"] == "__lazy_bootstrap":
                 raise ValueError("Reserved bootstrap session name in snapshot")
@@ -605,7 +725,7 @@ class LazyTmux:
 
     def activate(self, window: str) -> None:
         rows = [p for p in self.panes(window) if p[3]]
-        directories = [self.decode_cwd(json.loads(p[3])) for p in rows]
+        directories = [self.decode_cwd(validate_cwd(json.loads(p[3]))) for p in rows]
         for row, cwd in zip(rows, directories):
             if row[1] not in ("", "0"):
                 raise RuntimeError(
@@ -670,7 +790,7 @@ class LazyTmux:
             if if_running:
                 return
             raise RuntimeError("No running tmux server to save")
-        sessions = []
+        sessions: list[SessionRecord] = []
         for line in self.tmux(
             "list-sessions", "-F", "#{session_id}\t#{session_name}\t#{session_grouped}"
         ).splitlines():
@@ -679,7 +799,11 @@ class LazyTmux:
                 raise ValueError(
                     "Grouped sessions are unsupported; previous snapshot left intact"
                 )
-            session = {"uid": self.uid(sid), "name": name, "windows": []}
+            session: SessionRecord = {
+                "uid": self.uid(sid),
+                "name": name,
+                "windows": [],
+            }
             fields = (
                 "#{window_id}\t#{window_index}\t#{window_name}\t#{window_layout}"
                 "\t#{window_active}\t#{window_zoomed_flag}\t#{window_linked}"
@@ -692,16 +816,27 @@ class LazyTmux:
                     raise ValueError(
                         "Linked windows are unsupported; previous snapshot left intact"
                     )
-                panes = [
-                    {
-                        "cwd": json.loads(p[3]) if p[3] else self.encode_cwd(p[2]),
-                        "title": self.tmux(
-                            "display-message", "-p", "-t", p[0], "#{pane_title}"
-                        ),
-                        "active": p[4] == "1",
-                    }
-                    for p in self.panes(wid)
-                ]
+                panes: list[PaneRecord] = []
+                for pane_row in self.panes(wid):
+                    cwd_value: object = json.loads(pane_row[3]) if pane_row[3] else None
+                    cwd = (
+                        validate_cwd(cwd_value)
+                        if pane_row[3]
+                        else self.encode_cwd(pane_row[2])
+                    )
+                    panes.append(
+                        {
+                            "cwd": cwd,
+                            "title": self.tmux(
+                                "display-message",
+                                "-p",
+                                "-t",
+                                pane_row[0],
+                                "#{pane_title}",
+                            ),
+                            "active": pane_row[4] == "1",
+                        }
+                    )
                 session["windows"].append(
                     {
                         "uid": self.uid(wid, True),
@@ -714,13 +849,14 @@ class LazyTmux:
                     }
                 )
             sessions.append(session)
-        fallback = {
+        fallback: FocusRecord = {
             "session": sessions[0]["uid"],
             "window": sessions[0]["windows"][0]["uid"],
         }
+        focus_path = self.root / "focus.json"
         focus = (
-            json.loads((self.root / "focus.json").read_text())
-            if (self.root / "focus.json").exists()
+            validate_focus(read_json_object(focus_path))
+            if focus_path.exists()
             else fallback
         )
         atomic_json(

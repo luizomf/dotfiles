@@ -14,10 +14,18 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing_extensions import TypeGuard
 
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / "tmux/scripts/lazy.py"
 TMUX = shutil.which("tmux")
+
+
+def is_object_mapping(value: object) -> TypeGuard[dict[object, object]]:
+    return isinstance(value, dict)
 
 
 class LazyTmuxTests(unittest.TestCase):
@@ -294,6 +302,102 @@ class LazyTmuxTests(unittest.TestCase):
                         check=False,
                     )
 
+    def test_snapshot_boundaries_preserve_compatible_values_and_reject_bad_records(
+        self,
+    ):
+        with tempfile.TemporaryDirectory(prefix="lazy-validation-") as temporary:
+            root = Path(temporary)
+            state_dir = root / "state"
+            state_dir.mkdir()
+            state_file = state_dir / "state.json"
+            cli = [
+                sys.executable,
+                str(SCRIPT),
+                "--state-dir",
+                str(state_dir),
+                "--socket",
+                str(root / "socket"),
+                "--home",
+                str(root),
+                "--shell",
+                "/bin/sh",
+                "export",
+            ]
+
+            def snapshot(
+                version: object,
+                *,
+                session_value: object = None,
+                window_value: object = None,
+                pane_value: object = None,
+            ) -> dict[str, object]:
+                pane = pane_value or {
+                    "cwd": {"home": "."},
+                    "title": "shell",
+                    "active": True,
+                }
+                window = window_value or {
+                    "uid": "window",
+                    "index": 1,
+                    "name": "code",
+                    "active": True,
+                    "zoom": False,
+                    "layout": "",
+                    "panes": [pane],
+                }
+                session = session_value or {
+                    "uid": "session",
+                    "name": "project",
+                    "windows": [window],
+                }
+                return {
+                    "version": version,
+                    "focus": {"session": ["legacy"], "window": None},
+                    "sessions": [session],
+                }
+
+            for version in (True, 1.0):
+                with self.subTest(version=version):
+                    state = snapshot(version)
+                    state_file.write_text(json.dumps(state))
+                    destination = root / f"export-{type(version).__name__}"
+                    result = subprocess.run(
+                        [*cli, str(destination), "--quiet"],
+                        text=True,
+                        capture_output=True,
+                        timeout=15,
+                        check=False,
+                    )
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    exported_value: object = json.loads(
+                        (destination / "state.json").read_text()
+                    )
+                    if not is_object_mapping(exported_value):
+                        self.fail("Exported snapshot is not a JSON object")
+                    self.assertEqual(exported_value["focus"], state["focus"])
+                    self.assertIs(type(exported_value["version"]), type(version))
+                    self.assertEqual(exported_value["version"], version)
+
+            malformed = ["not", "a", "record"]
+            malformed_records = {
+                "session": snapshot(1, session_value=malformed),
+                "window": snapshot(1, window_value=malformed),
+                "pane": snapshot(1, pane_value=malformed),
+            }
+            for level, invalid in malformed_records.items():
+                with self.subTest(level=level):
+                    state_file.write_text(json.dumps(invalid))
+                    destination = root / f"invalid-{level}"
+                    result = subprocess.run(
+                        [*cli, str(destination), "--quiet"],
+                        text=True,
+                        capture_output=True,
+                        timeout=15,
+                        check=False,
+                    )
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertFalse(destination.exists())
+
     def test_layout_round_trip_remaps_home_and_missing_cwd_never_partially_activates(
         self,
     ):
@@ -412,6 +516,35 @@ class LazyTmuxTests(unittest.TestCase):
                 tmux("wait-for", "lazy-visit-complete")
                 self.assertEqual(
                     tmux("list-panes", "-t", "project:2", "-F", "#{pane_pid}"), "0\n0"
+                )
+                pane_ids = tmux(
+                    "list-panes", "-t", "project:2", "-F", "#{pane_id}"
+                ).splitlines()
+                tmux("select-window", "-t", "project:1")
+                tmux("wait-for", "lazy-visit-complete")
+                tmux(
+                    "set-option",
+                    "-p",
+                    "-t",
+                    pane_ids[1],
+                    "@lazy_cwd",
+                    json.dumps({"home": 7}),
+                )
+                checkpoint = snapshot.read_bytes()
+                tmux("select-window", "-t", "project:2")
+                tmux("wait-for", "lazy-visit-complete")
+                self.assertEqual(
+                    tmux("list-panes", "-t", "project:2", "-F", "#{pane_pid}"), "0\n0"
+                )
+                cli("save", "--quiet", success=False)
+                self.assertEqual(snapshot.read_bytes(), checkpoint)
+                tmux(
+                    "set-option",
+                    "-p",
+                    "-t",
+                    pane_ids[1],
+                    "@lazy_cwd",
+                    json.dumps({"home": "missing"}),
                 )
                 tmux("select-window", "-t", "project:1")
                 tmux("wait-for", "lazy-visit-complete")
