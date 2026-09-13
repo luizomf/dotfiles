@@ -26,7 +26,8 @@ when passing paths to per-file tools:
 - whole-project Pyright through `uv run --locked --no-sync` when Pyright is
   configured, including after staged Python deletions or type-config changes;
 - Prettier for supported staged documentation, web, and configuration files when
-  a root Prettier configuration exists;
+  a root Prettier configuration file or top-level `package.json` `prettier`
+  field exists;
 - a repository-local ESLint for staged JavaScript and TypeScript when
   configured;
 - a repository-local whole-project `tsc --noEmit` when `tsconfig.json` applies.

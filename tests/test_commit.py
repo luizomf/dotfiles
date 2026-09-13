@@ -186,16 +186,53 @@ class CommitCommandTests(unittest.TestCase):
         self.assertIn("shellcheck", result.stdout + result.stderr)
         self.assertFalse((self.repo / "model.log").exists())
 
-    def test_zsh_source_uses_zsh_syntax_without_shellcheck(self) -> None:
-        self.write(".zshrc", "export VALUE=1\n")
-        self.run_git("add", ".zshrc")
+    def test_nested_zsh_startup_files_use_zsh_without_shellcheck(self) -> None:
+        self.write("nested/.zshrc", "#!/usr/bin/env bash\nexport VALUE=1\n")
+        self.write("nested/.zprofile", "export PROFILE=1\n")
+        self.run_git("add", "nested/.zshrc", "nested/.zprofile")
         self.make_command("zsh", 'printf "zsh %s\\n" "$*" >>"$CHECK_LOG"')
         self.make_command("shellcheck", "exit 99")
 
         result = self.run_commit()
 
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
-        self.assertEqual("zsh -n ./.zshrc\n", (self.repo / "check.log").read_text())
+        self.assertEqual(
+            "zsh -n ./nested/.zprofile\nzsh -n ./nested/.zshrc\n",
+            (self.repo / "check.log").read_text(),
+        )
+
+    def test_prettierrc_javascript_configuration_blocks_on_failure(self) -> None:
+        self.write(".prettierrc.js", "module.exports = {};\n")
+        self.write("README.md", "unformatted\n")
+        self.run_git("add", ".prettierrc.js", "README.md")
+        self.make_command("prettier", "exit 23")
+
+        result = self.run_commit()
+
+        self.assertEqual(23, result.returncode)
+        self.assertFalse((self.repo / "model.log").exists())
+
+    def test_package_prettier_configuration_runs_prettier(self) -> None:
+        self.write("package.json", '{"prettier": "shared-config"}\n')
+        self.write("README.md", "formatted\n")
+        self.run_git("add", "package.json", "README.md")
+        self.make_command("prettier", 'printf "prettier %s\\n" "$*" >>"$CHECK_LOG"')
+
+        result = self.run_commit()
+
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("README.md", (self.repo / "check.log").read_text())
+
+    def test_prettier_dependency_alone_is_not_configuration(self) -> None:
+        self.write("package.json", '{"devDependencies": {"prettier": "3.0.0"}}\n')
+        self.write("README.md", "formatted\n")
+        self.run_git("add", "package.json", "README.md")
+        self.make_command("prettier", "exit 23")
+
+        result = self.run_commit()
+
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertFalse((self.repo / "check.log").exists())
 
     def test_configured_prettier_eslint_and_typescript_use_local_tools(self) -> None:
         self.write(".prettierrc.json", "{}\n")

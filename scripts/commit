@@ -98,11 +98,15 @@ if [[ -f pyproject.toml ]]; then
   grep -q '^\[tool\.ruff' pyproject.toml && ruff_configured=true
   grep -q '^\[tool\.pyright' pyproject.toml && pyright_configured=true
 fi
-if [[ -f .prettierrc || -f .prettierrc.json || -f .prettierrc.yaml || \
-  -f .prettierrc.yml || -f prettier.config.js || -f prettier.config.cjs || \
-  -f prettier.config.mjs ]]; then
+if [[ -f .prettierrc || -f .prettierrc.json || -f .prettierrc.json5 || \
+  -f .prettierrc.yaml || -f .prettierrc.yml || -f .prettierrc.toml || \
+  -f .prettierrc.js || -f .prettierrc.cjs || -f .prettierrc.mjs || \
+  -f .prettierrc.ts || -f .prettierrc.cts || -f .prettierrc.mts || \
+  -f prettier.config.js || -f prettier.config.cjs || -f prettier.config.mjs || \
+  -f prettier.config.ts || -f prettier.config.cts || -f prettier.config.mts ]]; then
   prettier_configured=true
 fi
+prettier_package_checked=false
 if [[ -f eslint.config.js || -f eslint.config.mjs || -f eslint.config.cjs || \
   -f .eslintrc || -f .eslintrc.js || -f .eslintrc.json || \
   -f .eslintrc.yaml || -f .eslintrc.yml ]]; then
@@ -137,7 +141,8 @@ while IFS= read -r -d '' staged_file; do
     "./$staged_file" || true)"
 
   is_zsh=false
-  case "$staged_file" in
+  staged_basename="${staged_file##*/}"
+  case "$staged_basename" in
     *.zsh|.zshrc|.zprofile|.zshenv|.zlogin|.zlogout)
       is_zsh=true
       ;;
@@ -175,8 +180,29 @@ while IFS= read -r -d '' staged_file; do
   fi
 
   case "$staged_file" in
-    *.md|*.mdx|*.json|*.jsonc|*.yaml|*.yml|*.html|*.css|*.scss|*.js|*.jsx|*.ts|*.tsx|*.vue|*.astro)
+    .prettierrc|*.md|*.mdx|*.json|*.jsonc|*.json5|*.toml|*.yaml|*.yml|*.html|*.css|*.scss|*.js|*.jsx|*.ts|*.tsx|*.vue|*.astro)
       prettier_file=true
+      if [[ "$prettier_configured" != true && -f package.json && \
+        "$prettier_package_checked" != true ]]; then
+        prettier_package_checked=true
+        require_command node
+        if node -e '
+          try {
+            const packageJson = JSON.parse(require("fs").readFileSync("package.json", "utf8"));
+            process.exit(Object.prototype.hasOwnProperty.call(packageJson, "prettier") ? 0 : 1);
+          } catch (error) {
+            console.error("Cannot parse package.json: " + error.message);
+            process.exit(2);
+          }
+        '; then
+          prettier_configured=true
+        else
+          package_status=$?
+          if ((package_status > 1)); then
+            exit "$package_status"
+          fi
+        fi
+      fi
       if [[ "$prettier_configured" == true ]]; then
         require_command prettier
         prettier --check -- "$staged_file"
