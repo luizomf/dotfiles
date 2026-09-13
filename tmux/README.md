@@ -1,26 +1,37 @@
 # Lazy tmux
 
-One normal tmux server, native sessions/windows/panes, and no persistence
-daemon. Save the structure with **prefix Ctrl-s**. A cold start recreates it
-with empty panes and starts login shells only in the return window. Visiting
-another window starts its shells once. Already-running panes are never suspended
-or respawned by lazy activation. Killing the server still ends its processes;
-this is not process checkpointing or service supervision.
+Lazy tmux keeps one normal tmux server and native sessions, windows, and panes;
+there is no persistence daemon. Save the structure with **prefix Ctrl-s**. A
+cold start recreates saved panes without their processes, starts login shells in
+the return window, and starts other windows when you visit them. Already-running
+panes are never suspended or respawned by lazy activation. Killing the server
+still ends its processes; this is not process checkpointing or service
+supervision.
 
-Requires **tmux >= 3.5** and **Python >= 3.9**, using Python's standard library.
-Prefer Homebrew tmux on macOS and Linux; the command respects PATH. The
-installer already provisions Python/toolchains and now also installs Brew tmux
-on Fedora, while retaining the distro fallback for explicit/non-interactive
-callers. No TPM, Resurrect or Continuum plugin is loaded or installed by this
-configuration. Existing plugin directories and old Resurrect snapshots are not
-deleted.
+## Requirements and limits
+
+Requires **tmux >= 3.5** and **Python >= 3.9**; no third-party Python packages
+are required. Prefer Homebrew tmux on macOS and Linux; the launcher respects
+`PATH`. The installer provisions Python/toolchains and installs Homebrew tmux on
+Fedora, while retaining the distro fallback for explicit or non-interactive
+callers. This configuration does not load or install TPM, Resurrect, or
+Continuum. Existing plugin directories and old Resurrect snapshots are left
+untouched.
+
+Saved structure includes sessions, windows, panes, layouts, titles, working
+directories, active locations, and zoom state. It does not include process
+commands or process state. Grouped sessions and linked windows are unsupported.
+Names and working directories containing tabs or newlines are rejected. A
+missing working directory prevents activation instead of silently falling back
+to the home directory.
 
 ## Everyday use
 
-In a new Zsh terminal outside tmux, `tmux`, `tmux a`, `tmux attach` and
-`tmux attach-session` (without additional arguments) call `tmux-lazy start`.
-Explicit tmux commands and socket/target arguments remain native, including
-calls from scripts and agents. Other shells can use the launcher directly:
+In a new Zsh terminal outside tmux, `tmux`, `tmux a`, `tmux attach`, and
+`tmux attach-session` without additional arguments call `tmux-lazy start`.
+Explicit tmux commands and socket or target arguments remain native, including
+calls from scripts and agent sessions. Other shells can use the launcher
+directly:
 
 ```sh
 tmux-lazy start
@@ -28,10 +39,9 @@ tmux-lazy start
 
 The launcher uses the default socket, not a separate everyday "lazy" server. If
 that server is already running, it configures hooks and attaches without
-restoring or replacing anything. To exercise a cold restore, save first, detach
-and stop that server **only when all its processes can safely end**, then start
-again. Do not stop the server hosting an agent just to reload this
-configuration.
+restoring or replacing anything. To exercise a cold restore, save first, detach,
+and stop the server only when all its processes can safely end. Do not stop the
+server hosting an agent just to reload this configuration.
 
 ```sh
 tmux-lazy status
@@ -41,70 +51,69 @@ tmux-lazy stop --yes
 tmux-lazy start
 ```
 
-- **Prefix Ctrl-s:** save structure and confirm through `display-message`.
-- **Prefix Ctrl-l / existing mouse picker:** same fzf/MRU navigation. Pending
-  windows show `Z` in the existing activity-marker position; loaded windows keep
-  the normal `✚`/blank marker. This does not modify tmux's real `Z` (zoom) flag.
-- **Prefix Ctrl-r:** explains the cold-restore workflow; never runs Resurrect.
-- **Prefix r:** reload the normal config. Reload only configures hooks; it never
-  restores, kills or respawns panes. It is not a migration of the running
+- **Prefix Ctrl-s:** saves the structure and confirms with a tmux message.
+- **Prefix Ctrl-l / the existing mouse picker:** opens the same fzf/MRU window
+  picker. Pending windows show `Z` in the activity-marker position; this does
+  not modify tmux's real `Z` (zoom) flag.
+- **Prefix Ctrl-r:** displays the cold-restore workflow; it never runs
+  Resurrect.
+- **Prefix r:** reloads the normal config. Reloading only configures hooks; it
+  never restores, kills, or respawns panes and is not a migration of the running
   server.
-- Automatic startup and activation are silent. A success message here would hold
-  client redraw and could hide an already-ready shell behind a black pane.
 
-The minimal status bar is unchanged; there is no demo label or extra lazy
-column. Wait for the prompt before typing into a newly activated window: empty
-panes do not buffer keyboard input. Missing cwd is an error, not a silent
-fallback to home. Correct the directory (or close/recreate that window);
-revisiting retries pending panes without replacing any running process.
+Successful automatic startup and activation are silent. Wait for the prompt
+before typing into a newly activated window: empty panes do not buffer keyboard
+input. If a working directory is missing, correct it or close and recreate that
+window; revisiting retries pending panes without replacing a running process.
 
 ## State and quiet commands
 
-The implementation is `tmux/scripts/lazy.py`; `scripts/tmux-lazy` is the PATH
-entry. Default state is `~/.local/share/tmux/lazy/state.json` (honoring
-`XDG_DATA_HOME`). The JSON stores session/window identities, names and indices,
-pane cwd/titles, layouts, active panes and zoom. New objects and explicit
-deletions are captured on save. Unvisited panes retain their saved cwd rather
-than an empty placeholder cwd. `focus.json` records last-visited location
-separately from the manual structure checkpoint. `state.lock` coordinates the
-local operations; writes replace JSON atomically. These files are private local
-state, never repository deliverables.
+The launcher is `scripts/tmux-lazy`, backed by `tmux/scripts/lazy.py`. Default
+state is `~/.local/share/tmux/lazy/` (honoring `XDG_DATA_HOME`). The directory
+contains private local JSON and lock files and is never a repository
+deliverable. A failed save leaves the previous snapshot intact. A failed fresh
+restore can leave a partial server for inspection; stop and retry explicitly
+when it is safe.
 
-Home-relative cwd is explicit in the JSON and resolves against each host's home.
-Paths outside home stay absolute. Do not assume external mounts or project paths
-exist on another host. Grouped sessions, linked windows and names/cwd containing
-tabs or newlines are refused rather than silently corrupted. A failed save
-leaves the previous snapshot intact. A failed fresh restore leaves its partial
-server for inspection; stop/retry explicitly when safe rather than replacing
-live work.
+Home-relative working directories resolve against each host's home; paths
+outside home stay absolute. Do not assume external mounts or project paths exist
+on another host. Save captures new objects and explicit deletions; unvisited
+panes retain their saved working directories. `state.lock` serializes local
+operations, and JSON writes replace files atomically. `focus.json` records the
+last visited location separately from the manually saved structure. Only
+portable `state.json` is exported or synchronized; socket-specific data, focus,
+and locks stay local.
 
 All CLI actions accept `--quiet` before or after the action. It suppresses
-confirmations, not errors/warnings or requested `status` JSON. It does not alter
-future key bindings. For optional scheduled saves:
+confirmations, not errors, warnings, or requested `status` JSON. It does not
+change future key bindings. For optional scheduled saves:
 
 ```sh
 tmux-lazy save --quiet --if-running
 ```
 
-`--if-running` skips a stopped server without creating/replacing a snapshot;
-without it, save reports an error. The dotfiles configuration itself installs no
-automatic save job. An operator can enable an hourly OMQueue Schedule on each
-host, labeled `tmux-lazy-autosave`, with cron `0 * * * *`. Autosave replaces the
-same checkpoint as manual save; it does not keep snapshot history.
+`--if-running` skips a stopped server without creating or replacing a snapshot;
+without it, save reports an error. The dotfiles configuration installs no
+automatic save job.
 
-For Queue execution use verified absolute Python/script paths and an explicit
-PATH with the chosen tmux and shell toolchains; do not assume an interactive
-login environment. Select the host's default socket explicitly so an agent's
-custom socket cannot become the autosave target. No shell background `&` or
-additional daemon is needed.
+## Optional Queue autosave
+
+An operator can enable an hourly OMQueue Schedule on each host, labeled
+`tmux-lazy-autosave`, with cron `0 * * * *`. Autosave replaces the same
+checkpoint as manual save; it does not keep snapshot history.
+
+For Queue execution, use verified absolute Python and script paths and an
+explicit `PATH` containing the chosen tmux and shell toolchains. Select the
+host's default socket explicitly so an agent's custom socket cannot become the
+autosave target. No shell background `&` or additional daemon is needed.
 
 To change the interval on a host without creating a duplicate Schedule:
 
 1. Find its ID with `omqueue_schedule --label tmux-lazy-autosave`.
 2. Read the current revision with `omqueue schedule inspect <id> --json`.
 3. Create a private temporary file with `document=$(mktemp)` and export with
-   `omqueue schedule export <id> > "$document"` (without `--json`, which wraps
-   the portable document in an operational response).
+   `omqueue schedule export <id> > "$document"`. Do not add `--json`; it wraps
+   the portable document in an operational response.
 4. Edit that document: add `scheduleId` from the inspection and set
    `baseRevision` to its `currentRevision`, then change `cron`. Use
    `*/30 * * * *` for every 30 minutes, `0 * * * *` for hourly, or `0 */2 * * *`
@@ -119,13 +128,16 @@ Use `omqueue schedule disable <id>` to pause and `omqueue schedule enable <id>`
 to resume. Changes affect future occurrences, not already-created Jobs. Keep
 exported Schedule documents local: they include host-specific command paths.
 
+## Sockets and state directories
+
 `--socket PATH` explicitly selects a server. Without it, commands use `$TMUX`
-when inside tmux, otherwise the normal socket under `TMUX_TMPDIR` (or `/tmp`).
-Custom/agent sockets get isolated state under `lazy/servers/<socket-hash>/`
-unless explicitly overridden. `--state-dir DIR` or `TMUX_LAZY_STATE_DIR` selects
-another state directory; an already-configured server retains its own directory.
-Do not share one override across unrelated servers unless that is deliberately
-intended.
+when inside tmux, otherwise the normal socket under `TMUX_TMPDIR` or `/tmp`.
+Custom and agent sockets get isolated state under `lazy/servers/<socket-hash>/`
+unless explicitly overridden.
+
+`--state-dir DIR` or `TMUX_LAZY_STATE_DIR` selects another state directory. An
+already-configured server retains its own directory. Do not share one override
+across unrelated servers unless that is deliberate.
 
 ## Migration and synchronization
 
@@ -137,29 +149,22 @@ into an empty lazy state directory:
 tmux-lazy import --snapshot "$HOME/.local/share/tmux/resurrect/last"
 ```
 
-Import ignores saved process commands and never changes the Resurrect files.
-Existing lazy JSON is never overwritten by import. Home mapping assumes a local
-snapshot or the portable `#{HOME}`/`~` paths produced by the old sync helper.
+Import ignores saved process commands, never changes the Resurrect files, and
+never overwrites existing lazy JSON. Home mapping supports local snapshots and
+the portable `#{HOME}` or `~` paths used by earlier snapshots.
 
-`scripts/synchosts` now saves the **default** server once with
-`--quiet --if-running`, exports validated state to a disposable staging
-directory, and publishes only `state.json`. No peer directory is cleared.
-Socket-specific data, locks and local focus remain on their host; newer peer
-timestamps do not override an explicit publication from the caller. Rsync stages
-replacement with `--delay-updates --checksum`; other data retains the script's
-previous update rules.
-
-This is publication, not a merge, fleet transaction or coordination with a
-peer's concurrent save. Ordinary `synchosts` no longer stops services or
-performs idle cleanup; see
-[the sync scope and failure policy](../docs/scripts/synchosts.md). Keep peer
-saves quiescent during publication, without stopping their running panes or
-unrelated services. A failed local save/export blocks tmux publication, not
-independent file transfers; a failed tmux push does not block other peers. All
-participating hosts need this updated checkout before relying on the snapshot.
-The personal script targets `~/.local/share/tmux/lazy/` on peers; adjust its
-policy for nondefault state/XDG paths instead of assuming those overrides are
-discovered remotely.
+`scripts/synchosts` saves the default server when running, stages validated
+state, and publishes only `state.json`. It does not clear peer directories. This
+is publication, not a merge, fleet transaction, or coordination with a peer's
+concurrent save. Keep peer saves quiescent during publication, without stopping
+their running panes or unrelated services. All participating hosts need this
+updated checkout before relying on the snapshot. The sync script targets
+`~/.local/share/tmux/lazy/` on peers; adjust its policy for nondefault state or
+XDG paths instead of assuming those overrides are discovered remotely. A newer
+peer timestamp does not override an explicit published snapshot. Snapshot rsync
+uses `--delay-updates --checksum`; other data transfers retain their existing
+update rules. See
+[the sync scope and failure policy](../docs/scripts/synchosts.md).
 
 ```sh
 # Export to a NEW directory; only portable state.json is emitted.
@@ -168,35 +173,27 @@ tmux-lazy export /path/to/new-staging-directory
 
 ## Other helpers
 
-- `tmux_make_sessions [PROJECTS_DIR]` remains an optional initial generator. It
-  refuses an existing target server, creates the initial shells eagerly and
-  saves through the same lazy command. Subsequent cold restores are lazy. It no
-  longer deletes old snapshots; shared `OM_PATHS_FILE`/project-path rules are
-  preserved.
+- `tmux_make_sessions [PROJECTS_DIR]` is an optional initial generator. It
+  refuses an existing target server, creates initial shells eagerly, and saves
+  through the same lazy command. Shared `OM_PATHS_FILE` and project-path rules
+  are preserved.
 - `tmux_respawn_all --yes` is explicitly destructive: save first, reset loaded
-  panes to login shells in their current cwd, then save again. Pending panes
-  stay pending. It no longer invokes Resurrect, history synchronization, remote
-  maintenance or snapshot deletion.
+  panes to login shells in their current working directories, then save again.
+  Pending panes stay pending.
 - Bulk send helpers skip pending panes; `tmux_run_visible_panes` retains its
   existing **current-session** scope despite its historical name.
-- `tmux_slop_nudger` refuses a pending target rather than silently sending to an
-  empty pane. Direct external `send-keys` callers must similarly target a loaded
-  pane. Existing ordinary native agent-created windows need no new protocol.
+- `tmux_slop_nudger` refuses a pending target rather than sending to an empty
+  pane. Direct external `send-keys` callers must likewise target a loaded pane.
 - `restart_terminal` remains a separate explicit destructive maintenance
   command; it is not part of lazy startup or restore.
 
-## Verification
+## Tests
 
-Run from the repository root:
+From the repository root:
 
 ```sh
 python3 -m unittest tests/test_tmux_lazy.py tests/test_synchosts.py tests/test_install_platform.py
 ```
 
-The tmux checks use private sockets and synthetic homes/state, including a real
-pseudo-TTY client for the redraw regression. Sync checks use fake
-remote/maintenance commands and local rsync fixtures. The focused suite has been
-exercised on macOS; the core tmux checks also run on Linux/tmux 3.5a in a
-read-only Docker container with an executable temporary filesystem for its test
-shell. No installer, real sync, Queue job or live-server destruction is a
-validation step.
+The focused tests use private tmux sockets and temporary homes/fixtures; no
+shared live server is needed.
