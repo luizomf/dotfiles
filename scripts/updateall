@@ -49,7 +49,7 @@ fi
 
 echo "Running uv self update"
 uv self update
-echo "Running uv upgrade tools: pyright mupy ruff"
+echo "Running uv upgrade tools: pyright mypy ruff"
 uv tool upgrade pyright mypy ruff
 echo "Running uv python upgrade"
 uv python upgrade
