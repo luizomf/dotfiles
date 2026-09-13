@@ -18,10 +18,11 @@ import tempfile
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol, TypedDict, Union, runtime_checkable
+from typing import TYPE_CHECKING, TypedDict, Union
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable, Iterator
+    from collections.abc import Generator
+    from typing_extensions import TypeGuard
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -64,43 +65,21 @@ class FocusRecord(TypedDict):
     window: object
 
 
+SnapshotVersion = Union[bool, int, float]
+
+
 class Snapshot(TypedDict):
-    version: int
+    version: SnapshotVersion
     sessions: list[SessionRecord]
     focus: FocusRecord
 
 
-@runtime_checkable
-class ObjectMapping(Protocol):
-    def __getitem__(self, key: object) -> object: ...
-
-    def __iter__(self) -> Iterator[object]: ...
-
-    def get(self, key: object, default: object = None) -> object: ...
-
-    def values(self) -> Iterable[object]: ...
+def is_object_mapping(value: object) -> TypeGuard[dict[object, object]]:
+    return isinstance(value, dict)
 
 
-@runtime_checkable
-class ObjectList(Protocol):
-    def __iter__(self) -> Iterator[object]: ...
-
-    def __len__(self) -> int: ...
-
-
-def object_mapping(value: object) -> ObjectMapping | None:
-    if isinstance(value, ObjectMapping) and isinstance(value, dict):
-        return value
-    return None
-
-
-def object_list(value: object) -> ObjectList | None:
-    if not isinstance(value, ObjectList):
-        return None
-    items = value
-    if not isinstance(value, list):
-        return None
-    return items
+def is_object_list(value: object) -> TypeGuard[list[object]]:
+    return isinstance(value, list)
 
 
 def default_socket() -> Path:
@@ -156,17 +135,24 @@ def atomic_json(path: Path, value: object) -> None:
         temporary.unlink(missing_ok=True)
 
 
-def read_json_object(path: Path) -> ObjectMapping:
+def read_json_object(path: Path) -> dict[object, object]:
     value: object = json.loads(path.read_text())
-    fields = object_mapping(value)
-    if fields is None:
+    if not is_object_mapping(value):
         raise TypeError("Expected a JSON object")
-    return fields
+    return value
+
+
+def validate_version(value: object) -> SnapshotVersion:
+    if value != 1 or not isinstance(value, (bool, int, float)):
+        raise ValueError("Unsupported or empty lazy snapshot")
+    return value
 
 
 def validate_cwd(value: object) -> Cwd:
-    cwd_values = object_mapping(value)
-    if cwd_values is None or set(cwd_values) not in ({"home"}, {"absolute"}):
+    if not is_object_mapping(value):
+        raise ValueError("cwd must be explicitly home-relative or absolute")
+    cwd_values = value
+    if set(cwd_values) not in ({"home"}, {"absolute"}):
         raise ValueError("cwd must be explicitly home-relative or absolute")
     path = next(iter(cwd_values.values()))
     if not isinstance(path, str) or any(c in path for c in "\t\r\n\0"):
@@ -181,13 +167,17 @@ def validate_cwd(value: object) -> Cwd:
 
 
 def validate_focus(value: object) -> FocusRecord:
-    fields = object_mapping(value)
-    if fields is None or set(fields) != {"session", "window"}:
+    if not is_object_mapping(value):
+        raise ValueError("Invalid saved focus")
+    fields = value
+    if set(fields) != {"session", "window"}:
         raise ValueError("Invalid saved focus")
     return {"session": fields["session"], "window": fields["window"]}
 
 
-def validate_identity(values: ObjectMapping, identities: set[str]) -> tuple[str, str]:
+def validate_identity(
+    values: dict[object, object], identities: set[str]
+) -> tuple[str, str]:
     uid = values["uid"]
     name = values["name"]
     if not isinstance(uid, str) or not uid or uid in identities:
@@ -199,25 +189,30 @@ def validate_identity(values: ObjectMapping, identities: set[str]) -> tuple[str,
 
 
 def validate_state(state: object) -> Snapshot:
-    record = object_mapping(state)
-    if record is None:
+    if not is_object_mapping(state):
         raise ValueError("Unsupported or empty lazy snapshot")
+    record = state
+    version = validate_version(record.get("version"))
     sessions_value = record.get("sessions")
-    if record.get("version") != 1 or not sessions_value:
+    if not sessions_value:
         raise ValueError("Unsupported or empty lazy snapshot")
-    raw_sessions = object_list(sessions_value)
-    if set(record) != {"version", "sessions", "focus"} or raw_sessions is None:
+    if set(record) != {"version", "sessions", "focus"} or not is_object_list(
+        sessions_value
+    ):
         raise ValueError("Unexpected snapshot fields")
+    raw_sessions = sessions_value
     focus = validate_focus(record["focus"])
 
     identities: set[str] = set()
     sessions: list[SessionRecord] = []
     for raw_session in raw_sessions:
-        session_values = object_mapping(raw_session)
-        if session_values is None:
+        if not is_object_mapping(raw_session):
             raise ValueError("Invalid session record")
-        raw_windows = object_list(session_values.get("windows"))
-        if set(session_values) != {"uid", "name", "windows"} or raw_windows is None:
+        session_values = raw_session
+        raw_windows = session_values.get("windows")
+        if set(session_values) != {"uid", "name", "windows"} or not is_object_list(
+            raw_windows
+        ):
             raise ValueError("Invalid session record")
         session_uid, session_name = validate_identity(session_values, identities)
         if (
@@ -231,9 +226,9 @@ def validate_state(state: object) -> Snapshot:
         indices: set[int] = set()
         windows: list[WindowRecord] = []
         for raw_window in raw_windows:
-            window_values = object_mapping(raw_window)
-            if window_values is None:
+            if not is_object_mapping(raw_window):
                 raise ValueError("Invalid window record")
+            window_values = raw_window
             if set(window_values) != {
                 "uid",
                 "index",
@@ -250,8 +245,8 @@ def validate_state(state: object) -> Snapshot:
             if not isinstance(active, bool) or not isinstance(zoom, bool):
                 raise ValueError("Invalid window active/zoom flags")
             index = window_values["index"]
-            raw_panes = object_list(window_values["panes"])
-            if (
+            raw_panes = window_values["panes"]
+            if not is_object_list(raw_panes) or (
                 not isinstance(index, int)
                 or index < 0
                 or index in indices
@@ -267,9 +262,9 @@ def validate_state(state: object) -> Snapshot:
 
             panes: list[PaneRecord] = []
             for raw_pane in raw_panes:
-                pane_values = object_mapping(raw_pane)
-                if pane_values is None:
+                if not is_object_mapping(raw_pane):
                     raise ValueError("Invalid pane record")
+                pane_values = raw_pane
                 active_pane = pane_values.get("active")
                 if set(pane_values) != {"cwd", "title", "active"} or not isinstance(
                     active_pane, bool
@@ -292,7 +287,7 @@ def validate_state(state: object) -> Snapshot:
                 }
             )
         sessions.append({"uid": session_uid, "name": session_name, "windows": windows})
-    return {"version": 1, "sessions": sessions, "focus": focus}
+    return {"version": version, "sessions": sessions, "focus": focus}
 
 
 class LazyTmux:
