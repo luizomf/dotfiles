@@ -29,7 +29,7 @@ class SyncHostsTests(unittest.TestCase):
         self.script = scripts / "synchosts"
         real_rsync = shutil.which("rsync")
         if real_rsync is None:
-            self.skipTest("rsync is required")
+            self.fail("rsync is required")
         self.real_rsync = real_rsync
         # Keep fixtures independent of the operator's editable default fleet.
         runner = scripts / "run_all_hosts"

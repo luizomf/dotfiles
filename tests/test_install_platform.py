@@ -13,7 +13,7 @@ class InstallPlatformTests(unittest.TestCase):
     def shell(self, script: str, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [
-                "/bin/bash",
+                "bash",
                 "-c",
                 'source "$1" || exit; ' + script,
                 "test",
