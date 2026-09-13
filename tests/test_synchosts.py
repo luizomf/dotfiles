@@ -167,6 +167,7 @@ class SyncHostsTests(unittest.TestCase):
             "COMMAND_LOG": str(self.log),
             "PROJECTS_DIR": "",
             "REAL_RSYNC": self.real_rsync,
+            "RSYNC_BIN": str(self.bin / "rsync"),
             **(extra_env or {}),
         }
         # Fixed interpreter, fixture-owned script/argv and fake external commands.
@@ -383,6 +384,30 @@ class SyncHostsTests(unittest.TestCase):
                 self.assertEqual(path.read_text(), "synthetic-m132")
                 if host != "m132":
                     self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+
+    def test_auth_sync_uses_selected_rsync_when_path_finds_an_old_one(self):
+        legacy_bin = self.root / "legacy-bin"
+        legacy_bin.mkdir()
+        legacy_rsync = legacy_bin / "rsync"
+        legacy_rsync.write_text(
+            "#!/bin/sh\nprintf 'old system rsync selected\\n' >&2\nexit 1\n"
+        )
+        legacy_rsync.chmod(0o755)
+        source = self.home / ".codex/auth.json"
+        source.write_text("synthetic caller credentials")
+        source.chmod(0o644)
+        result = self.run_sync(
+            "--sync-auth",
+            extra_env={
+                "PATH": f"{legacy_bin}:{self.bin}:{os.environ['PATH']}",
+            },
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(source.stat().st_mode & 0o777, 0o644)
+        for host in ["m4128", "fedoraair"]:
+            target = self.root / "homes" / host / ".codex/auth.json"
+            self.assertEqual(target.read_text(), "synthetic caller credentials")
+            self.assertEqual(target.stat().st_mode & 0o777, 0o600)
 
     def test_auth_sync_keeps_machine_identity_and_absent_or_failed_auth(self):
         identity_paths = [

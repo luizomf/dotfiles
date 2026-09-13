@@ -94,6 +94,20 @@ if [[ -o interactive ]]; then
   run_step 'local history flush' fc -W
 fi
 
+# Non-interactive Zsh can put Apple's older rsync ahead of Homebrew. Select
+# this command explicitly without sourcing .zshrc or changing the shell's PATH.
+rsync_bin="${RSYNC_BIN:-rsync}"
+if [[ -z "${RSYNC_BIN:-}" && "$OSTYPE" == darwin* ]]; then
+  for candidate in /opt/homebrew/bin/rsync /usr/local/bin/rsync; do
+    if [[ -x "$candidate" ]]; then
+      rsync_bin="$candidate"
+      break
+    fi
+  done
+fi
+# SSH shells have the same PATH issue; this environment is only for remote rsync.
+rsync_remote='PATH="/opt/homebrew/bin:/usr/local/bin:$PATH" rsync'
+
 # Ordinary sync never stops services or prunes their state. Idle maintenance
 # remains a separate explicit operation with its own guards (see docs/scripts/).
 run_step 'history merge (offline peers are optional)' "$script_dir/zsh_history_sync.py" "$@"
@@ -194,7 +208,8 @@ sync_home() {
     print -u2 -- "Cannot prepare directory on $host: ~/$directory; skipping this transfer."
     return 1
   fi
-  rsync "$copy_flags" --progress --stats "$@" "$source" "$destination"
+  "$rsync_bin" "$copy_flags" --rsync-path="$rsync_remote" \
+    --progress --stats "$@" "$source" "$destination"
 }
 
 sync_data_home() {
@@ -233,7 +248,8 @@ sync_auth_home() {
   fi
   "$host_runner" --host "$host" --no-tty \
     "umask 077; mkdir -p -- ~/${(qq)directory}" || return $?
-  rsync -havz --checksum --delay-updates --chmod=F600 \
+  "$rsync_bin" -havz --rsync-path="$rsync_remote" \
+    --checksum --delay-updates --chmod=F600 \
     --include='/auth.json' --exclude='*' \
     "$HOME/${directory%/}/" "$host:~/$directory"
 }

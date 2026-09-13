@@ -142,6 +142,20 @@ token validity or prevent refresh-token races. OpenAI documents both
 and
 [concurrent-session limitations](https://learn.chatgpt.com/docs/auth/ci-cd-auth).
 
+## Rsync executable
+
+On macOS the script prefers the installed Homebrew rsync at
+`/opt/homebrew/bin/rsync`, then `/usr/local/bin/rsync`, over Apple's older
+OpenRSYNC. Elsewhere it uses `rsync` from PATH. `RSYNC_BIN` can select an
+explicit local executable, including an isolated test double.
+
+Remote rsync commands prepend those Homebrew locations to their own PATH using
+`--rsync-path`; this does not change the login shell's environment. The script
+never sources `.zshrc` or changes the global PATH. This matters because an
+interactive terminal and a non-interactive Zsh/SSH command can otherwise resolve
+different rsync binaries. Auth's `--chmod=F600` requires the modern rsync;
+Apple's OpenRSYNC rejects that option. Nothing is installed automatically.
+
 ## Workflow and failures
 
 The command validates the host list, merges Zsh history, saves/stages tmux
@@ -176,5 +190,5 @@ python3 -m unittest tests.test_synchosts
 
 Tests use synthetic private files, fake remote commands and local rsync
 fixtures. They cover whole-directory transfer, preserved relative links, shared
-exclusions, auth publication, host Codex isolation, failure handling and tmux
-behavior.
+exclusions, auth publication with a selected rsync despite an older PATH
+candidate, host Codex isolation, failure handling and tmux behavior.
