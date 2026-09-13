@@ -39,6 +39,17 @@ class Config(TypedDict):
     concurrencyDefinitions: dict[str, str]
 
 
+class OptionalInternalRunInput(TypedDict, total=False):
+    stdin: str
+    ollamaEnvironment: dict[str, str]
+
+
+class InternalRunInput(OptionalInternalRunInput):
+    executable: str
+    arguments: list[str]
+    workingDirectory: str
+
+
 LOCAL_BACKGROUND_ENVIRONMENT_KEYS = (
     "HOME",
     "LANG",
@@ -63,6 +74,14 @@ def fail(message: str, status: int = 1) -> NoReturn:
 
 def is_object_dict(value: object) -> TypeGuard[dict[object, object]]:
     return isinstance(value, dict)
+
+
+def is_object_list(value: object) -> TypeGuard[list[object]]:
+    return isinstance(value, list)
+
+
+def is_string_list(value: object) -> TypeGuard[list[str]]:
+    return is_object_list(value) and all(isinstance(item, str) for item in value)
 
 
 def usage(stream: TextIO = sys.stdout) -> None:
@@ -899,35 +918,64 @@ def internal_local_run(due_value: str) -> NoReturn:
     internal_run()
 
 
-def internal_run() -> NoReturn:
+def load_internal_run_input() -> InternalRunInput:
     try:
-        value = json.load(sys.stdin)
+        value: object = json.load(sys.stdin)
+    except (json.JSONDecodeError, TypeError) as error:
+        fail(f"invalid Trigger input: {error}")
+
+    if not is_object_dict(value):
+        fail("invalid Trigger input shape")
+
+    try:
         executable = value["executable"]
         arguments = value["arguments"]
         working_directory = value["workingDirectory"]
-        ollama_environment = value.get("ollamaEnvironment", {})
-        has_stdin = "stdin" in value
-        command_stdin = value.get("stdin")
-    except (json.JSONDecodeError, KeyError, TypeError) as error:
+    except KeyError as error:
         fail(f"invalid Trigger input: {error}")
 
+    ollama_environment = value.get("ollamaEnvironment", {})
+    has_stdin = "stdin" in value
+    command_stdin = value.get("stdin")
     if not (
         isinstance(executable, str)
         and executable.startswith("/")
-        and isinstance(arguments, list)
-        and all(isinstance(argument, str) for argument in arguments)
+        and is_string_list(arguments)
         and isinstance(working_directory, str)
         and working_directory.startswith("/")
-        and isinstance(ollama_environment, dict)
+        and is_object_dict(ollama_environment)
         and (not has_stdin or isinstance(command_stdin, str))
         and all(
-            name in FORWARDED_OLLAMA_ENVIRONMENT
+            isinstance(name, str)
+            and name in FORWARDED_OLLAMA_ENVIRONMENT
             and isinstance(environment_value, str)
             and environment_value
             for name, environment_value in ollama_environment.items()
         )
     ):
         fail("invalid Trigger input shape")
+
+    trigger_input: InternalRunInput = {
+        "executable": executable,
+        "arguments": arguments.copy(),
+        "workingDirectory": working_directory,
+        "ollamaEnvironment": {
+            name: environment_value
+            for name, environment_value in ollama_environment.items()
+            if isinstance(name, str) and isinstance(environment_value, str)
+        },
+    }
+    if has_stdin and isinstance(command_stdin, str):
+        trigger_input["stdin"] = command_stdin
+    return trigger_input
+
+
+def internal_run() -> NoReturn:
+    trigger_input = load_internal_run_input()
+    executable = trigger_input["executable"]
+    arguments = trigger_input["arguments"]
+    working_directory = trigger_input["workingDirectory"]
+    ollama_environment = trigger_input.get("ollamaEnvironment", {})
 
     scripts_directory = str(Path(__file__).resolve().parent)
     preferred_path = [
@@ -957,9 +1005,9 @@ def internal_run() -> NoReturn:
 
     try:
         os.chdir(working_directory)
-        if has_stdin:
+        if "stdin" in trigger_input:
             with tempfile.TemporaryFile() as stdin_file:
-                stdin_file.write(command_stdin.encode("utf-8"))
+                stdin_file.write(trigger_input["stdin"].encode("utf-8"))
                 stdin_file.seek(0)
                 os.dup2(stdin_file.fileno(), 0)
         if sys.platform == "darwin":
