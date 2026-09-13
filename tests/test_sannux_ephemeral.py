@@ -103,9 +103,7 @@ class SannuxEphemeralTests(unittest.TestCase):
         invocations = self.docker_invocations()
         self.assertEqual(len(invocations), 1)
         home_mounts = [
-            argument
-            for argument in invocations[0]
-            if argument.endswith(":/home/agent")
+            argument for argument in invocations[0] if argument.endswith(":/home/agent")
         ]
         self.assertEqual(len(home_mounts), 1)
         run_home = Path(home_mounts[0].removesuffix(":/home/agent"))
@@ -115,7 +113,9 @@ class SannuxEphemeralTests(unittest.TestCase):
         self.assertEqual(stat.S_IMODE(ephemeral_root.stat().st_mode), 0o700)
         self.assertEqual(marker.read_text(encoding="utf-8"), "keep")
 
-    def test_shell_mode_keeps_ephemeral_mounts_and_replaces_only_entrypoint(self) -> None:
+    def test_shell_mode_keeps_ephemeral_mounts_and_replaces_only_entrypoint(
+        self,
+    ) -> None:
         result = self.run_script("pi", "--shell", "-c", "printf shell-ready")
 
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -127,9 +127,7 @@ class SannuxEphemeralTests(unittest.TestCase):
         agent_index = invocation.index("agent")
         self.assertEqual(invocation[agent_index + 1 :], ["-c", "printf shell-ready"])
         home_mount = next(
-            argument
-            for argument in invocation
-            if argument.endswith(":/home/agent")
+            argument for argument in invocation if argument.endswith(":/home/agent")
         )
         run_home = Path(home_mount.removesuffix(":/home/agent"))
         self.assertEqual(run_home.parent, Path(f"{self.pi_home}.ephemeral-runs"))
@@ -158,9 +156,7 @@ class SannuxEphemeralTests(unittest.TestCase):
         (skill / "node_modules" / "dependency" / "package.json").write_text(
             "{}\n", encoding="utf-8"
         )
-        (skills / ".omskills-managed-links").write_text(
-            "managed\n", encoding="utf-8"
-        )
+        (skills / ".omskills-managed-links").write_text("managed\n", encoding="utf-8")
 
         linked_source = self.root / "linked-extension.ts"
         linked_source.write_text("export const linked = true;\n", encoding="utf-8")

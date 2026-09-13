@@ -164,7 +164,9 @@ class Args(argparse.Namespace):
     list_scenes: bool
 
 
-def build_rows(pool: str, width: int, height: int, rng: random.Random, cells: int = 1) -> bytes:
+def build_rows(
+    pool: str, width: int, height: int, rng: random.Random, cells: int = 1
+) -> bytes:
     """Full-screen repaint: home cursor, then absolute-position every row."""
     count = max(1, width // cells)
     out = [b"\x1b[H"]
@@ -213,7 +215,8 @@ def scene_attrs(w: int, h: int, i: int, rng: random.Random) -> bytes:
     out = [b"\x1b[H"]
     for y in range(1, h + 1):
         row = "".join(
-            f"\x1b[{rng.choice(ATTR_POOL)}m{rng.choice(ASCII_POOL)}\x1b[0m" for _ in range(w)
+            f"\x1b[{rng.choice(ATTR_POOL)}m{rng.choice(ASCII_POOL)}\x1b[0m"
+            for _ in range(w)
         )
         out.append(f"\x1b[{y};1H{row}".encode())
     return b"".join(out)
@@ -432,7 +435,9 @@ def run_verify(out_fd: int, in_fd: int) -> None:
                 160 + (h2 >> 11) % 96,
                 160 + (h2 >> 19) % 96,
             )
-            cells.append(f"\x1b[38;2;{fr};{fg};{fb}m\x1b[48;2;{br};{bg};{bb}m{VERIFY_GLYPH}")
+            cells.append(
+                f"\x1b[38;2;{fr};{fg};{fb}m\x1b[48;2;{br};{bg};{bb}m{VERIFY_GLYPH}"
+            )
         out.append(f"\x1b[{y + 1};1H{''.join(cells)}\x1b[0m".encode())
 
     status = (
@@ -446,10 +451,18 @@ def run_verify(out_fd: int, in_fd: int) -> None:
     os.read(in_fd, 64)
 
 
-def report(results: list[Stats], rtt_used: bool, cursor: CursorMode, stalled: list[str]) -> None:
+def report(
+    results: list[Stats], rtt_used: bool, cursor: CursorMode, stalled: list[str]
+) -> None:
     baseline = next((s.fps for s in results if s.scene == "ascii" and s.fps), None)
-    mode = "CSI 6n round-trip (render time)" if rtt_used else "write() only (buffered, optimistic)"
-    print(f"\nmode: {mode}   cursor: {cursor}   term: {os.environ.get('TERM_PROGRAM', '?')}\n")
+    mode = (
+        "CSI 6n round-trip (render time)"
+        if rtt_used
+        else "write() only (buffered, optimistic)"
+    )
+    print(
+        f"\nmode: {mode}   cursor: {cursor}   term: {os.environ.get('TERM_PROGRAM', '?')}\n"
+    )
     header = f"{'scene':<9}{'frames':>7}{'fps':>9}{'p50 ms':>9}{'p95 ms':>9}{'max ms':>9}{'MiB/s':>9}{'rel':>7}"
     print(header)
     print("-" * len(header))
@@ -461,7 +474,9 @@ def report(results: list[Stats], rtt_used: bool, cursor: CursorMode, stalled: li
         )
     print("\nrel = fps relative to the `ascii` baseline on this same terminal.")
     if not rtt_used:
-        print("warning: terminal never answered CSI 6n; numbers measure writes, not rendering.")
+        print(
+            "warning: terminal never answered CSI 6n; numbers measure writes, not rendering."
+        )
     if stalled:
         print(
             f"warning: stopped early on {', '.join(stalled)}: no CSI 6n reply within "
@@ -486,9 +501,13 @@ def parse_args() -> Args:
             "against --cursor toggle to confirm a per-frame DECTCEM toggle."
         ),
     )
-    parser.add_argument("scenes", nargs="*", default=[], help="scenes to run (default: all)")
+    parser.add_argument(
+        "scenes", nargs="*", default=[], help="scenes to run (default: all)"
+    )
     parser.add_argument("--seconds", type=float, default=3.0, help="duration per scene")
-    parser.add_argument("--fps", type=float, default=0.0, help="target fps (0 = unlimited)")
+    parser.add_argument(
+        "--fps", type=float, default=0.0, help="target fps (0 = unlimited)"
+    )
     parser.add_argument(
         "--cursor",
         choices=["hide", "show", "blink", "toggle"],
@@ -522,7 +541,9 @@ def parse_args() -> Args:
         action="store_true",
         help="draw one static deterministic frame and hold it, to compare renderers by eye",
     )
-    parser.add_argument("--list", dest="list_scenes", action="store_true", help="list scenes")
+    parser.add_argument(
+        "--list", dest="list_scenes", action="store_true", help="list scenes"
+    )
     return parser.parse_args(namespace=Args())
 
 
@@ -543,7 +564,10 @@ def main() -> int:
     out_fd = sys.stdout.fileno()
     in_fd = sys.stdin.fileno()
     if not os.isatty(out_fd) or not os.isatty(in_fd):
-        print("termbench needs an interactive terminal on stdin and stdout.", file=sys.stderr)
+        print(
+            "termbench needs an interactive terminal on stdin and stdout.",
+            file=sys.stderr,
+        )
         return 2
 
     saved = termios.tcgetattr(in_fd)
@@ -561,7 +585,10 @@ def main() -> int:
         write_all(out_fd, b"\x1b[?1049h" + CURSOR_SEQ[args.cursor])
         if args.shape != "keep":
             blinking, steady = CURSOR_SHAPE[args.shape]
-            write_all(out_fd, f"\x1b[{blinking if args.cursor == 'blink' else steady} q".encode())
+            write_all(
+                out_fd,
+                f"\x1b[{blinking if args.cursor == 'blink' else steady} q".encode(),
+            )
         if args.verify:
             run_verify(out_fd, in_fd)
         else:

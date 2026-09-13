@@ -1,4 +1,5 @@
 """Control-flow tests only: no real firewall, files in /run, or subprocesses."""
+
 import importlib.util
 from pathlib import Path
 import subprocess
@@ -6,7 +7,8 @@ import unittest
 from unittest.mock import mock_open, patch
 
 spec = importlib.util.spec_from_file_location(
-    "candidate", Path(__file__).resolve().parents[1] / "scripts" / "docker-route-pmtu.py"
+    "candidate",
+    Path(__file__).resolve().parents[1] / "scripts" / "docker-route-pmtu.py",
 )
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
@@ -47,8 +49,12 @@ class Fake:
 
 class CandidateTests(unittest.TestCase):
     def execute(self, fake, mode):
-        with patch.object(m, "run", fake.run), patch.object(m, "preflight"), \
-             patch("builtins.open", mock_open()), patch.object(m.fcntl, "flock"):
+        with (
+            patch.object(m, "run", fake.run),
+            patch.object(m, "preflight"),
+            patch("builtins.open", mock_open()),
+            patch.object(m.fcntl, "flock"),
+        ):
             m.change(mode)
 
     def test_scope_and_dynamic_flags(self):
@@ -60,7 +66,9 @@ class CandidateTests(unittest.TestCase):
             self.assertIn(rule[1], ("docker0", "br-+"))
             self.assertIn("--clamp-mss-to-pmtu", rule)
             self.assertNotIn("--set-mss", rule)
-            self.assertEqual(rule[rule.index("--tcp-flags") + 1:][:2], ["SYN,RST", "SYN"])
+            self.assertEqual(
+                rule[rule.index("--tcp-flags") + 1 :][:2], ["SYN,RST", "SYN"]
+            )
             self.assertNotIn("wg0", rule)
             self.assertNotIn("wld0", rule)
 
@@ -105,16 +113,23 @@ class CandidateTests(unittest.TestCase):
 
     def test_remove_does_not_require_docker_or_firewalld_state(self):
         fake = Fake()
-        with patch.object(m, "run", fake.run), \
-             patch.object(m, "preflight", side_effect=AssertionError("called preflight")), \
-             patch("builtins.open", mock_open()), patch.object(m.fcntl, "flock"):
+        with (
+            patch.object(m, "run", fake.run),
+            patch.object(
+                m, "preflight", side_effect=AssertionError("called preflight")
+            ),
+            patch("builtins.open", mock_open()),
+            patch.object(m.fcntl, "flock"),
+        ):
             m.change("remove")
 
     def test_plan_has_no_runtime_calls(self):
         for mode in ("plan-apply", "plan-remove"):
-            with patch.object(m.sys, "argv", ["candidate", mode]), \
-                 patch.object(m, "run", side_effect=AssertionError("runtime call")), \
-                 patch("builtins.print") as output:
+            with (
+                patch.object(m.sys, "argv", ["candidate", mode]),
+                patch.object(m, "run", side_effect=AssertionError("runtime call")),
+                patch("builtins.print") as output,
+            ):
                 m.main()
                 self.assertEqual(output.call_count, 8)
 

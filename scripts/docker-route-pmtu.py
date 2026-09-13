@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 """Review candidate: eight owned route-PMTU rules; never run apply without approval."""
+
 import fcntl
 import json
 import os
@@ -17,9 +18,25 @@ def rules():
     for tool in TOOLS:
         for interface in ("docker0", "br-+"):
             for direction in ("-i", "-o"):
-                yield tool, [direction, interface, "-p", "tcp", "--tcp-flags",
-                             "SYN,RST", "SYN", "-m", "comment", "--comment", TAG,
-                             "-j", "TCPMSS", "--clamp-mss-to-pmtu"]
+                yield (
+                    tool,
+                    [
+                        direction,
+                        interface,
+                        "-p",
+                        "tcp",
+                        "--tcp-flags",
+                        "SYN,RST",
+                        "SYN",
+                        "-m",
+                        "comment",
+                        "--comment",
+                        TAG,
+                        "-j",
+                        "TCPMSS",
+                        "--clamp-mss-to-pmtu",
+                    ],
+                )
 
 
 def command(tool, action, rule):
@@ -27,14 +44,17 @@ def command(tool, action, rule):
 
 
 def run(args, check=True):
-    return subprocess.run(args, check=check, text=True, capture_output=True,
-                          env=ENV, timeout=20)
+    return subprocess.run(
+        args, check=check, text=True, capture_output=True, env=ENV, timeout=20
+    )
 
 
 def preflight():
     state = run(["/usr/bin/systemctl", "is-active", "firewalld"], check=False)
     if state.stdout.strip() != "inactive":
-        raise RuntimeError("Require reviewed inactive firewalld; do not change its state")
+        raise RuntimeError(
+            "Require reviewed inactive firewalld; do not change its state"
+        )
     for tool in TOOLS:
         if "(nf_tables)" not in run([tool, "--version"]).stdout:
             raise RuntimeError("Unexpected iptables backend")
@@ -43,16 +63,21 @@ def preflight():
 def check_scope():
     # Run explicitly before first application; boot application precedes Docker.
     docker = ["/usr/bin/docker", "--host", "unix:///var/run/docker.sock"]
-    ids = run(docker + ["network", "ls", "--filter", "driver=bridge", "-q"]).stdout.split()
+    ids = run(
+        docker + ["network", "ls", "--filter", "driver=bridge", "-q"]
+    ).stdout.split()
     if not ids:
         raise RuntimeError("No local Docker bridge inventory; refuse application")
     networks = json.loads(run(docker + ["network", "inspect", *ids]).stdout)
-    owned = {n["Options"].get("com.docker.network.bridge.name") or "br-" + n["Id"][:12]
-             for n in networks}
+    owned = {
+        n["Options"].get("com.docker.network.bridge.name") or "br-" + n["Id"][:12]
+        for n in networks
+    }
     covered = lambda name: name == "docker0" or name.startswith("br-")
     interfaces = {p.name for p in Path("/sys/class/net").iterdir()}
     if any(not covered(name) for name in owned) or any(
-            covered(name) and name not in owned for name in interfaces):
+        covered(name) and name not in owned for name in interfaces
+    ):
         raise RuntimeError("Bridge naming scope changed/collides; require fresh review")
 
 
@@ -85,8 +110,14 @@ def change(mode):
                     elif result.returncode != 1:
                         raise RuntimeError("Cannot reconcile exact rule")
                 except Exception as cleanup_error:
-                    print("ROLLBACK UNRESOLVED: " + shlex.join(command(tool, "-D", rule))
-                          + " (" + type(cleanup_error).__name__ + ")", file=sys.stderr)
+                    print(
+                        "ROLLBACK UNRESOLVED: "
+                        + shlex.join(command(tool, "-D", rule))
+                        + " ("
+                        + type(cleanup_error).__name__
+                        + ")",
+                        file=sys.stderr,
+                    )
             # Keep the original failure even if any individual cleanup failed.
             raise
 
@@ -95,17 +126,26 @@ def main():
     mode = sys.argv[1] if len(sys.argv) == 2 else ""
     if mode in ("plan-apply", "plan-remove"):
         for tool, rule in rules():
-            print(shlex.join(command(tool, "-I", ["1", *rule]) if mode == "plan-apply"
-                             else command(tool, "-D", rule)))
+            print(
+                shlex.join(
+                    command(tool, "-I", ["1", *rule])
+                    if mode == "plan-apply"
+                    else command(tool, "-D", rule)
+                )
+            )
         return
     if mode == "check-scope":
         check_scope()
         print("PASS: current Docker bridge names match the reserved selectors")
         return
     if mode not in ("apply", "remove"):
-        raise SystemExit("usage: docker-route-pmtu.py plan-apply|plan-remove|check-scope|apply|remove")
+        raise SystemExit(
+            "usage: docker-route-pmtu.py plan-apply|plan-remove|check-scope|apply|remove"
+        )
     if os.geteuid() != 0:
-        raise SystemExit("apply/remove require root and separate operator authorization")
+        raise SystemExit(
+            "apply/remove require root and separate operator authorization"
+        )
     change(mode)
 
 
