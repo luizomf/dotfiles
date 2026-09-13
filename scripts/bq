@@ -945,25 +945,25 @@ def load_internal_run_input() -> InternalRunInput:
         and working_directory.startswith("/")
         and is_object_dict(ollama_environment)
         and (not has_stdin or isinstance(command_stdin, str))
-        and all(
+    ):
+        fail("invalid Trigger input shape")
+
+    validated_environment: dict[str, str] = {}
+    for name, environment_value in ollama_environment.items():
+        if not (
             isinstance(name, str)
             and name in FORWARDED_OLLAMA_ENVIRONMENT
             and isinstance(environment_value, str)
             and environment_value
-            for name, environment_value in ollama_environment.items()
-        )
-    ):
-        fail("invalid Trigger input shape")
+        ):
+            fail("invalid Trigger input shape")
+        validated_environment[name] = environment_value
 
     trigger_input: InternalRunInput = {
         "executable": executable,
         "arguments": arguments.copy(),
         "workingDirectory": working_directory,
-        "ollamaEnvironment": {
-            name: environment_value
-            for name, environment_value in ollama_environment.items()
-            if isinstance(name, str) and isinstance(environment_value, str)
-        },
+        "ollamaEnvironment": validated_environment,
     }
     if has_stdin and isinstance(command_stdin, str):
         trigger_input["stdin"] = command_stdin

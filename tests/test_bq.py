@@ -1,3 +1,4 @@
+import io
 import json
 import os
 import pty
@@ -9,8 +10,10 @@ import tempfile
 import textwrap
 import time
 import unittest
+from contextlib import redirect_stderr
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 BQ = REPOSITORY / "scripts" / "bq"
@@ -135,6 +138,95 @@ class BqCliTests(unittest.TestCase):
                     self.capture_path.read_text(encoding="utf-8")
                 )
                 self.assertEqual(trigger_input["stdin"], value)
+
+    def test_internal_input_rejects_malformed_and_non_object_json(self) -> None:
+        module = runpy.run_path(str(BQ))
+        values = [
+            ("[", "invalid Trigger input:"),
+            ("null", "invalid Trigger input shape"),
+            ("[]", "invalid Trigger input shape"),
+        ]
+
+        for value, diagnostic in values:
+            with self.subTest(value=value):
+                error_output = io.StringIO()
+                with (
+                    patch("sys.stdin", io.StringIO(value)),
+                    redirect_stderr(error_output),
+                    self.assertRaises(SystemExit) as raised,
+                ):
+                    module["load_internal_run_input"]()
+
+                self.assertEqual(raised.exception.code, 1)
+                self.assertIn(diagnostic, error_output.getvalue())
+
+    def test_internal_input_preserves_absent_and_present_empty_stdin(self) -> None:
+        module = runpy.run_path(str(BQ))
+        required_input = {
+            "executable": "/usr/bin/true",
+            "arguments": list[str](),
+            "workingDirectory": str(self.root),
+        }
+
+        with patch("sys.stdin", io.StringIO(json.dumps(required_input))):
+            without_stdin = module["load_internal_run_input"]()
+        with patch(
+            "sys.stdin", io.StringIO(json.dumps({**required_input, "stdin": ""}))
+        ):
+            with_empty_stdin = module["load_internal_run_input"]()
+
+        self.assertNotIn("stdin", without_stdin)
+        self.assertEqual(with_empty_stdin["stdin"], "")
+
+    def test_internal_input_accepts_valid_optional_environment_and_extra_field(
+        self,
+    ) -> None:
+        module = runpy.run_path(str(BQ))
+        trigger_input = {
+            "executable": "/usr/bin/true",
+            "arguments": list[str](),
+            "workingDirectory": str(self.root),
+            "ollamaEnvironment": {
+                "OLLAMA_HOST": "http://127.0.0.1:11434",
+                "OLLAMA_KEEP_ALIVE": "5m",
+            },
+            "futureField": {"ignored": True},
+        }
+
+        with patch("sys.stdin", io.StringIO(json.dumps(trigger_input))):
+            loaded = module["load_internal_run_input"]()
+
+        self.assertEqual(
+            loaded["ollamaEnvironment"], trigger_input["ollamaEnvironment"]
+        )
+        self.assertNotIn("futureField", loaded)
+
+    def test_internal_input_rejects_invalid_optional_environment(self) -> None:
+        module = runpy.run_path(str(BQ))
+        values = [
+            {"UNKNOWN": "value"},
+            {"OLLAMA_HOST": ""},
+            {"OLLAMA_HOST": 42},
+        ]
+
+        for environment in values:
+            with self.subTest(environment=environment):
+                trigger_input = {
+                    "executable": "/usr/bin/true",
+                    "arguments": list[str](),
+                    "workingDirectory": str(self.root),
+                    "ollamaEnvironment": environment,
+                }
+                error_output = io.StringIO()
+                with (
+                    patch("sys.stdin", io.StringIO(json.dumps(trigger_input))),
+                    redirect_stderr(error_output),
+                    self.assertRaises(SystemExit) as raised,
+                ):
+                    module["load_internal_run_input"]()
+
+                self.assertEqual(raised.exception.code, 1)
+                self.assertIn("invalid Trigger input shape", error_output.getvalue())
 
     def test_internal_run_restores_stdin_and_executes_arguments_literally(self) -> None:
         result_path = self.root / "command-result.json"
