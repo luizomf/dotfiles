@@ -17,11 +17,19 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / "tmux/scripts/lazy.py"
-TMUX = shutil.which("tmux") or "/tmux-not-found"
+TMUX = shutil.which("tmux")
 
 
-@unittest.skipUnless(Path(TMUX).is_file(), "tmux is required")
 class LazyTmuxTests(unittest.TestCase):
+    tmux_binary: str
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        if TMUX is None:
+            reason = "tmux is required"
+            raise unittest.SkipTest(reason)
+        cls.tmux_binary = TMUX
+
     def test_import_visit_save_and_restart_preserve_pending_and_running_windows(self):
         with tempfile.TemporaryDirectory(prefix="lazy-demo-test-") as temporary:
             root = Path(temporary).resolve()
@@ -77,7 +85,7 @@ class LazyTmuxTests(unittest.TestCase):
 
             def tmux(*args: str) -> str:
                 return subprocess.run(
-                    [TMUX, "-S", str(trial / "socket"), *args],
+                    [self.tmux_binary, "-S", str(trial / "socket"), *args],
                     env=env,
                     text=True,
                     capture_output=True,
@@ -160,7 +168,7 @@ class LazyTmuxTests(unittest.TestCase):
                 master, slave = pty.openpty()
                 client = subprocess.Popen(
                     [
-                        TMUX,
+                        self.tmux_binary,
                         "-S",
                         str(trial / "socket"),
                         "attach-session",
@@ -279,7 +287,7 @@ class LazyTmuxTests(unittest.TestCase):
             finally:
                 if (trial / "socket").exists():
                     subprocess.run(
-                        [TMUX, "-S", str(trial / "socket"), "kill-server"],
+                        [self.tmux_binary, "-S", str(trial / "socket"), "kill-server"],
                         env=env,
                         capture_output=True,
                         timeout=15,
@@ -388,7 +396,7 @@ class LazyTmuxTests(unittest.TestCase):
 
             def tmux(*args: str) -> str:
                 return subprocess.run(
-                    [TMUX, "-S", str(socket), *args],
+                    [self.tmux_binary, "-S", str(socket), *args],
                     env=env,
                     text=True,
                     capture_output=True,
@@ -466,7 +474,7 @@ class LazyTmuxTests(unittest.TestCase):
             finally:
                 if socket.exists():
                     subprocess.run(
-                        [TMUX, "-S", str(socket), "kill-server"],
+                        [self.tmux_binary, "-S", str(socket), "kill-server"],
                         env=env,
                         capture_output=True,
                         timeout=15,
@@ -480,7 +488,7 @@ class LazyTmuxTests(unittest.TestCase):
             home.mkdir()
             (home / "dotfiles").symlink_to(REPO, target_is_directory=True)
             socket = root / "socket"
-            real_tmux = TMUX
+            real_tmux = self.tmux_binary
             binary_dir = root / "bin"
             binary_dir.mkdir()
             wrapper = binary_dir / "tmux"
