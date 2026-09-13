@@ -1,27 +1,41 @@
 """Control-flow tests only: no real firewall, files in /run, or subprocesses."""
+
+import importlib.machinery
 import importlib.util
-from pathlib import Path
 import subprocess
 import unittest
+from pathlib import Path
+from typing import Optional
 from unittest.mock import mock_open, patch
 
-spec = importlib.util.spec_from_file_location(
-    "candidate", Path(__file__).resolve().parents[1] / "scripts" / "docker-route-pmtu.py"
+candidate_path = (
+    Path(__file__).resolve().parents[1] / "scripts" / "docker-route-pmtu.py"
 )
+loader = importlib.machinery.SourceFileLoader("candidate", str(candidate_path))
+spec = importlib.util.spec_from_loader(loader.name, loader)
+assert spec is not None
 m = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(m)
+loader.exec_module(m)
 
 
 class Fake:
-    def __init__(self, fail_insert=None, timeout_insert=None, timeout_delete=None):
-        self.state = set()
+    def __init__(
+        self,
+        fail_insert: Optional[int] = None,
+        timeout_insert: Optional[int] = None,
+        timeout_delete: Optional[int] = None,
+    ) -> None:
+        self.state: set[tuple[str, tuple[str, ...]]] = set()
         self.inserts = 0
         self.deletes = 0
         self.fail_insert = fail_insert
         self.timeout_insert = timeout_insert
         self.timeout_delete = timeout_delete
 
-    def run(self, args, check=True):
+    def run(
+        self, args: list[str], check: bool = True
+    ) -> subprocess.CompletedProcess[str]:
+        _ = check
         action = args[5]
         rule = tuple(args[8:] if action == "-I" else args[7:])
         key = (args[0], rule)
@@ -46,9 +60,13 @@ class Fake:
 
 
 class CandidateTests(unittest.TestCase):
-    def execute(self, fake, mode):
-        with patch.object(m, "run", fake.run), patch.object(m, "preflight"), \
-             patch("builtins.open", mock_open()), patch.object(m.fcntl, "flock"):
+    def execute(self, fake: Fake, mode: str) -> None:
+        with (
+            patch.object(m, "run", fake.run),
+            patch.object(m, "preflight"),
+            patch("builtins.open", mock_open()),
+            patch.object(m.fcntl, "flock"),
+        ):
             m.change(mode)
 
     def test_scope_and_dynamic_flags(self):
@@ -60,7 +78,9 @@ class CandidateTests(unittest.TestCase):
             self.assertIn(rule[1], ("docker0", "br-+"))
             self.assertIn("--clamp-mss-to-pmtu", rule)
             self.assertNotIn("--set-mss", rule)
-            self.assertEqual(rule[rule.index("--tcp-flags") + 1:][:2], ["SYN,RST", "SYN"])
+            self.assertEqual(
+                rule[rule.index("--tcp-flags") + 1 :][:2], ["SYN,RST", "SYN"]
+            )
             self.assertNotIn("wg0", rule)
             self.assertNotIn("wld0", rule)
 
@@ -105,16 +125,23 @@ class CandidateTests(unittest.TestCase):
 
     def test_remove_does_not_require_docker_or_firewalld_state(self):
         fake = Fake()
-        with patch.object(m, "run", fake.run), \
-             patch.object(m, "preflight", side_effect=AssertionError("called preflight")), \
-             patch("builtins.open", mock_open()), patch.object(m.fcntl, "flock"):
+        with (
+            patch.object(m, "run", fake.run),
+            patch.object(
+                m, "preflight", side_effect=AssertionError("called preflight")
+            ),
+            patch("builtins.open", mock_open()),
+            patch.object(m.fcntl, "flock"),
+        ):
             m.change("remove")
 
     def test_plan_has_no_runtime_calls(self):
         for mode in ("plan-apply", "plan-remove"):
-            with patch.object(m.sys, "argv", ["candidate", mode]), \
-                 patch.object(m, "run", side_effect=AssertionError("runtime call")), \
-                 patch("builtins.print") as output:
+            with (
+                patch.object(m.sys, "argv", ["candidate", mode]),
+                patch.object(m, "run", side_effect=AssertionError("runtime call")),
+                patch("builtins.print") as output,
+            ):
                 m.main()
                 self.assertEqual(output.call_count, 8)
 

@@ -172,9 +172,7 @@ def make_parser() -> argparse.ArgumentParser:
         required=True,
         type=parse_format,
         metavar="FORMAT",
-        help=(
-            "output format: b/bin/binary, x/hex/hexadecimal, or u/unicode"
-        ),
+        help=("output format: b/bin/binary, x/hex/hexadecimal, or u/unicode"),
     )
 
     return parser
@@ -224,9 +222,7 @@ def input_to_bytes(data_format: DataFormat, value: str) -> bytes:
 
     if data_format == "binary":
         if not BINARY_BYTE_RE.fullmatch(value.strip()):
-            raise ValueError(
-                "binary input must use whitespace-separated 8-bit groups"
-            )
+            raise ValueError("binary input must use whitespace-separated 8-bit groups")
         return bytes(int(byte, 2) for byte in value.split())
 
     if not HEX_BYTE_RE.fullmatch(value.strip()):
