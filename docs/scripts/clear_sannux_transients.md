@@ -1,8 +1,8 @@
 # `clear_sannux_transients`
 
-`scripts/clear_sannux_transients` removes eligible disposable Sannux agent homes.
-It never stops consumers and refuses cleanup when matching processes or containers
-are active.
+`scripts/clear_sannux_transients` removes eligible disposable Sannux agent
+homes. It never stops consumers and refuses cleanup when matching processes or
+containers are active.
 
 A normal run is a preview:
 
@@ -10,8 +10,8 @@ A normal run is a preview:
 clear_sannux_transients
 ```
 
-Deletion requires both explicit flags after confirming all work and publication
-continuations are idle:
+Deletion requires both explicit flags after confirming that all work involving
+these homes and related publication activity is idle:
 
 ```sh
 clear_sannux_transients --apply --idle-confirmed
