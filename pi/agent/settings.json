@@ -3,7 +3,10 @@
   "defaultModel": "gpt-5.6-sol",
   "defaultThinkingLevel": "medium",
   "theme": "omtheme",
-  "enabledModels": ["gpt-*", "ollama/*"],
+  "enabledModels": [
+    "gpt-*",
+    "ollama/*"
+  ],
   "compaction": {
     "enabled": true
   },
@@ -27,21 +30,21 @@
   "hideThinkingBlock": false,
   "editorPaddingX": 1,
   "transport": "auto",
-  "tuiMode": "fullscreen",
-  "fullscreenScrollbar": "auto",
+  "tuiMode": "regular",
+  "fullscreenScrollbar": "hidden",
   "followUpMode": "one-at-a-time",
   "terminal": {
-    "showTerminalProgress": true,
+    "showTerminalProgress": false,
     "clearOnShrink": false,
     "images": "auto"
   },
-  "showHardwareCursor": true,
+  "showHardwareCursor": false,
   "images": {
     "autoResize": true,
     "blockImages": false
   },
   "defaultProjectTrust": "always",
-  "fullscreenExitOutput": "resume-hint",
+  "fullscreenExitOutput": "transcript",
   "modelThinkingLevels": {
     "openai-codex/gpt-6-astra": "medium",
     "openai-codex/gpt-5.6-sol": "medium"
@@ -49,6 +52,8 @@
   "autocompleteMaxVisible": 5,
   "treeFilterMode": "all",
   "doubleEscapeAction": "tree",
-  "collapseChangelog": true,
-  "httpIdleTimeoutMs": 300000
+  "collapseChangelog": false,
+  "httpIdleTimeoutMs": 300000,
+  "enableInstallTelemetry": true,
+  "fullscreenCopyOnSelect": false
 }
