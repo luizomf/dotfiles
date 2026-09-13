@@ -3,9 +3,7 @@
 These are my personal dotfiles. They install the exact environment I use every
 day, and they are intentionally opinionated.
 
-**README rule:** Keep this file limited to installation. Technical and
-maintenance documentation belongs in [`docs/`](docs/), organized by subject or
-script.
+See [`docs/`](docs/) for technical and maintenance documentation.
 
 I have tested clean installations on:
 
