@@ -1,6 +1,7 @@
 # Technical documentation
 
-The root README is only for installation. Maintainer and agent notes live here.
+The root README covers installation. This directory contains technical and
+maintenance guidance.
 
 ## Scripts
 
