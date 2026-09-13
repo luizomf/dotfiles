@@ -2,7 +2,7 @@
   "version": 1,
   "snippets": [
     {
-      "name": "Daily Paper Status (SSH)",
+      "name": "Daily Paper Status (SSH Watcher)",
       "body": "ssh -t fedoraair 'watch --color -n 1 python3 \"$PROJECTS_DIR\"/daily-paper/maintenance/daily-paper-status-prototype.py --color=always'",
       "description": "Watch the read-only Daily Paper dashboard on Fedora. Requires PROJECTS_DIR in the remote shell.",
       "execute": false
@@ -15,9 +15,9 @@
     },
     {
       "name": "Restart WireGuard All Hosts",
-      "body": "hosts=(m132 m4128 fedoraair); for h in \"${hosts[@]}\"; do; echo \"HOST DOWN: $h\"; ssh -t \"${h}\" 'zsh -lc \". ~/.zshrc ; sudo wg-quick down wg0 ;\"'; done; echo 'REBOOT'; ssh kvm8reboot; sleep 60; for h in \"${hosts[@]}\"; do echo \"HOST UP: $h\";  ssh -t \"${h}\" 'zsh -lc \". ~/.zshrc ; sudo wg-quick up wg0 ;\"'; done;",
+      "body": "run_all_hosts '. ~/.zshrc ; sudo wg-quick down wg0 || true' && ssh kvm8reboot && echo; for i in {59..0}; do echo \"Starting wg0 in ${i}s\"; sleep 1; done && run_all_hosts '. ~/.zshrc ; sudo wg-quick up wg0 || true'",
       "description": "Use ssh to restart WireGuard in all local hosts.",
-      "execute": true
+      "execute": false
     },
     {
       "name": "Pi Update",

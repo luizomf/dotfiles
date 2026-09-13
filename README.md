@@ -3,6 +3,9 @@
 These are my personal dotfiles. They install the exact environment I use every
 day, and they are intentionally opinionated.
 
+Since I use both Mac and Linux, most things here need to work on both (tested on
+Fedora and Ubuntu).
+
 See [`docs/`](docs/) for technical and maintenance documentation.
 
 I have tested clean installations on:
