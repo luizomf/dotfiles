@@ -4,17 +4,18 @@
 import fcntl
 import json
 import os
-from pathlib import Path
 import shlex
 import subprocess
 import sys
+from collections.abc import Iterator, Sequence
+from pathlib import Path
 
 TAG = "docker-route-pmtu:20260910:v1"
 TOOLS = ("/usr/sbin/iptables", "/usr/sbin/ip6tables")
 ENV = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL": "C"}
 
 
-def rules():
+def rules() -> Iterator[tuple[str, list[str]]]:
     for tool in TOOLS:
         for interface in ("docker0", "br-+"):
             for direction in ("-i", "-o"):
@@ -39,17 +40,17 @@ def rules():
                 )
 
 
-def command(tool, action, rule):
+def command(tool: str, action: str, rule: Sequence[str]) -> list[str]:
     return [tool, "-w", "5", "-t", "mangle", action, "FORWARD", *rule]
 
 
-def run(args, check=True):
+def run(args: Sequence[str], check: bool = True) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         args, check=check, text=True, capture_output=True, env=ENV, timeout=20
     )
 
 
-def preflight():
+def preflight() -> None:
     state = run(["/usr/bin/systemctl", "is-active", "firewalld"], check=False)
     if state.stdout.strip() != "inactive":
         raise RuntimeError(
@@ -60,20 +61,23 @@ def preflight():
             raise RuntimeError("Unexpected iptables backend")
 
 
-def check_scope():
+def check_scope() -> None:
     # Run explicitly before first application; boot application precedes Docker.
     docker = ["/usr/bin/docker", "--host", "unix:///var/run/docker.sock"]
     ids = run(
-        docker + ["network", "ls", "--filter", "driver=bridge", "-q"]
+        [*docker, "network", "ls", "--filter", "driver=bridge", "-q"]
     ).stdout.split()
     if not ids:
         raise RuntimeError("No local Docker bridge inventory; refuse application")
-    networks = json.loads(run(docker + ["network", "inspect", *ids]).stdout)
+    networks = json.loads(run([*docker, "network", "inspect", *ids]).stdout)
     owned = {
         n["Options"].get("com.docker.network.bridge.name") or "br-" + n["Id"][:12]
         for n in networks
     }
-    covered = lambda name: name == "docker0" or name.startswith("br-")
+
+    def covered(name: str) -> bool:
+        return name == "docker0" or name.startswith("br-")
+
     interfaces = {p.name for p in Path("/sys/class/net").iterdir()}
     if any(not covered(name) for name in owned) or any(
         covered(name) and name not in owned for name in interfaces
@@ -81,13 +85,13 @@ def check_scope():
         raise RuntimeError("Bridge naming scope changed/collides; require fresh review")
 
 
-def change(mode):
+def change(mode: str) -> None:
     # Serialize this helper only; every individual command also takes xtables' lock.
     with open("/run/docker-route-pmtu.lock", "a", encoding="utf-8") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if mode == "apply":
             preflight()
-        added = []
+        added: list[tuple[str, list[str]]] = []
         try:
             for tool, rule in rules():
                 result = run(command(tool, "-C", rule), check=False)
@@ -122,7 +126,7 @@ def change(mode):
             raise
 
 
-def main():
+def main() -> None:
     mode = sys.argv[1] if len(sys.argv) == 2 else ""
     if mode in ("plan-apply", "plan-remove"):
         for tool, rule in rules():

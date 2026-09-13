@@ -4,17 +4,18 @@
 import argparse
 import json
 import os
-from pathlib import Path
 import re
 import shutil
 import stat
 import subprocess
+from collections.abc import Callable
+from pathlib import Path
 
 NAMESPACE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]*\.ephemeral-runs")
 RUN = re.compile(r"run\.[A-Za-z0-9]{6}")
 
 
-def directory(path):
+def directory(path: Path) -> tuple[int, int]:
     info = path.lstat()
     if (
         not stat.S_ISDIR(info.st_mode)
@@ -27,7 +28,7 @@ def directory(path):
     return info.st_dev, info.st_ino
 
 
-def plan(home):
+def plan(home: Path) -> tuple[Path, list[Path], list[Path]]:
     home = Path(home)
     directory(home)
     root = home / "sannux-data" / "agent-homes"
@@ -35,7 +36,8 @@ def plan(home):
         return root, [], []
     directory(root.parent)
     directory(root)
-    candidates, preserved = [], []
+    candidates: list[Path] = []
+    preserved: list[Path] = []
     for namespace in sorted(root.iterdir()):
         if NAMESPACE.fullmatch(namespace.name):
             directory(namespace)
@@ -53,11 +55,11 @@ def plan(home):
     return root, candidates, preserved
 
 
-def command(*argv):
+def command(*argv: str) -> str:
     return subprocess.check_output(argv, text=True, timeout=15)
 
 
-def assert_idle(root):
+def assert_idle(root: Path) -> None:
     # Do not signal Pi, Omnews, Docker, or user processes. Refuse ambiguity.
     processes = command("ps", "-axo", "pid=,command=")
     for line in processes.splitlines():
@@ -94,7 +96,7 @@ def assert_idle(root):
                 )
 
 
-def validate_tree(path):
+def validate_tree(path: Path) -> None:
     # Never cross a mounted filesystem or follow a link inside a disposable tree.
     if path.is_symlink() or not path.is_dir():
         return
@@ -107,13 +109,17 @@ def validate_tree(path):
                 raise RuntimeError(f"Refusing mounted directory: {child}")
 
 
-def clean(home, apply=False, idle_check=assert_idle):
+def clean(
+    home: Path,
+    apply: bool = False,
+    idle_check: Callable[[Path], None] = assert_idle,
+) -> tuple[list[Path], list[Path]]:
     root, entries, preserved = plan(home)
     if not entries:
         return entries, preserved
     idle_check(root)
-    identities = {}
-    parents = {}
+    identities: dict[Path, tuple[int, int, int]] = {}
+    parents: dict[Path, tuple[int, int]] = {}
     for entry in entries:
         parents[entry.parent] = directory(entry.parent)
         s = entry.lstat()
@@ -141,7 +147,7 @@ def clean(home, apply=False, idle_check=assert_idle):
     return entries, preserved
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true")
     parser.add_argument(

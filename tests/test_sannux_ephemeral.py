@@ -183,7 +183,7 @@ class SannuxEphemeralTests(unittest.TestCase):
 
         invocations = self.docker_invocations()
         self.assertEqual(len(invocations), 2)
-        commands_by_package = {}
+        commands_by_package: dict[str, list[str]] = {}
         for invocation in invocations:
             prefix_index = invocation.index("--prefix")
             package_path = invocation[prefix_index + 1]

@@ -1,29 +1,41 @@
 """Control-flow tests only: no real firewall, files in /run, or subprocesses."""
 
+import importlib.machinery
 import importlib.util
-from pathlib import Path
 import subprocess
 import unittest
+from pathlib import Path
+from typing import Optional
 from unittest.mock import mock_open, patch
 
-spec = importlib.util.spec_from_file_location(
-    "candidate",
-    Path(__file__).resolve().parents[1] / "scripts" / "docker-route-pmtu.py",
+candidate_path = (
+    Path(__file__).resolve().parents[1] / "scripts" / "docker-route-pmtu.py"
 )
+loader = importlib.machinery.SourceFileLoader("candidate", str(candidate_path))
+spec = importlib.util.spec_from_loader(loader.name, loader)
+assert spec is not None
 m = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(m)
+loader.exec_module(m)
 
 
 class Fake:
-    def __init__(self, fail_insert=None, timeout_insert=None, timeout_delete=None):
-        self.state = set()
+    def __init__(
+        self,
+        fail_insert: Optional[int] = None,
+        timeout_insert: Optional[int] = None,
+        timeout_delete: Optional[int] = None,
+    ) -> None:
+        self.state: set[tuple[str, tuple[str, ...]]] = set()
         self.inserts = 0
         self.deletes = 0
         self.fail_insert = fail_insert
         self.timeout_insert = timeout_insert
         self.timeout_delete = timeout_delete
 
-    def run(self, args, check=True):
+    def run(
+        self, args: list[str], check: bool = True
+    ) -> subprocess.CompletedProcess[str]:
+        _ = check
         action = args[5]
         rule = tuple(args[8:] if action == "-I" else args[7:])
         key = (args[0], rule)
@@ -48,7 +60,7 @@ class Fake:
 
 
 class CandidateTests(unittest.TestCase):
-    def execute(self, fake, mode):
+    def execute(self, fake: Fake, mode: str) -> None:
         with (
             patch.object(m, "run", fake.run),
             patch.object(m, "preflight"),
