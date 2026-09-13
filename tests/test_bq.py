@@ -194,9 +194,7 @@ class BqCliTests(unittest.TestCase):
         with socket.socket(socket.AF_UNIX) as bus:
             bus.bind(str(bus_path))
             module = runpy.run_path(str(BQ))
-            environment = module["linux_session_environment"](
-                runtime_path, os.getuid()
-            )
+            environment = module["linux_session_environment"](runtime_path, os.getuid())
 
         self.assertEqual(
             environment,
@@ -338,9 +336,8 @@ class BqCliTests(unittest.TestCase):
 
         deadline = time.monotonic() + 5
         while (
-            (not first_output.exists() or not second_output.exists())
-            and time.monotonic() < deadline
-        ):
+            not first_output.exists() or not second_output.exists()
+        ) and time.monotonic() < deadline:
             time.sleep(0.01)
         self.assertEqual(
             json.loads(first_output.read_text(encoding="utf-8")),
