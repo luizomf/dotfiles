@@ -2,11 +2,9 @@
 
 set -euo pipefail
 
-MODEL="${MODEL:?Variable MODEL not found}"
-MODEL_REASONING="${LOCAL_MODEL_REASONING:?Variable LOCAL_MODEL_REASONING not found}"
-
 verbose=false
-declare -a pi_args=()
+declare -a pi_args
+pi_arg_count=0
 while (($#)); do
   case "$1" in
     -v|--verbose)
@@ -14,41 +12,232 @@ while (($#)); do
       ;;
     --)
       pi_args+=("$@")
+      pi_arg_count=$((pi_arg_count + $#))
       break
       ;;
     *)
       pi_args+=("$1")
+      pi_arg_count=$((pi_arg_count + 1))
       ;;
   esac
   shift
 done
 
+if ! command -v git >/dev/null 2>&1; then
+  printf 'Required command not found: git\n' >&2
+  exit 127
+fi
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+if git diff --cached --quiet; then
+  printf 'No staged changes. Stage the files to commit first.\n' >&2
+  exit 1
+else
+  git_status=$?
+  if ((git_status > 1)); then
+    exit "$git_status"
+  fi
+fi
+
+staged_files_file="$(mktemp "${TMPDIR:-/tmp}/commit-staged.XXXXXX")"
+cleanup() {
+  status=$?
+  rm -f "$staged_files_file"
+  trap - EXIT
+  exit "$status"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+git diff --cached --name-only -z >"$staged_files_file"
+while IFS= read -r -d '' staged_file; do
+  if git diff --quiet -- "$staged_file"; then
+    continue
+  else
+    git_status=$?
+    if ((git_status > 1)); then
+      exit "$git_status"
+    fi
+  fi
+
+  printf 'Refusing staged file with additional unstaged edits: %s\n' \
+    "$staged_file" >&2
+  printf 'Resolve its staging first, then run commit again.\n' >&2
+  exit 1
+done <"$staged_files_file"
+
+git diff --cached --check
+
+MODEL="${MODEL:?Variable MODEL not found}"
+MODEL_REASONING="${LOCAL_MODEL_REASONING:?Variable LOCAL_MODEL_REASONING not found}"
+
+require_command() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    printf 'Required command not found: %s\n' "$1" >&2
+    exit 127
+  fi
+}
+
+require_command title
+require_command sannux_ephemeral
+if [[ "$verbose" == true ]]; then
+  require_command pi_parse_json
+fi
+
+ruff_configured=false
+pyright_configured=false
+prettier_configured=false
+eslint_configured=false
+[[ -f ruff.toml || -f .ruff.toml ]] && ruff_configured=true
+[[ -f pyrightconfig.json ]] && pyright_configured=true
+if [[ -f pyproject.toml ]]; then
+  grep -q '^\[tool\.ruff' pyproject.toml && ruff_configured=true
+  grep -q '^\[tool\.pyright' pyproject.toml && pyright_configured=true
+fi
+if [[ -f .prettierrc || -f .prettierrc.json || -f .prettierrc.yaml || \
+  -f .prettierrc.yml || -f prettier.config.js || -f prettier.config.cjs || \
+  -f prettier.config.mjs ]]; then
+  prettier_configured=true
+fi
+if [[ -f eslint.config.js || -f eslint.config.mjs || -f eslint.config.cjs || \
+  -f .eslintrc || -f .eslintrc.js || -f .eslintrc.json || \
+  -f .eslintrc.yaml || -f .eslintrc.yml ]]; then
+  eslint_configured=true
+fi
+
+python_change=false
+prettier_file=false
+eslint_file=false
+ts_change=false
+while IFS= read -r -d '' staged_file; do
+  case "$staged_file" in
+    pyproject.toml|pyrightconfig.json|ruff.toml|.ruff.toml)
+      python_change=true
+      ;;
+    tsconfig.json|tsconfig.*.json)
+      ts_change=true
+      ;;
+  esac
+  case "$staged_file" in
+    *.py)
+      python_change=true
+      ;;
+    *.ts|*.tsx)
+      ts_change=true
+      ;;
+  esac
+
+  [[ -f "$staged_file" ]] || continue
+  first_line="$(head -n 1 "./$staged_file")"
+  shellcheck_directive="$(grep -m 1 -E '^#[[:space:]]*shellcheck[[:space:]]+shell=' \
+    "./$staged_file" || true)"
+
+  is_zsh=false
+  case "$staged_file" in
+    *.zsh|.zshrc|.zprofile|.zshenv|.zlogin|.zlogout)
+      is_zsh=true
+      ;;
+  esac
+  [[ "$first_line" == '#!'*zsh* || "$shellcheck_directive" == *shell=zsh* ]] \
+    && is_zsh=true
+
+  if [[ "$is_zsh" == true ]]; then
+    require_command zsh
+    zsh -n "./$staged_file"
+  elif [[ "$first_line" == '#!'*bash* || "$shellcheck_directive" == *shell=bash* ]]; then
+    /bin/bash -n "./$staged_file"
+    require_command shellcheck
+    shellcheck -- "$staged_file"
+  elif [[ "$first_line" == '#!'*ksh* || "$shellcheck_directive" == *shell=ksh* ]]; then
+    require_command ksh
+    ksh -n "./$staged_file"
+    require_command shellcheck
+    shellcheck -- "$staged_file"
+  elif [[ "$staged_file" == *.sh || "$first_line" == '#!'*sh || \
+    "$first_line" == '#!'*dash* || "$shellcheck_directive" == *shell=sh* || \
+    "$shellcheck_directive" == *shell=dash* ]]; then
+    /bin/sh -n "./$staged_file"
+    require_command shellcheck
+    shellcheck -- "$staged_file"
+  fi
+
+  if [[ "$staged_file" == *.py || "$first_line" == '#!'*python* ]]; then
+    python_change=true
+    if [[ "$ruff_configured" == true ]]; then
+      require_command uv
+      uv run --locked --no-sync ruff check --no-fix -- "$staged_file"
+      uv run --locked --no-sync ruff format --check -- "$staged_file"
+    fi
+  fi
+
+  case "$staged_file" in
+    *.md|*.mdx|*.json|*.jsonc|*.yaml|*.yml|*.html|*.css|*.scss|*.js|*.jsx|*.ts|*.tsx|*.vue|*.astro)
+      prettier_file=true
+      if [[ "$prettier_configured" == true ]]; then
+        require_command prettier
+        prettier --check -- "$staged_file"
+      fi
+      ;;
+  esac
+  case "$staged_file" in
+    *.js|*.jsx|*.ts|*.tsx)
+      eslint_file=true
+      if [[ "$eslint_configured" == true ]]; then
+        if [[ ! -x node_modules/.bin/eslint ]]; then
+          printf 'Required local project tool not found: node_modules/.bin/eslint\n' >&2
+          exit 127
+        fi
+        node_modules/.bin/eslint -- "$staged_file"
+      fi
+      ;;
+  esac
+done <"$staged_files_file"
+
+if [[ "$python_change" == true && "$ruff_configured" != true ]]; then
+  printf 'Ruff: no configured check.\n'
+fi
+if [[ "$python_change" == true ]]; then
+  if [[ "$pyright_configured" == true ]]; then
+    require_command uv
+    uv run --locked --no-sync pyright
+  else
+    printf 'Pyright: no configured check.\n'
+  fi
+fi
+[[ "$prettier_file" != true || "$prettier_configured" == true ]] || \
+  printf 'Prettier: no configured check.\n'
+[[ "$eslint_file" != true || "$eslint_configured" == true ]] || \
+  printf 'ESLint: no configured check.\n'
+if [[ "$ts_change" == true ]]; then
+  if [[ -f tsconfig.json ]]; then
+    if [[ ! -x node_modules/.bin/tsc ]]; then
+      printf 'Required local project tool not found: node_modules/.bin/tsc\n' >&2
+      exit 127
+    fi
+    node_modules/.bin/tsc --noEmit -p tsconfig.json
+  else
+    printf 'TypeScript: no configured check.\n'
+  fi
+fi
+
 PROMPT="$(cat <<-EOF
-Check the modified files in the current directory using Git.
+Read only the staged Git diff in the current repository.
 
-Create organized and well-documented commit messages following the
-*Conventional Commits* standard—including scopes such as feat, fix,
-chore, refactor, ci, test, among others—and commit the files with
-clear, concise messages.
-DO NOT ANALYZE OTHER FILES OR COMMITS, ONLY THE MODIFIED ONES; YOUR TASK IS TO
-PROVIDE A CONCISE MESSAGE FOR THESE MODIFIED FILES.
+Create an organized, clear, and concise English commit message following the
+Conventional Commits standard, then commit exactly that staged diff. Use a
+message body when useful.
 
-Use the message body for longer text if necessary.
-The language must be English.
+Do not inspect unrelated files or commits. Do not fix, check, edit, stage,
+unstage, restore, or delete anything. The selected staged content has already
+passed its configured mechanical checks; your only tasks are writing its commit
+message and committing it.
 
-Do not alter, edit, or delete files. Your only task is to document what was
-done and commit the changes.
-
-Be careful when including bash or zsh commands in the messages, as the string
-might be interpreted as a command with bash/zsh expansion.
-
----
-
-Previous commits:
-
-$(git log -n 2 --format='%B' 2>/dev/null || true)
-
----
+Be careful when including bash or zsh commands in the message because the text
+might be interpreted as a command with shell expansion.
 EOF
 )"
 
@@ -66,11 +255,17 @@ declare -a pi_cmd=(
 )
 
 if [[ "$verbose" == true ]]; then
-  printf '%s\n' "$PROMPT" \
-    | "${pi_cmd[@]}" --mode json "${pi_args[@]}" \
-    | pi_parse_json
-else
+  if ((pi_arg_count)); then
+    printf '%s\n' "$PROMPT" \
+      | "${pi_cmd[@]}" --mode json "${pi_args[@]}" \
+      | pi_parse_json
+  else
+    printf '%s\n' "$PROMPT" | "${pi_cmd[@]}" --mode json | pi_parse_json
+  fi
+elif ((pi_arg_count)); then
   printf '%s\n' "$PROMPT" | "${pi_cmd[@]}" "${pi_args[@]}"
+else
+  printf '%s\n' "$PROMPT" | "${pi_cmd[@]}"
 fi
 
 title "Commit done: ${MODEL} ${MODEL_REASONING}"

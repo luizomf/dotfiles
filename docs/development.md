@@ -21,6 +21,9 @@ queue jobs, or host-maintenance commands.
 
 ## Focused checks
 
+The [`commit` staged-check gate](scripts/commit.md) documents the read-only
+mechanical checks run before its local model is called.
+
 Run checks only on files being changed:
 
 ```sh
