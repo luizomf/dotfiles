@@ -68,16 +68,19 @@ class PullAllTests(unittest.TestCase):
         prline.chmod(0o755)
         self.repository(self.home / "dotfiles")
 
-    def repository(self, path):
+    def repository(self, path: Path) -> Path:
+        git = self.git
+        if git is None:
+            self.fail("Git executable is unavailable")
         subprocess.run(
-            [str(self.git), "init", "-q", str(path)],
+            [git, "init", "-q", str(path)],
             env=self.env,
             check=True,
             capture_output=True,
         )
         return path
 
-    def run_pullall(self, **env):
+    def run_pullall(self, **env: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             ["/bin/bash", str(ROOT / "scripts/pullall")],
             cwd=self.home,
@@ -85,6 +88,7 @@ class PullAllTests(unittest.TestCase):
             capture_output=True,
             text=True,
             timeout=15,
+            check=False,
         )
 
     def test_mixed_outcomes_are_reported_without_stopping_other_repositories(self):
@@ -156,6 +160,7 @@ class PullAllTests(unittest.TestCase):
                 capture_output=True,
                 text=True,
                 timeout=5,
+                check=False,
             )
             self.assertIn(process.returncode, [0, 1], process.stderr)
             # An orphan zombie may briefly await OS reaping; it cannot run.
