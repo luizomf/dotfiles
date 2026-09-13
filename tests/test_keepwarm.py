@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 import uuid
+from contextlib import suppress
 from pathlib import Path
 
 REPOSITORY = Path(__file__).resolve().parents[1]
@@ -78,10 +79,8 @@ class KeepwarmTests(unittest.TestCase):
                 for process in (current, previous):
                     if process is None:
                         continue
-                    try:
+                    with suppress(ProcessLookupError):
                         os.killpg(process.pid, signal.SIGKILL)
-                    except ProcessLookupError:
-                        pass
                     process.wait(timeout=5)
                 if previous.stdin:
                     previous.stdin.close()

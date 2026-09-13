@@ -6,7 +6,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Optional
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 
@@ -25,6 +27,10 @@ class SyncHostsTests(unittest.TestCase):
         for name in ["synchosts", "run_all_hosts", "zsh_history_sync.py"]:
             shutil.copy2(REPOSITORY / "scripts" / name, scripts / name)
         self.script = scripts / "synchosts"
+        real_rsync = shutil.which("rsync")
+        if real_rsync is None:
+            self.skipTest("rsync is required")
+        self.real_rsync = real_rsync
         # Keep fixtures independent of the operator's editable default fleet.
         runner = scripts / "run_all_hosts"
         runner_text, replacements = re.subn(
@@ -133,7 +139,9 @@ class SyncHostsTests(unittest.TestCase):
         )
         cli.chmod(0o755)
 
-    def run_sync(self, *args, extra_env=None):
+    def run_sync(
+        self, *args: str, extra_env: Optional[Mapping[str, str]] = None
+    ) -> subprocess.CompletedProcess[str]:
         env = {
             **os.environ,
             "HOME": str(self.home),
@@ -144,7 +152,7 @@ class SyncHostsTests(unittest.TestCase):
             "FIXTURE_ROOT": str(self.root),
             "COMMAND_LOG": str(self.log),
             "PROJECTS_DIR": "",
-            "REAL_RSYNC": shutil.which("rsync"),
+            "REAL_RSYNC": self.real_rsync,
             **(extra_env or {}),
         }
         return subprocess.run(
@@ -154,9 +162,10 @@ class SyncHostsTests(unittest.TestCase):
             capture_output=True,
             text=True,
             timeout=40,
+            check=False,
         )
 
-    def commands(self):
+    def commands(self) -> list[list[str]]:
         return (
             [json.loads(line) for line in self.log.read_text().splitlines()]
             if self.log.exists()

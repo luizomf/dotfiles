@@ -1,14 +1,17 @@
 """Exercise the sourced public lock functions against a disposable local repo."""
 
 import os
-from pathlib import Path
 import platform
 import select
 import signal
 import subprocess
-import time
 import tempfile
+import time
 import unittest
+from collections.abc import Mapping
+from contextlib import suppress
+from pathlib import Path
+from typing import Optional
 
 HELPER = Path(__file__).resolve().parents[1] / "scripts/site_git_automation_lock"
 
@@ -24,7 +27,9 @@ class SiteGitLockTest(unittest.TestCase):
         }
         self.env["SITE_GIT_LOCK_TIMEOUT_SECONDS"] = "0"
 
-    def execute(self, body, overrides=None):
+    def execute(
+        self, body: str, overrides: Optional[Mapping[str, str]] = None
+    ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [
                 "/bin/bash",
@@ -34,13 +39,18 @@ class SiteGitLockTest(unittest.TestCase):
                 str(HELPER),
                 str(self.repo),
             ],
-            env=self.env | (overrides or {}),
+            env=self.env | dict(overrides or {}),
             capture_output=True,
             text=True,
             timeout=10,
+            check=False,
         )
 
-    def holder(self, body='printf "READY\\n"; IFS= read -r finish', timeout="0"):
+    def holder(
+        self,
+        body: str = 'printf "READY\\n"; IFS= read -r finish',
+        timeout: str = "0",
+    ) -> subprocess.Popen[str]:
         process = subprocess.Popen(
             [
                 "/bin/bash",
@@ -62,23 +72,22 @@ class SiteGitLockTest(unittest.TestCase):
         return process
 
     @staticmethod
-    def stop(process):
+    def stop(process: subprocess.Popen[str]) -> None:
         # Only the process group created for this individual test is signaled.
-        try:
+        with suppress(ProcessLookupError):
             os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
         process.communicate(timeout=5)
 
-    def ready(self, process):
-        self.assertTrue(
-            select.select([process.stdout], [], [], 5)[0], "No readiness message"
-        )
-        line = process.stdout.readline().strip()
+    def ready(self, process: subprocess.Popen[str]) -> str:
+        stdout = process.stdout
+        if stdout is None:
+            self.fail("Holder stdout pipe is unavailable")
+        self.assertTrue(select.select([stdout], [], [], 5)[0], "No readiness message")
+        line = stdout.readline().strip()
         self.assertTrue(line.startswith("READY"), line)
         return line
 
-    def release(self, process):
+    def release(self, process: subprocess.Popen[str]) -> None:
         output, error = process.communicate("release\n", timeout=5)
         self.assertEqual(process.returncode, 0, output + error)
 
@@ -151,7 +160,10 @@ class SiteGitLockTest(unittest.TestCase):
         path = self.repo / ".git/om-site-automation.flock"
         inode = path.stat().st_ino
         waiter = self.holder(timeout="4")
-        self.assertFalse(select.select([waiter.stdout], [], [], 0.2)[0])
+        stdout = waiter.stdout
+        if stdout is None:
+            self.fail("Waiter stdout pipe is unavailable")
+        self.assertFalse(select.select([stdout], [], [], 0.2)[0])
         self.release(owner)
         self.ready(waiter)
         self.assertEqual(path.stat().st_ino, inode)

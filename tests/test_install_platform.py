@@ -1,19 +1,19 @@
 """Test installer policy without executing install.sh or package managers."""
 
-from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULE = ROOT / "scripts/lib/install-platform.sh"
 
 
 class InstallPlatformTests(unittest.TestCase):
-    def shell(self, script, *args):
+    def shell(self, script: str, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [
-                "bash",
+                "/bin/bash",
                 "-c",
                 'source "$1" || exit; ' + script,
                 "test",
@@ -23,9 +23,10 @@ class InstallPlatformTests(unittest.TestCase):
             text=True,
             capture_output=True,
             timeout=5,
+            check=False,
         )
 
-    def run_error_policy(self, body):
+    def run_error_policy(self, body: str) -> subprocess.CompletedProcess[str]:
         # Exercise the actual prologue without running the destructive installer.
         lines = (ROOT / "install.sh").read_text().splitlines()
         options = next(line for line in lines if line.startswith("set -"))
@@ -39,7 +40,11 @@ class InstallPlatformTests(unittest.TestCase):
         )
         # macOS /bin/bash 3.2 differs from newer Bash for ERR in a guarded $(...).
         return subprocess.run(
-            ["/bin/bash", "-c", script], text=True, capture_output=True, timeout=5
+            ["/bin/bash", "-c", script],
+            text=True,
+            capture_output=True,
+            timeout=5,
+            check=False,
         )
 
     def test_expected_subshell_probe_does_not_report_installation_failure(self):
