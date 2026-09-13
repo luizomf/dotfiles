@@ -14,11 +14,11 @@ import sys
 import tempfile
 import time
 import uuid
-from collections.abc import Iterator, Mapping
+from collections.abc import Generator, Mapping
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import NoReturn
+from typing import NoReturn, TextIO, TypedDict, TypeGuard
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 CONFIG_PATH = Path.home() / ".config" / "bq" / "config.json"
@@ -32,6 +32,13 @@ FORWARDED_OLLAMA_ENVIRONMENT = (
     "OLLAMA_LOAD_TIMEOUT",
     "OLLAMA_KEEP_ALIVE",
 )
+
+
+class Config(TypedDict):
+    definitionId: str
+    concurrencyDefinitions: dict[str, str]
+
+
 LOCAL_BACKGROUND_ENVIRONMENT_KEYS = (
     "HOME",
     "LANG",
@@ -54,7 +61,11 @@ def fail(message: str, status: int = 1) -> NoReturn:
     raise SystemExit(status)
 
 
-def usage(stream=sys.stdout) -> None:
+def is_object_dict(value: object) -> TypeGuard[dict[object, object]]:
+    return isinstance(value, dict)
+
+
+def usage(stream: TextIO = sys.stdout) -> None:
     print(
         """Usage:
   bq --setup
@@ -145,9 +156,7 @@ def run_omqueue(
     )
 
 
-def linux_session_environment(
-    runtime_path: Path, user_id: int
-) -> dict[str, str]:
+def linux_session_environment(runtime_path: Path, user_id: int) -> dict[str, str]:
     try:
         runtime_metadata = runtime_path.lstat()
     except OSError:
@@ -190,29 +199,36 @@ def queue_configuration_present() -> bool:
     return True
 
 
-def load_config() -> dict[str, object]:
+def load_config() -> Config:
     try:
-        config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+        config_value: object = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError, TypeError):
         fail(f"not configured; run 'bq --setup' (expected {CONFIG_PATH})")
 
-    if not isinstance(config, dict):
+    if not is_object_dict(config_value):
         fail(f"invalid configuration in {CONFIG_PATH}")
 
-    definition_id = config.get("definitionId")
+    definition_id = config_value.get("definitionId")
     if not isinstance(definition_id, str) or not definition_id:
         fail(f"invalid Definition identity in {CONFIG_PATH}")
 
-    concurrency_definitions = config.get("concurrencyDefinitions", {})
-    if not isinstance(concurrency_definitions, dict) or not all(
-        isinstance(key, str) and key and isinstance(value, str) and value
-        for key, value in concurrency_definitions.items()
-    ):
+    concurrency_value = config_value.get("concurrencyDefinitions", {})
+    if not is_object_dict(concurrency_value):
         fail(f"invalid concurrency Definition mapping in {CONFIG_PATH}")
+    concurrency_definitions: dict[str, str] = {}
+    for key, value in concurrency_value.items():
+        if (
+            not isinstance(key, str)
+            or not key
+            or not isinstance(value, str)
+            or not value
+        ):
+            fail(f"invalid concurrency Definition mapping in {CONFIG_PATH}")
+        concurrency_definitions[key] = value
 
     return {
         "definitionId": definition_id,
-        "concurrencyDefinitions": dict(concurrency_definitions),
+        "concurrencyDefinitions": concurrency_definitions,
     }
 
 
@@ -220,7 +236,7 @@ def load_definition_id() -> str:
     return str(load_config()["definitionId"])
 
 
-def save_config(config: dict[str, object]) -> None:
+def save_config(config: Config) -> None:
     CONFIG_PATH.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     temporary = CONFIG_PATH.with_suffix(f".{os.getpid()}.tmp")
     temporary.write_text(
@@ -232,7 +248,7 @@ def save_config(config: dict[str, object]) -> None:
 
 
 @contextmanager
-def config_lock() -> Iterator[None]:
+def config_lock() -> Generator[None, None, None]:
     CONFIG_PATH.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     descriptor = os.open(CONFIG_LOCK_PATH, os.O_CREAT | os.O_RDWR, 0o600)
     try:
@@ -352,22 +368,18 @@ def enable_definition(definition_id: str) -> None:
 
 def setup() -> None:
     with config_lock():
-        config = (
-            load_config()
-            if queue_configuration_present()
-            else {"concurrencyDefinitions": {}}
-        )
-        existing_definition_id = config.get("definitionId")
-        definition_id = apply_definition(
-            existing_definition_id if isinstance(existing_definition_id, str) else None
-        )
-        concurrency_definitions = config["concurrencyDefinitions"]
-        if not isinstance(concurrency_definitions, dict):
-            fail(f"invalid concurrency Definition mapping in {CONFIG_PATH}")
+        if queue_configuration_present():
+            config = load_config()
+            existing_definition_id: str | None = config["definitionId"]
+            concurrency_definitions = config["concurrencyDefinitions"]
+        else:
+            existing_definition_id = None
+            concurrency_definitions = {}
+
+        definition_id = apply_definition(existing_definition_id)
         reconciled_definitions = {
             key: apply_definition(value, key)
             for key, value in sorted(concurrency_definitions.items())
-            if isinstance(key, str) and isinstance(value, str)
         }
         save_config(
             {
@@ -390,10 +402,8 @@ def definition_for_concurrency_key(
     with config_lock():
         config = load_config()
         concurrency_definitions = config["concurrencyDefinitions"]
-        if not isinstance(concurrency_definitions, dict):
-            fail(f"invalid concurrency Definition mapping in {CONFIG_PATH}")
         existing = concurrency_definitions.get(concurrency_key)
-        if isinstance(existing, str):
+        if existing is not None:
             return existing
 
         definition_id = apply_definition(None, concurrency_key)
@@ -812,7 +822,9 @@ def submit_local_background(
     ]
 
     with tempfile.TemporaryFile(mode="w+", encoding="utf-8") as trigger_file:
-        json.dump(trigger_input, trigger_file, ensure_ascii=False, separators=(",", ":"))
+        json.dump(
+            trigger_input, trigger_file, ensure_ascii=False, separators=(",", ":")
+        )
         trigger_file.write("\n")
         trigger_file.flush()
         trigger_file.seek(0)
