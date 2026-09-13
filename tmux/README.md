@@ -51,6 +51,9 @@ tmux-lazy stop --yes
 tmux-lazy start
 ```
 
+- **Prefix c:** opens a new window in the active pane's working directory.
+- **Prefix % / Prefix ":** splits side by side / top and bottom in the active
+  pane's working directory.
 - **Prefix Ctrl-s:** saves the structure and confirms with a tmux message.
 - **Prefix Ctrl-l / the existing mouse picker:** opens the same fzf/MRU window
   picker. Pending windows show `Z` in the activity-marker position; this does
