@@ -2,10 +2,10 @@
 
 Python feedback tools are declared in `pyproject.toml` and locked in `uv.lock`.
 This environment is for maintaining the dotfiles; installed scripts must keep
-their own runtime interpreter contracts. The owner prefers Bash for new
-operational scripts, without hidden Zsh or interactive-shell dependencies.
-Preserve existing POSIX shell scripts and Bash 3.2 compatibility where their
-current contracts require it.
+their own runtime interpreter contracts. Use Bash for new operational scripts
+without hidden Zsh or interactive-shell dependencies. Preserve existing POSIX
+shell scripts and Bash 3.2 compatibility where their current contracts require
+it.
 
 The installer syncs the checkout's ignored `.venv` from the lockfile. Set
 `OM_INSTALL_SKIP_TOOLCHAINS=1` to skip that step. For an existing checkout, use
@@ -17,7 +17,7 @@ uv sync --locked
 
 This is a dedicated environment, so sync may remove undeclared packages. Do not
 put `.venv` on the global PATH or use it from installed scripts, tmux hooks,
-Queue payloads, or host maintenance.
+queue jobs, or host-maintenance commands.
 
 ## Focused checks
 
@@ -37,24 +37,24 @@ uv run --locked ruff format --check
 uv run --locked pyright
 ```
 
-Ruff follows the owner's loudterm policy: `ALL` except docstrings (`D`), `print`
-calls (`T201`), and `COM812`, which conflicts with the Ruff formatter. Tests also
-ignore `ANN201` and `S101` and retain their unittest style by ignoring `PT009` and
-`PT027`. Pyright uses `strict` mode without requiring third-party type stubs.
-Dotfiles-specific file discovery and Python runtime-version overrides remain
-independent of loudterm.
+Ruff selects `ALL` except docstrings (`D`), `print` calls (`T201`), and
+`COM812`, which conflicts with the Ruff formatter. Tests also ignore `ANN201`
+and `S101` and retain their unittest style by ignoring `PT009` and `PT027`.
+Pyright uses `strict` mode without requiring third-party type stubs.
+Extensionless command discovery and Python-version overrides are configured
+separately from lint rule selection.
 
-Ruff and Pyright are diagnostics, not substitutes for behavior tests. Existing
-code has known diagnostics and formatting differences; compare affected files
-before and after a change instead of hiding warnings with casts or broad
-ignores. Plain Ruff checks do not apply fixes (`fix = false`,
-`unsafe-fixes = false`). Neovim's explicit `ruff_fix` save step can still apply
-safe fixes, so review the diff after saving Python files under the expanded
-rules. Do not bulk-fix legacy code merely to make the stricter report green.
+Ruff and Pyright provide diagnostics, not behavior tests. Existing code may have
+diagnostics or formatting differences; review affected files before and after
+changes and avoid hiding warnings with casts or broad ignores. Plain Ruff checks
+do not apply fixes (`fix = false`, `unsafe-fixes = false`). Neovim's explicit
+`ruff_fix` save step can still apply safe fixes, so review the diff after saving
+Python files under the expanded rules. Avoid unrelated bulk fixes when updating
+legacy code.
 
 Extensionless Python commands are listed in `pyproject.toml`. Update both tool
-lists when adding one. Python-version overrides should follow known runtime
-requirements rather than the developer's current shell.
+lists when adding one. Set Python-version overrides from the command's runtime
+requirements, not from the development shell.
 
 ## Formatting
 
