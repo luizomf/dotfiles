@@ -97,8 +97,8 @@ else
   failures=$((failures + 1))
 fi
 
-check_model 'Antigravity ephemeral home / Gemini 3.7 Flash (High)' \
-  sannux_agy_stdin --model 'Gemini 3.7 Flash (High)' --dangerously-skip-permissions
+check_model 'Antigravity ephemeral home / Gemini 3.8 Flash (High)' \
+  sannux_agy_stdin --model 'Gemini 3.8 Flash (High)' --dangerously-skip-permissions
 
 if [[ "$refresh_ok" == true ]]; then
   daily_runner="$PROJECTS_DIR/daily-paper/runners/run-pi-ephemeral.sh"
