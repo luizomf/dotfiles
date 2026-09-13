@@ -99,7 +99,11 @@ if ! repositories_file=$(mktemp "${TMPDIR:-/tmp}/pullall.XXXXXX"); then
   exit 1
 fi
 if [[ -d "${PROJECTS_DIR:-}" ]]; then
-  if find "${PROJECTS_DIR}/" -maxdepth 1 -mindepth 1 -type d -print0 > "$repositories_file"; then
+  # Search one extra level in organizational directories, never inside a checkout.
+  # Match the .git directory/file/symlink check used by pull_repository.
+  if find "${PROJECTS_DIR}/" -maxdepth 2 -mindepth 1 -type d -print0 \
+    \( -exec test -e '{}/.git' \; -o -exec test -L '{}/.git' \; \) -prune \
+    > "$repositories_file"; then
     while IFS= read -r -d '' repository; do
       pull_repository "$repository"
     done < "$repositories_file"

@@ -18,7 +18,7 @@ class PullAllTests(unittest.TestCase):
         self.projects.mkdir()
         self.bin = self.home / "bin"
         self.bin.mkdir()
-        for name in ["mktemp", "find", "rm"]:
+        for name in ["mktemp", "find", "rm", "test"]:
             executable = shutil.which(name)
             self.assertIsNotNone(executable)
             (self.bin / name).symlink_to(str(executable))
@@ -108,6 +108,22 @@ class PullAllTests(unittest.TestCase):
             {"dotfiles", "failed", "updated"},
         )
         self.assertEqual((dirty / "work.txt").read_text(), "uncommitted work")
+
+    def test_organizational_directories_are_searched_only_one_level_deeper(self):
+        self.repository(self.projects / "direct")
+        self.repository(self.projects / "learn" / "nested repo")
+        dirty = self.repository(self.projects / "other group" / "dirty")
+        (dirty / "work.txt").write_text("keep me")
+        self.repository(self.projects / "learn" / "deeper" / "too deep")
+        parent = self.repository(self.projects / "parent")
+        self.repository(parent / "must not pull")
+        result = self.run_pullall()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("3 updated, 2 dirty, 3 non-repository, 0 failed", result.stdout)
+        self.assertEqual(
+            set((self.home / "pulls").read_text().splitlines()),
+            {"dotfiles", "direct", "nested repo"},
+        )
 
     def test_timed_out_pull_is_reported_and_remaining_repositories_continue(self):
         self.repository(self.projects / "updated")

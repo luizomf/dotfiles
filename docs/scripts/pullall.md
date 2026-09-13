@@ -1,7 +1,11 @@
 # `pullall`
 
-`scripts/pullall` updates `~/dotfiles` and each direct child of `PROJECTS_DIR`
-that is a Git checkout.
+`scripts/pullall` updates `~/dotfiles` and Git checkouts directly under
+`PROJECTS_DIR`. When a direct child is not a checkout, it also searches that
+child's immediate subdirectories (for example, `PROJECTS_DIR/learn/my-repo`).
+It never searches deeper or descends into an existing checkout, including
+worktrees and submodules identified by a `.git` file. Directory symlinks are not
+followed.
 
 ## Behavior
 
@@ -13,7 +17,8 @@ git pull --all --prune --ff-only
 
 Dirty checkouts and non-repository directories are skipped. A failure in one
 repository does not prevent attempts on the others. The final summary lists
-updated, dirty, non-repository, and failed entries.
+updated, dirty, non-repository, and failed entries. Organizational directories
+and their non-repository children count as non-repository entries.
 
 The command exits nonzero when:
 
