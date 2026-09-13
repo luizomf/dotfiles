@@ -51,8 +51,12 @@ class SyncHostsTests(unittest.TestCase):
             (home / ".zsh_history").write_text(": 100:0;echo fixture\n")
             (home / "sannux-data/backups/omnews" / f"{host}.db").write_text(host)
             (home / ".pi/agent" / f"{host}.txt").write_text(host)
-            (home / "Desktop/tutoriais_e_cursos/project" / f"{host}.txt").write_text(host)
-            (home / "Desktop/tutoriais_e_cursos/project/.omnews-data/local.db").write_text(host)
+            (home / "Desktop/tutoriais_e_cursos/project" / f"{host}.txt").write_text(
+                host
+            )
+            (
+                home / "Desktop/tutoriais_e_cursos/project/.omnews-data/local.db"
+            ).write_text(host)
             (home / ".local/share/tmux/lazy/state.json").write_text(
                 '{"version": 1, "sessions": [{"name": "fixture"}]}\n'
             )
@@ -98,7 +102,18 @@ class SyncHostsTests(unittest.TestCase):
             "raise SystemExit('Unexpected fixture command '+name)\n"
         )
         fake.chmod(0o755)
-        for name in ["hostname", "sleep", "pullall", "prline", "ssh", "rsync", "trash", "gio", "rm", "stop_omnivoicetts"]:
+        for name in [
+            "hostname",
+            "sleep",
+            "pullall",
+            "prline",
+            "ssh",
+            "rsync",
+            "trash",
+            "gio",
+            "rm",
+            "stop_omnivoicetts",
+        ]:
             (self.bin / name).symlink_to(fake)
         for name in ["python3", "python3.14"]:
             (self.bin / name).symlink_to(sys.executable)
@@ -134,22 +149,34 @@ class SyncHostsTests(unittest.TestCase):
         }
         return subprocess.run(
             ["/bin/zsh", "-f", str(self.script), *args],
-            cwd=self.root, env=env, capture_output=True, text=True, timeout=40,
+            cwd=self.root,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=40,
         )
 
     def commands(self):
-        return [json.loads(line) for line in self.log.read_text().splitlines()] if self.log.exists() else []
+        return (
+            [json.loads(line) for line in self.log.read_text().splitlines()]
+            if self.log.exists()
+            else []
+        )
 
     def test_explicit_snapshot_replaces_newer_peer_state_without_touching_runtime(self):
         expected = '{"version": 1, "sessions": [{"name": "fixture"}]}\n'
         for host in ["m132", "m4128", "fedoraair"]:
             directory = self.root / "homes" / host / ".local/share/tmux/lazy"
-            (directory / "state.json").write_text(expected if host == "m132" else "old peer state\n")
+            (directory / "state.json").write_text(
+                expected if host == "m132" else "old peer state\n"
+            )
             timestamp = 100 if host == "m132" else 2000000000
             os.utime(directory / "state.json", (timestamp, timestamp))
             for name in ["focus.json", "lazy.lock", "runtime.json", "socket-marker"]:
                 (directory / name).write_text(host)
-        result = self.run_sync(extra_env={'TMUX': '/fixture/custom,12,0', 'TMUX_PANE': '%0'})
+        result = self.run_sync(
+            extra_env={"TMUX": "/fixture/custom,12,0", "TMUX_PANE": "%0"}
+        )
         self.assertEqual(result.returncode, 0, result.stderr)
         for host in ["m132", "m4128", "fedoraair"]:
             directory = self.root / "homes" / host / ".local/share/tmux/lazy"
@@ -166,8 +193,15 @@ class SyncHostsTests(unittest.TestCase):
                 for directory, suffix in [
                     ("Desktop/tutoriais_e_cursos/project", ".txt"),
                 ]:
-                    self.assertEqual((home / directory / (origin + suffix)).read_text(), origin)
-            self.assertEqual((home / "Desktop/tutoriais_e_cursos/project/.omnews-data/local.db").read_text(), host)
+                    self.assertEqual(
+                        (home / directory / (origin + suffix)).read_text(), origin
+                    )
+            self.assertEqual(
+                (
+                    home / "Desktop/tutoriais_e_cursos/project/.omnews-data/local.db"
+                ).read_text(),
+                host,
+            )
         copies = [c for c in self.commands() if c[0] == "rsync" and "--server" not in c]
         self.assertFalse(any("m132:~/" in arg for c in copies for arg in c))
         data_copies = [c for c in copies if "tmux/lazy" not in c[-1]]
@@ -176,14 +210,14 @@ class SyncHostsTests(unittest.TestCase):
 
     def test_agent_homes_are_not_copied_but_static_skills_are(self):
         transient = [
-            'Desktop/tutoriais_e_cursos/project/.scratch/evidence',
-            'Desktop/tutoriais_e_cursos/project/.cache/data',
-            '.codex/automations/daily/hooks/state/marker',
-            '.pi/agent/sessions/conversation',
-            'sannux-data/agent-homes/pi.ephemeral-runs/run.ABC123/auth',
-            'sannux-data/agent-homes/pi-daily-paper-sessions/.hidden',
-            'sannux-data/agent-homes/pi/.pi/agent/sessions/session',
-            'sannux-data/workspaces/pi-daily-paper-node-modules/package',
+            "Desktop/tutoriais_e_cursos/project/.scratch/evidence",
+            "Desktop/tutoriais_e_cursos/project/.cache/data",
+            ".codex/automations/daily/hooks/state/marker",
+            ".pi/agent/sessions/conversation",
+            "sannux-data/agent-homes/pi.ephemeral-runs/run.ABC123/auth",
+            "sannux-data/agent-homes/pi-daily-paper-sessions/.hidden",
+            "sannux-data/agent-homes/pi/.pi/agent/sessions/session",
+            "sannux-data/workspaces/pi-daily-paper-node-modules/package",
         ]
         transient += [
             "sannux-data/agent-homes/pi/.pi/agent/auth.json",
@@ -192,11 +226,11 @@ class SyncHostsTests(unittest.TestCase):
             "sannux-data/workspaces/user-project/code",
         ]
         durable = [".agents/skills/example/SKILL.md"]
-        origin = self.root / 'homes/m4128'
+        origin = self.root / "homes/m4128"
         for rel in transient + durable:
             f = origin / rel
             f.parent.mkdir(parents=True, exist_ok=True)
-            f.write_text('fixture only')
+            f.write_text("fixture only")
         result = self.run_sync()
         self.assertEqual(result.returncode, 0, result.stderr)
         for rel in transient:
@@ -231,11 +265,15 @@ class SyncHostsTests(unittest.TestCase):
         # Force backend selection in this copied fixture script, never hide a
         # real tool and accidentally invoke the operator's desktop Trash.
         source = self.script.read_text()
-        self.assertEqual(source.count('if command -v trash >/dev/null 2>&1; then'), 1)
-        self.script.write_text(source.replace('if command -v trash >/dev/null 2>&1; then', 'if false; then'))
+        self.assertEqual(source.count("if command -v trash >/dev/null 2>&1; then"), 1)
+        self.script.write_text(
+            source.replace(
+                "if command -v trash >/dev/null 2>&1; then", "if false; then"
+            )
+        )
         result = self.run_sync()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue(any(c[0] == 'gio' for c in self.commands()))
+        self.assertTrue(any(c[0] == "gio" for c in self.commands()))
 
     def test_live_services_need_no_maintenance_and_keep_their_state_local(self):
         live = [
@@ -284,14 +322,23 @@ class SyncHostsTests(unittest.TestCase):
                 )
 
     def test_additional_host_does_not_trigger_idle_maintenance(self):
-        result = self.run_sync('--additional-hosts', 'extra')
+        result = self.run_sync("--additional-hosts", "extra")
         self.assertEqual(result.returncode, 0, result.stderr)
-        calls = [c[-1] for c in self.commands() if c[0] == 'ssh' and c[-2] == 'extra']
-        relevant = [c for c in calls if 'scripts/clear_sannux_transients' in c or 'scripts/stop_omnivoicetts' in c]
+        calls = [c[-1] for c in self.commands() if c[0] == "ssh" and c[-2] == "extra"]
+        relevant = [
+            c
+            for c in calls
+            if "scripts/clear_sannux_transients" in c
+            or "scripts/stop_omnivoicetts" in c
+        ]
         self.assertEqual(relevant, [])
 
     def test_newest_file_is_collected_before_distribution(self):
-        for host, text, timestamp in [("m132", "old", 100), ("m4128", "middle", 200), ("fedoraair", "newest", 300)]:
+        for host, text, timestamp in [
+            ("m132", "old", 100),
+            ("m4128", "middle", 200),
+            ("fedoraair", "newest", 300),
+        ]:
             file = self.root / "homes" / host / ".agents/skills/version"
             file.write_text(text)
             os.utime(file, (timestamp, timestamp))
@@ -367,12 +414,14 @@ class SyncHostsTests(unittest.TestCase):
 
     def test_failed_export_does_not_publish_snapshot_but_keeps_data_sync(self):
         peer_state = self.root / "homes/fedoraair/.local/share/tmux/lazy/state.json"
-        peer_state.write_text('previous peer snapshot\n')
+        peer_state.write_text("previous peer snapshot\n")
         result = self.run_sync(extra_env={"FAIL_EXPORT": "1"})
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertIn("BLOCKED: tmux publication", result.stdout)
-        self.assertEqual(peer_state.read_text(), 'previous peer snapshot\n')
-        self.assertFalse(any(c[0] == "rsync" and "tmux/lazy" in c[-1] for c in self.commands()))
+        self.assertEqual(peer_state.read_text(), "previous peer snapshot\n")
+        self.assertFalse(
+            any(c[0] == "rsync" and "tmux/lazy" in c[-1] for c in self.commands())
+        )
         self.assertTrue(
             (
                 self.root
@@ -407,7 +456,9 @@ class SyncHostsTests(unittest.TestCase):
         result = self.run_sync(extra_env={"FAIL_TRASH": "1"})
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertIn("FAILED: tmux stage cleanup", result.stdout)
-        self.assertTrue(any(c[0] == "rsync" and "tmux/lazy" in c[-1] for c in self.commands()))
+        self.assertTrue(
+            any(c[0] == "rsync" and "tmux/lazy" in c[-1] for c in self.commands())
+        )
 
     def test_help_and_invalid_arguments_have_no_operational_effects(self):
         self.assertEqual(self.run_sync("--help").returncode, 0)
@@ -425,7 +476,9 @@ class SyncHostsTests(unittest.TestCase):
                 / (origin + ".txt")
             )
             self.assertEqual(source.read_text(), origin)
-        self.assertTrue((self.root / "homes/extra/.local/share/tmux/lazy/state.json").exists())
+        self.assertTrue(
+            (self.root / "homes/extra/.local/share/tmux/lazy/state.json").exists()
+        )
 
     def test_only_disposable_stage_is_trashed(self):
         result = self.run_sync()
@@ -435,8 +488,10 @@ class SyncHostsTests(unittest.TestCase):
         self.assertFalse(any("--delete" in c for c in commands if c[0] == "rsync"))
         trashed = list((self.root / "trash").iterdir())
         self.assertEqual(len(trashed), 1)
-        self.assertIn('-synchosts-tmux-lazy.', trashed[0].name)
-        self.assertEqual([p.name for p in (trashed[0] / 'snapshot').iterdir()], ['state.json'])
+        self.assertIn("-synchosts-tmux-lazy.", trashed[0].name)
+        self.assertEqual(
+            [p.name for p in (trashed[0] / "snapshot").iterdir()], ["state.json"]
+        )
 
 
 if __name__ == "__main__":
