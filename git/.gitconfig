@@ -2,6 +2,7 @@
 	defaultBranch = main
 [core]
   editor = nvim
+  pager = less -FRX
   repositoryformatversion = 0
   filemode = true
   bare = false

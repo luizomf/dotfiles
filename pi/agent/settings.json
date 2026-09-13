@@ -30,7 +30,7 @@
   "hideThinkingBlock": false,
   "editorPaddingX": 1,
   "transport": "auto",
-  "tuiMode": "regular",
+  "tuiMode": "fullscreen",
   "fullscreenScrollbar": "auto",
   "followUpMode": "one-at-a-time",
   "terminal": {
