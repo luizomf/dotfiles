@@ -64,8 +64,8 @@ work.
 
 There is no conflict resolution or protection from simultaneous source edits and
 peer tmux saves. Keep transferred files and peer tmux saves quiet during sync.
-Each participating host runs its own copy of the script, so update all
-participating hosts before relying on new exclusions.
+Update the script on every machine where you run `synchosts` before relying on
+new exclusions.
 
 `synchosts` does not stop services or run destructive cleanup. Those remain
 explicit operations; see [`clear_sannux_transients`](clear_sannux_transients.md)
