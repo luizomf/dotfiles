@@ -2,7 +2,7 @@
 
 Python feedback tools are declared in `pyproject.toml` and locked in `uv.lock`.
 This environment is for maintaining the dotfiles; installed scripts must keep
-their own runtime interpreter contracts. Use Bash for new operational scripts
+their own runtime interpreter contracts. Prefer Bash for new operational scripts
 without hidden Zsh or interactive-shell dependencies. Preserve existing POSIX
 shell scripts and Bash 3.2 compatibility where their current contracts require
 it.
