@@ -1,8 +1,9 @@
 """Real tmux integration on private sockets; never touch an existing server."""
 
+from __future__ import annotations
+
 import json
 import os
-from pathlib import Path
 import pty
 import re
 import select
@@ -12,12 +13,14 @@ import sys
 import tempfile
 import time
 import unittest
+from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / "tmux/scripts/lazy.py"
+TMUX = shutil.which("tmux") or "/tmux-not-found"
 
 
-@unittest.skipUnless(shutil.which("tmux"), "tmux is required")
+@unittest.skipUnless(Path(TMUX).is_file(), "tmux is required")
 class LazyTmuxTests(unittest.TestCase):
     def test_import_visit_save_and_restart_preserve_pending_and_running_windows(self):
         with tempfile.TemporaryDirectory(prefix="lazy-demo-test-") as temporary:
@@ -59,17 +62,22 @@ class LazyTmuxTests(unittest.TestCase):
             env.pop("TMUX_PANE", None)
             env["TERM"] = "xterm-256color"
 
-            def run(*args):
+            def run(*args: str) -> str:
                 result = subprocess.run(
-                    [*cli, *args], env=env, text=True, capture_output=True, timeout=30
+                    [*cli, *args],
+                    env=env,
+                    text=True,
+                    capture_output=True,
+                    timeout=30,
+                    check=False,
                 )
                 if result.returncode:
                     self.fail(f"{args[0]} failed: {result.stderr}\n{result.stdout}")
                 return result.stdout
 
-            def tmux(*args):
+            def tmux(*args: str) -> str:
                 return subprocess.run(
-                    ["tmux", "-S", str(trial / "socket"), *args],
+                    [TMUX, "-S", str(trial / "socket"), *args],
                     env=env,
                     text=True,
                     capture_output=True,
@@ -152,7 +160,7 @@ class LazyTmuxTests(unittest.TestCase):
                 master, slave = pty.openpty()
                 client = subprocess.Popen(
                     [
-                        "tmux",
+                        TMUX,
                         "-S",
                         str(trial / "socket"),
                         "attach-session",
@@ -243,6 +251,7 @@ class LazyTmuxTests(unittest.TestCase):
                         text=True,
                         capture_output=True,
                         timeout=15,
+                        check=False,
                     )
                     self.assertNotEqual(failed.returncode, 0)
                     self.assertIn("No running tmux server to save", failed.stderr)
@@ -270,10 +279,11 @@ class LazyTmuxTests(unittest.TestCase):
             finally:
                 if (trial / "socket").exists():
                     subprocess.run(
-                        ["tmux", "-S", str(trial / "socket"), "kill-server"],
+                        [TMUX, "-S", str(trial / "socket"), "kill-server"],
                         env=env,
                         capture_output=True,
                         timeout=15,
+                        check=False,
                     )
 
     def test_layout_round_trip_remaps_home_and_missing_cwd_never_partially_activates(
@@ -347,7 +357,9 @@ class LazyTmuxTests(unittest.TestCase):
             for key in ("TMUX", "TMUX_PANE", "TMUX_LAZY_STATE_DIR"):
                 env.pop(key, None)
 
-            def cli(*args, home=None, success=True):
+            def cli(
+                *args: str, home: Path | None = None, success: bool = True
+            ) -> subprocess.CompletedProcess[str]:
                 result = subprocess.run(
                     [
                         sys.executable,
@@ -366,6 +378,7 @@ class LazyTmuxTests(unittest.TestCase):
                     text=True,
                     capture_output=True,
                     timeout=30,
+                    check=False,
                 )
                 if success:
                     self.assertEqual(result.returncode, 0, result.stderr)
@@ -373,9 +386,9 @@ class LazyTmuxTests(unittest.TestCase):
                     self.assertNotEqual(result.returncode, 0)
                 return result
 
-            def tmux(*args):
+            def tmux(*args: str) -> str:
                 return subprocess.run(
-                    ["tmux", "-S", str(socket), *args],
+                    [TMUX, "-S", str(socket), *args],
                     env=env,
                     text=True,
                     capture_output=True,
@@ -432,7 +445,7 @@ class LazyTmuxTests(unittest.TestCase):
                 cli("save", "--quiet", home=homes[1])
                 again = json.loads(snapshot.read_text())
 
-                def geometry(layout):
+                def geometry(layout: str) -> str:
                     return re.sub(
                         r"(\d+x\d+,\d+,\d+),\d+(?=[}\],]|$)",
                         r"\1,P",
@@ -453,10 +466,11 @@ class LazyTmuxTests(unittest.TestCase):
             finally:
                 if socket.exists():
                     subprocess.run(
-                        ["tmux", "-S", str(socket), "kill-server"],
+                        [TMUX, "-S", str(socket), "kill-server"],
                         env=env,
                         capture_output=True,
                         timeout=15,
+                        check=False,
                     )
 
     def test_native_server_winning_startup_race_is_not_modified(self):
@@ -466,7 +480,7 @@ class LazyTmuxTests(unittest.TestCase):
             home.mkdir()
             (home / "dotfiles").symlink_to(REPO, target_is_directory=True)
             socket = root / "socket"
-            real_tmux = shutil.which("tmux")
+            real_tmux = TMUX
             binary_dir = root / "bin"
             binary_dir.mkdir()
             wrapper = binary_dir / "tmux"
@@ -510,6 +524,7 @@ class LazyTmuxTests(unittest.TestCase):
                     text=True,
                     capture_output=True,
                     timeout=30,
+                    check=False,
                 )
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("concurrently", result.stderr)
@@ -535,6 +550,7 @@ class LazyTmuxTests(unittest.TestCase):
                         env=env,
                         capture_output=True,
                         timeout=15,
+                        check=False,
                     )
 
 

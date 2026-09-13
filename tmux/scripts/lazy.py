@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Save tmux structure and activate restored windows on demand (no daemon)."""
 
+from __future__ import annotations
+
 import argparse
-from contextlib import contextmanager
 import fcntl
 import hashlib
 import json
 import os
-from pathlib import Path
 import pwd
 import re
 import shlex
@@ -16,22 +16,28 @@ import subprocess
 import sys
 import tempfile
 import uuid
+from contextlib import contextmanager
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 REPO = Path(__file__).resolve().parents[2]
 
 
-def default_socket():
+def default_socket() -> Path:
     return (
         Path(os.environ.get("TMUX_TMPDIR", "/tmp")) / f"tmux-{os.getuid()}" / "default"
     ).resolve()
 
 
-def socket_path(explicit=None):
+def socket_path(explicit: Path | None = None) -> Path:
     inherited = os.environ.get("TMUX", "").rsplit(",", 2)[0]
     return Path(explicit or inherited or default_socket()).resolve()
 
 
-def state_directory(socket):
+def state_directory(socket: Path) -> Path:
     if os.environ.get("TMUX_LAZY_STATE_DIR"):
         return Path(os.environ["TMUX_LAZY_STATE_DIR"]).expanduser()
     # A configured server owns its state path. Query the option rather than
@@ -43,6 +49,7 @@ def state_directory(socket):
             text=True,
             capture_output=True,
             timeout=10,
+            check=False,
         )
         value = owner.stdout.removesuffix("\n")
         if owner.returncode == 0 and value:
@@ -57,12 +64,12 @@ def state_directory(socket):
     return base
 
 
-def literal_format(value):
+def literal_format(value: object) -> str:
     """Prevent literal paths from being interpreted as tmux format expressions."""
     return str(value).replace("#", "##")
 
 
-def atomic_json(path, value):
+def atomic_json(path: Path, value: object) -> None:
     temporary = path.with_suffix(".tmp")
     try:
         temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n")
@@ -173,7 +180,14 @@ def validate_state(state):
 
 
 class LazyTmux:
-    def __init__(self, directory, socket, home, shell, quiet=False):
+    def __init__(
+        self,
+        directory: str | Path,
+        socket: str | Path,
+        home: str | Path,
+        shell: str,
+        quiet: bool = False,
+    ) -> None:
         self.root = Path(directory).expanduser().resolve()
         self.socket = Path(socket).resolve()
         self.home = Path(home).resolve()
@@ -184,20 +198,21 @@ class LazyTmux:
         for name in ("TMUX", "TMUX_PANE", "ENV", "BASH_ENV"):
             self.env.pop(name, None)
         self.env["HOME"] = str(self.home)
-        self.binary = shutil.which("tmux")
-        if not self.binary:
+        binary = shutil.which("tmux")
+        if not binary:
             raise RuntimeError("tmux is required in PATH (prefer Homebrew)")
+        self.binary = binary
         if not Path(shell).is_absolute() or not os.access(shell, os.X_OK):
             raise ValueError("Select an executable absolute shell path with --shell")
 
     @contextmanager
-    def locked(self):
+    def locked(self) -> Generator[None, None, None]:
         self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
         with (self.root / "state.lock").open("a") as handle:
             fcntl.flock(handle, fcntl.LOCK_EX)
             yield
 
-    def tmux(self, *args, configuration=None):
+    def tmux(self, *args: str, configuration: str | Path | None = None) -> str:
         command = [self.binary, "-S", str(self.socket)]
         if configuration is None:
             # A failed connection must not silently create a replacement server.
@@ -205,13 +220,18 @@ class LazyTmux:
         else:
             command += ["-f", str(configuration)]
         result = subprocess.run(
-            [*command, *args], env=self.env, text=True, capture_output=True, timeout=30
+            [*command, *args],
+            env=self.env,
+            text=True,
+            capture_output=True,
+            timeout=30,
+            check=False,
         )
         if result.returncode:
             raise RuntimeError(f"tmux {args[0]}: {result.stderr.strip()}")
         return result.stdout.removesuffix("\n")
 
-    def alive(self):
+    def alive(self) -> bool:
         if not self.socket.exists():
             return False
         try:
@@ -226,29 +246,32 @@ class LazyTmux:
             )
         return True
 
-    def notify(self, message, *, in_tmux=False):
+    def notify(self, message: str, *, in_tmux: bool = False) -> None:
         if not self.quiet:
             if in_tmux:
                 self.tmux("display-message", message)
             else:
                 print(message)
 
-    def encode_cwd(self, cwd):
+    def encode_cwd(self, cwd: str) -> dict[str, str]:
         path = Path(cwd)
         try:
             return {"home": str(path.relative_to(self.home))}
         except ValueError:
             return {"absolute": str(path)}
 
-    def decode_cwd(self, cwd):
+    def decode_cwd(self, cwd: dict[str, str]) -> str:
         path = self.home / cwd["home"] if "home" in cwd else Path(cwd["absolute"])
         if not path.is_dir():
             raise RuntimeError(f"Missing cwd; activation refused: {path}")
         return str(path)
 
-    def panes(self, window=None):
+    def panes(self, window: str | None = None) -> list[list[str]]:
         target = ["-t", window] if window else ["-a"]
-        fields = "#{pane_id}\t#{pane_pid}\t#{pane_current_path}\t#{@lazy_cwd}\t#{pane_active}"
+        fields = (
+            "#{pane_id}\t#{pane_pid}\t#{pane_current_path}"
+            "\t#{@lazy_cwd}\t#{pane_active}"
+        )
         rows = [
             line.split("\t")
             for line in self.tmux("list-panes", *target, "-F", fields).splitlines()
@@ -260,7 +283,7 @@ class LazyTmux:
     def load(self):
         return validate_state(json.loads(self.state_file.read_text()))
 
-    def import_snapshot(self, snapshot):
+    def import_snapshot(self, snapshot: Path) -> None:
         if self.state_file.exists():
             raise RuntimeError(
                 "A lazy snapshot already exists; refusing to overwrite it"
@@ -327,7 +350,7 @@ class LazyTmux:
             "Imported Resurrect structure; no saved process commands will be executed."
         )
 
-    def command(self, action):
+    def command(self, action: str) -> str:
         # Quiet is per invocation: a quiet configure must not silence prefix C-s.
         return literal_format(
             shlex.join(
@@ -347,7 +370,7 @@ class LazyTmux:
             )
         )
 
-    def configure(self):
+    def configure(self) -> None:
         if not self.alive():
             raise RuntimeError("No running tmux server to configure")
         self.tmux("set-option", "-g", "@lazy_state_dir", str(self.root))
@@ -378,7 +401,7 @@ class LazyTmux:
                 "set-hook", "-g", hook + "[200]", "run-shell -b " + shlex.quote(command)
             )
 
-    def boot(self):
+    def boot(self) -> None:
         if self.alive():
             # Reconfiguration/adoption never kills or restores into an existing server.
             self.configure()
@@ -470,7 +493,7 @@ class LazyTmux:
                 )
             raise
 
-    def restore_structure(self, state):
+    def restore_structure(self, state) -> tuple[str, str]:
         targets = {}
         focus_path = self.root / "focus.json"
         focus = (
@@ -580,7 +603,7 @@ class LazyTmux:
         self.tmux("select-window", "-t", wid)
         return sid, wid
 
-    def activate(self, window):
+    def activate(self, window: str) -> None:
         rows = [p for p in self.panes(window) if p[3]]
         directories = [self.decode_cwd(json.loads(p[3])) for p in rows]
         for row, cwd in zip(rows, directories):
@@ -600,7 +623,7 @@ class LazyTmux:
         self.tmux("set-option", "-w", "-u", "-t", window, "@lazy_pending")
         # No success message here: display-message can freeze pane redraw.
 
-    def uid(self, target, window=False):
+    def uid(self, target: str, window: bool = False) -> str:
         args = ["-w"] if window else []
         uid = self.tmux("show-option", *args, "-qv", "-t", target, "@lazy_uid")
         if not uid:
@@ -608,7 +631,7 @@ class LazyTmux:
             self.tmux("set-option", *args, "-t", target, "@lazy_uid", uid)
         return uid
 
-    def visit(self, window, session, generation):
+    def visit(self, window: str, session: str, generation: str) -> None:
         if (
             not self.alive()
             or self.tmux("show-option", "-gqv", "@lazy_generation") != generation
@@ -642,7 +665,7 @@ class LazyTmux:
             if self.alive():
                 self.tmux("wait-for", "-S", "lazy-visit-complete")
 
-    def save(self, if_running=False):
+    def save(self, if_running: bool = False) -> None:
         if not self.alive():
             if if_running:
                 return
@@ -657,9 +680,14 @@ class LazyTmux:
                     "Grouped sessions are unsupported; previous snapshot left intact"
                 )
             session = {"uid": self.uid(sid), "name": name, "windows": []}
-            fields = "#{window_id}\t#{window_index}\t#{window_name}\t#{window_layout}\t#{window_active}\t#{window_zoomed_flag}\t#{window_linked}"
-            for line in self.tmux("list-windows", "-t", sid, "-F", fields).splitlines():
-                wid, index, name, layout, active, zoom, linked = line.split("\t")
+            fields = (
+                "#{window_id}\t#{window_index}\t#{window_name}\t#{window_layout}"
+                "\t#{window_active}\t#{window_zoomed_flag}\t#{window_linked}"
+            )
+            for window_line in self.tmux(
+                "list-windows", "-t", sid, "-F", fields
+            ).splitlines():
+                wid, index, name, layout, active, zoom, linked = window_line.split("\t")
                 if linked == "1":
                     raise ValueError(
                         "Linked windows are unsupported; previous snapshot left intact"
@@ -701,7 +729,7 @@ class LazyTmux:
         )
         self.notify("Tmux structure saved", in_tmux=True)
 
-    def export(self, destination):
+    def export(self, destination: Path) -> None:
         state = self.load()
         # Only state.json crosses machines. Locks, focus and socket-specific data
         # stay local; home-relative cwd is already portable without substitutions.
@@ -710,7 +738,7 @@ class LazyTmux:
         atomic_json(destination / "state.json", state)
         self.notify("Portable tmux snapshot exported")
 
-    def status(self):
+    def status(self) -> dict[str, object]:
         if not self.alive():
             return {"running": False}
         panes = self.panes()
@@ -728,7 +756,7 @@ class LazyTmux:
         }
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--socket",
@@ -828,8 +856,10 @@ if __name__ == "__main__":
         subprocess.TimeoutExpired,
     ) as exc:
         print(f"tmux-lazy: {exc}", file=sys.stderr)
-        if os.environ.get("TMUX"):
+        binary = shutil.which("tmux")
+        if os.environ.get("TMUX") and binary:
             subprocess.run(
-                ["tmux", "display-message", "-l", f"tmux-lazy: {exc}"], check=False
+                [binary, "display-message", "-l", f"tmux-lazy: {exc}"],
+                check=False,
             )
         sys.exit(1)
