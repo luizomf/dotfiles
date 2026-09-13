@@ -2,7 +2,10 @@
 
 Python feedback tools are declared in `pyproject.toml` and locked in `uv.lock`.
 This environment is for maintaining the dotfiles; installed scripts must keep
-their own runtime interpreter contracts.
+their own runtime interpreter contracts. The owner prefers Bash for new
+operational scripts, without hidden Zsh or interactive-shell dependencies.
+Preserve existing POSIX shell scripts and Bash 3.2 compatibility where their
+current contracts require it.
 
 The installer syncs the checkout's ignored `.venv` from the lockfile. Set
 `OM_INSTALL_SKIP_TOOLCHAINS=1` to skip that step. For an existing checkout, use
@@ -34,10 +37,12 @@ uv run --locked ruff format --check
 uv run --locked pyright
 ```
 
-Ruff follows the owner's loudterm policy: `ALL` except docstrings (`D`) and
-`print` calls (`T201`), with `ANN201` and `S101` ignored in tests. Pyright uses
-`strict` mode without requiring third-party type stubs. Dotfiles-specific file
-discovery and Python runtime-version overrides remain independent of loudterm.
+Ruff follows the owner's loudterm policy: `ALL` except docstrings (`D`), `print`
+calls (`T201`), and `COM812`, which conflicts with the Ruff formatter. Tests also
+ignore `ANN201` and `S101` and retain their unittest style by ignoring `PT009` and
+`PT027`. Pyright uses `strict` mode without requiring third-party type stubs.
+Dotfiles-specific file discovery and Python runtime-version overrides remain
+independent of loudterm.
 
 Ruff and Pyright are diagnostics, not substitutes for behavior tests. Existing
 code has known diagnostics and formatting differences; compare affected files

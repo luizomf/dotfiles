@@ -46,10 +46,12 @@ include = [
 [tool.ruff.lint]
 # Match the owner's loudterm lint policy; review diagnostics without bulk fixes.
 select = ["ALL"]
-ignore = ["D", "T201"]
+# COM812 conflicts with Ruff's formatter.
+ignore = ["COM812", "D", "T201"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["ANN201", "S101"]
+# Preserve the unittest style used by this repository.
+"tests/**/*.py" = ["ANN201", "PT009", "PT027", "S101"]
 
 [tool.ruff.format]
 quote-style = "double"
