@@ -118,7 +118,7 @@ if run_step 'tmux save' env -u TMUX -u TMUX_PANE "$script_dir/tmux-lazy" save --
   tmux_saved=1
 fi
 
-run_step 'pullall' pullall
+run_step 'pullall' run_all_hosts -- '. ~/.zshrc ; pullall'
 
 echo
 prline
