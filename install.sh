@@ -33,6 +33,7 @@ logerror() {
 # Report only an actual failed installer exit. macOS Bash 3.2 can fire ERR for
 # expected probes inside guarded substitutions, while omitting a parent ERR for
 # some failed subshells. EXIT handles both without claiming a successful run failed.
+# shellcheck disable=SC2154 # exit_status is assigned inside this EXIT trap.
 trap 'exit_status=$?; if (( BASH_SUBSHELL == 0 && exit_status != 0 )); then logerror "Installation failed (exit $exit_status)."; fi' EXIT
 
 run_remote_script() (
@@ -171,7 +172,7 @@ if [[ "$OP_SYSTEM" == "ubuntu" ]]; then
   install_homebrew
   brew install fastfetch font-fira-code-nerd-font gcc neovim tree-sitter-cli rtk glow \
     bat chafa fzf tmux btop gh imagemagick just lazygit p7zip pandoc vhs trash-cli hf \
-    pi-coding-agent pipes-sh cmatrix asciiquarium cbonsai nyancat
+    pi-coding-agent pipes-sh cmatrix asciiquarium cbonsai nyancat shellcheck
 
   mkdir -p "$HOME/.local/bin"
   if ! command -v fd > /dev/null 2>&1 && command -v fdfind > /dev/null 2>&1; then
@@ -386,7 +387,7 @@ if [[ "${OM_INSTALL_SKIP_PLUGINS:-0}" != "1" ]]; then
 fi
 
 loginfo "Verificando a instalação..."
-required_commands=(git nvim vim zsh tmux python3 brew fastfetch fd fzf bat)
+required_commands=(git nvim vim zsh tmux python3 brew fastfetch fd fzf bat shellcheck)
 if [[ "$OP_SYSTEM" == "ubuntu" ]]; then
   required_commands+=(ghostty)
 fi
@@ -440,6 +441,9 @@ if [[ "${OM_INSTALL_SKIP_PLUGINS:-0}" != "1" ]]; then
     fi
   done
 fi
+
+loginfo "Configuring repository-local Git hooks (preserving existing setups)..."
+"$REPO_DIR/scripts/setup_git_hooks"
 
 printf '\n%s\n' \
   "Instalação automática concluída." \

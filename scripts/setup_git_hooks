@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Configure only the checkout containing this script, never the caller's repo.
+repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+if [[ "$(git rev-parse --show-toplevel)" != "$repo_root" ]]; then
+  printf 'Run setup_git_hooks from a dotfiles checkout.\n' >&2
+  exit 1
+fi
+if [[ ! -x .githooks/pre-commit || ! -x scripts/check_staged ]]; then
+  printf 'Dotfiles hook or checker is missing or not executable.\n' >&2
+  exit 1
+fi
+
+if hooks_path="$(git config --get core.hooksPath)"; then
+  if [[ "$hooks_path" == .githooks ]]; then
+    printf 'Dotfiles hook directory is already configured.\n'
+  else
+    printf 'Existing core.hooksPath preserved; dotfiles hook not activated.\n'
+    printf 'See docs/scripts/check_staged.md before changing the hook setup.\n'
+  fi
+  exit 0
+else
+  config_status=$?
+  if ((config_status != 1)); then
+    exit "$config_status"
+  fi
+fi
+
+hooks_dir="$(git rev-parse --git-path hooks)"
+for hook in "$hooks_dir"/*; do
+  [[ -e "$hook" || -L "$hook" ]] || continue
+  [[ "$hook" != *.sample ]] || continue
+  printf 'Existing hooks directory preserved; dotfiles hook not activated.\n'
+  printf 'See docs/scripts/check_staged.md before changing the hook setup.\n'
+  exit 0
+done
+
+git config --local core.hooksPath .githooks
+printf 'Dotfiles pre-commit hook enabled for this checkout.\n'
+printf 'Quick check: git add path/to/file && commit --check\n'

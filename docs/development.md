@@ -21,8 +21,10 @@ queue jobs, or host-maintenance commands.
 
 ## Focused checks
 
-The [`commit` staged-check gate](scripts/commit.md) documents the read-only
-mechanical checks run before its local model is called.
+The [`check_staged` gate](scripts/check_staged.md) documents the non-fixing
+mechanical checks shared by [`commit`](scripts/commit.md) and the optional Git
+hook. Deployed checks use tools on PATH rather than the development `.venv`; the
+commands below provide locked manual verification.
 
 Run checks only on files being changed:
 

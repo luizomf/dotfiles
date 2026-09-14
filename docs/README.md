@@ -5,6 +5,8 @@ maintenance guidance.
 
 ## Scripts
 
+- [`check_staged` and `setup_git_hooks`](scripts/check_staged.md)
+- [`commit`](scripts/commit.md)
 - [`pullall`](scripts/pullall.md)
 - [`synchosts`](scripts/synchosts.md)
 - [`clear_sannux_transients`](scripts/clear_sannux_transients.md)

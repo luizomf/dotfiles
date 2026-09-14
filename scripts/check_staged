@@ -1,0 +1,240 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+require_command() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    printf 'Required command not found: %s\n' "$1" >&2
+    exit 127
+  fi
+}
+
+require_command git
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+if git diff --cached --quiet; then
+  printf 'No staged changes; nothing checked. Stage the intended files with git add first.\n'
+  exit 0
+else
+  git_status=$?
+  if ((git_status > 1)); then
+    exit "$git_status"
+  fi
+fi
+
+staged_files_file="$(mktemp "${TMPDIR:-/tmp}/commit-staged.XXXXXX")"
+cleanup() {
+  status=$?
+  rm -f "$staged_files_file"
+  if ((status != 0)); then
+    printf 'Staged checks failed. Fix the reported issue, stage the fix, then run commit --check.\n' >&2
+  fi
+  trap - EXIT
+  exit "$status"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+# Keep both sides of renames so removing a typed source still runs type checks.
+git diff --cached --no-renames --name-status -z >"$staged_files_file"
+while IFS= read -r -d '' staged_status && IFS= read -r -d '' staged_file; do
+  if git diff --quiet -- "$staged_file"; then
+    continue
+  else
+    git_status=$?
+    if ((git_status > 1)); then
+      exit "$git_status"
+    fi
+  fi
+
+  printf 'Refusing staged file with additional unstaged edits: %s\n' \
+    "$staged_file" >&2
+  printf 'Resolve its staging first, then retry.\n' >&2
+  exit 1
+done <"$staged_files_file"
+
+git diff --cached --check
+
+ruff_configured=false
+pyright_configured=false
+prettier_configured=false
+eslint_configured=false
+[[ -f ruff.toml || -f .ruff.toml ]] && ruff_configured=true
+[[ -f pyrightconfig.json ]] && pyright_configured=true
+if [[ -f pyproject.toml ]]; then
+  grep -Eq '^[[:space:]]*\[[[:space:]]*tool[[:space:]]*\.[[:space:]]*ruff[[:space:]]*(\.|\])' \
+    pyproject.toml && ruff_configured=true
+  grep -Eq '^[[:space:]]*\[[[:space:]]*tool[[:space:]]*\.[[:space:]]*pyright[[:space:]]*(\.|\])' \
+    pyproject.toml && pyright_configured=true
+fi
+if [[ -f .prettierrc || -f .prettierrc.json || -f .prettierrc.json5 || \
+  -f .prettierrc.yaml || -f .prettierrc.yml || -f .prettierrc.toml || \
+  -f .prettierrc.js || -f .prettierrc.cjs || -f .prettierrc.mjs || \
+  -f .prettierrc.ts || -f .prettierrc.cts || -f .prettierrc.mts || \
+  -f prettier.config.js || -f prettier.config.cjs || -f prettier.config.mjs || \
+  -f prettier.config.ts || -f prettier.config.cts || -f prettier.config.mts ]]; then
+  prettier_configured=true
+fi
+prettier_package_checked=false
+if [[ -f eslint.config.js || -f eslint.config.mjs || -f eslint.config.cjs || \
+  -f eslint.config.ts || -f eslint.config.mts || -f eslint.config.cts || \
+  -f .eslintrc || -f .eslintrc.js || -f .eslintrc.cjs || -f .eslintrc.json || \
+  -f .eslintrc.yaml || -f .eslintrc.yml ]]; then
+  eslint_configured=true
+fi
+
+python_change=false
+prettier_file=false
+eslint_file=false
+ts_change=false
+while IFS= read -r -d '' staged_status && IFS= read -r -d '' staged_file; do
+  case "$staged_file" in
+    pyproject.toml|pyrightconfig.json|ruff.toml|.ruff.toml)
+      python_change=true
+      ;;
+    tsconfig.json|tsconfig.*.json)
+      ts_change=true
+      ;;
+  esac
+  case "$staged_file" in
+    *.py|*.pyi)
+      python_change=true
+      ;;
+    *.ts|*.tsx|*.mts|*.cts)
+      ts_change=true
+      ;;
+  esac
+
+  if [[ "$staged_status" == D ]]; then
+    # A deleted extensionless command can only be identified in the old tree.
+    if [[ "$python_change" != true ]]; then
+      first_line="$(git show "HEAD:$staged_file" | awk 'NR == 1 { print }')"
+      [[ "$first_line" != '#!'*python* ]] || python_change=true
+    fi
+    continue
+  fi
+
+  # Git stages a symlink's target path, not the target file's contents.
+  if [[ -L "$staged_file" ]]; then
+    printf 'Skipping per-file checks for symlink: %s\n' "$staged_file"
+    continue
+  fi
+  [[ -f "$staged_file" ]] || continue
+  first_line="$(head -n 1 "./$staged_file")"
+  shellcheck_directive="$(grep -m 1 -E '^#[[:space:]]*shellcheck[[:space:]]+shell=' \
+    "./$staged_file" || true)"
+
+  shell_dialect=
+  case "$staged_file" in
+    *.bash) shell_dialect="bash" ;;
+    *.ksh) shell_dialect="ksh" ;;
+    *.sh) shell_dialect="sh" ;;
+  esac
+  if [[ "$first_line" =~ ^\#!.*[/[:space:]](bash|dash|ksh|sh|zsh)([[:space:]]|$) ]]; then
+    shell_dialect="${BASH_REMATCH[1]}"
+  fi
+  if [[ "$shellcheck_directive" =~ shell=(bash|dash|ksh|sh|zsh)([[:space:]]|$) ]]; then
+    shell_dialect="${BASH_REMATCH[1]}"
+  fi
+  # Startup filenames are Zsh sources even if a legacy shebang says otherwise.
+  case "${staged_file##*/}" in
+    *.zsh|.zshrc|.zprofile|.zshenv|.zlogin|.zlogout) shell_dialect="zsh" ;;
+  esac
+  case "$shell_dialect" in
+    bash) /bin/bash -n "./$staged_file" ;;
+    sh|dash) /bin/sh -n "./$staged_file" ;;
+    ksh|zsh)
+      require_command "$shell_dialect"
+      "$shell_dialect" -n "./$staged_file"
+      ;;
+  esac
+  if [[ -n "$shell_dialect" && "$shell_dialect" != zsh ]]; then
+    require_command shellcheck
+    shellcheck --external-sources --shell="$shell_dialect" -- "$staged_file"
+  fi
+
+  if [[ "$staged_file" == *.py || "$staged_file" == *.pyi || \
+    "$first_line" == '#!'*python* ]]; then
+    python_change=true
+    if [[ "$ruff_configured" == true ]]; then
+      require_command ruff
+      ruff check --no-fix -- "$staged_file"
+      ruff format --check -- "$staged_file"
+    fi
+  fi
+
+  case "$staged_file" in
+    .prettierrc|*.md|*.mdx|*.json|*.jsonc|*.json5|*.yaml|*.yml|*.html|*.css|*.scss|*.js|*.jsx|*.mjs|*.cjs|*.ts|*.tsx|*.mts|*.cts|*.vue|*.astro)
+      prettier_file=true
+      if [[ "$prettier_configured" != true && -f package.json && \
+        "$prettier_package_checked" != true ]]; then
+        prettier_package_checked=true
+        require_command node
+        if node -e '
+          try {
+            const packageJson = JSON.parse(require("fs").readFileSync("package.json", "utf8"));
+            process.exit(Object.prototype.hasOwnProperty.call(packageJson, "prettier") ? 0 : 1);
+          } catch (error) {
+            console.error("Cannot parse package.json: " + error.message);
+            process.exit(2);
+          }
+        '; then
+          prettier_configured=true
+        else
+          package_status=$?
+          if ((package_status > 1)); then
+            exit "$package_status"
+          fi
+        fi
+      fi
+      if [[ "$prettier_configured" == true ]]; then
+        require_command prettier
+        prettier --check -- "$staged_file"
+      fi
+      ;;
+  esac
+  case "$staged_file" in
+    *.js|*.jsx|*.mjs|*.cjs|*.ts|*.tsx|*.mts|*.cts)
+      eslint_file=true
+      if [[ "$eslint_configured" == true ]]; then
+        if [[ ! -x node_modules/.bin/eslint ]]; then
+          printf 'Required local project tool not found: node_modules/.bin/eslint\n' >&2
+          exit 127
+        fi
+        node_modules/.bin/eslint -- "$staged_file"
+      fi
+      ;;
+  esac
+done <"$staged_files_file"
+
+if [[ "$python_change" == true && "$ruff_configured" != true ]]; then
+  printf 'Ruff: no configured check.\n'
+fi
+if [[ "$python_change" == true ]]; then
+  if [[ "$pyright_configured" == true ]]; then
+    require_command pyright
+    pyright
+  else
+    printf 'Pyright: no configured check.\n'
+  fi
+fi
+[[ "$prettier_file" != true || "$prettier_configured" == true ]] || \
+  printf 'Prettier: no configured check.\n'
+[[ "$eslint_file" != true || "$eslint_configured" == true ]] || \
+  printf 'ESLint: no configured check.\n'
+if [[ "$ts_change" == true ]]; then
+  if [[ -f tsconfig.json ]]; then
+    if [[ ! -x node_modules/.bin/tsc ]]; then
+      printf 'Required local project tool not found: node_modules/.bin/tsc\n' >&2
+      exit 127
+    fi
+    node_modules/.bin/tsc --noEmit -p tsconfig.json
+  else
+    printf 'TypeScript: no configured check.\n'
+  fi
+fi
+
+printf 'Staged checks passed (configured checks only).\n'
