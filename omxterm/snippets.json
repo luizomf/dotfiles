@@ -3,43 +3,43 @@
   "snippets": [
     {
       "name": "Daily Paper Status (SSH Watcher)",
-      "body": "ssh -t fedoraair 'watch --color -n 1 python3 \"$PROJECTS_DIR\"/daily-paper/maintenance/daily-paper-status-prototype.py --color=always'",
+      "body": " ssh -t fedoraair 'watch --color -n 1 python3 \"$PROJECTS_DIR\"/daily-paper/maintenance/daily-paper-status-prototype.py --color=always'",
       "description": "Watch the read-only Daily Paper dashboard on Fedora. Requires PROJECTS_DIR in the remote shell.",
       "execute": false
     },
     {
       "name": "curl pandoc html to markdown",
-      "body": "export URL=\"${URL:-CHANGE URL}\" MDOUTPUT=\"${HOME}/Desktop/saved.md\" ; curl -fsSL \"${URL}\" | pandoc -f html -t gfm-raw_html-fenced_divs --wrap=none -o \"${MDOUTPUT}\"",
+      "body": " export URL=\"${URL:-CHANGE URL}\" MDOUTPUT=\"${HOME}/Desktop/saved.md\" ; curl -fsSL \"${URL}\" | pandoc -f html -t gfm-raw_html-fenced_divs --wrap=none -o \"${MDOUTPUT}\"",
       "description": "Use curl and pandoc to open HTML pages and try to save it as markdown.",
       "execute": false
     },
     {
       "name": "Restart WireGuard All Hosts",
-      "body": "run_all_hosts '. ~/.zshrc ; sudo wg-quick down wg0 || true' && ssh kvm8reboot && echo; for i in {59..0}; do echo \"Starting wg0 in ${i}s\"; sleep 1; done && run_all_hosts '. ~/.zshrc ; sudo wg-quick up wg0 || true'",
+      "body": " run_all_hosts '. ~/.zshrc ; sudo wg-quick down wg0 || true' && ssh kvm8reboot && echo; for i in {59..0}; do echo \"Starting wg0 in ${i}s\"; sleep 1; done && run_all_hosts '. ~/.zshrc ; sudo wg-quick up wg0 || true'",
       "description": "Use ssh to restart WireGuard in all local hosts.",
       "execute": false
     },
     {
       "name": "Pi Update",
-      "body": "npx @earendil-works/pi-coding-agent update ; npx @earendil-works/pi-coding-agent update --all ; npx @earendil-works/pi-coding-agent update --models ;",
+      "body": " npx @earendil-works/pi-coding-agent update ; npx @earendil-works/pi-coding-agent update --all ; npx @earendil-works/pi-coding-agent update --models ;",
       "description": "Uniform pi update for linux and macos",
       "execute": true
     },
     {
       "name": "Test Sannux Ephemeral Models",
-      "body": "test_models",
+      "body": " test_models",
       "description": "Test local Sannux Ephemeral Models with sannux_ephemeral script for Codex, Codex Ollama, Pi and Agy",
       "execute": true
     },
     {
       "name": "Clear Docker History, Volumes and Networks",
-      "body": "docker stop `docker ps -q -a` ; docker builder prune -f ; docker system prune -f ; docker volume prune -f ; docker builder prune -f ; docker network prune -f ; docker builder history rm --all ; docker builder prune -f ;",
+      "body": " docker stop `docker ps -q -a` ; docker builder prune -f ; docker system prune -f ; docker volume prune -f ; docker builder prune -f ; docker network prune -f ; docker builder history rm --all ; docker builder prune -f ;",
       "description": "Clear Docker Bloat",
       "execute": true
     },
     {
       "name": "Create TTS for daily briefings",
-      "body": "bq --label daily_breafing_tts_clean --json --concurrency-key audio-playback zsh -lc '. ~/.zshrc ; llm_clean --model \"${LOCAL_MODEL}\" -c \"$(cat ~/omnews_briefings/\"$(date +%Y-%m-%d)\".md)\" -- --nowordwrap --think=max --hidethinking > ~/omnews_briefings/\"$(date +%Y-%m-%d)\"_tts.txt ; msg=\"Daily Paper Markdown Cleaner Finished.\" osalert'",
+      "body": " bq --label daily_breafing_tts_clean --json --concurrency-key audio-playback zsh -lc '. ~/.zshrc ; llm_clean --model \"${LOCAL_MODEL}\" -c \"$(cat ~/omnews_briefings/\"$(date +%Y-%m-%d)\".md)\" -- --nowordwrap --think=max --hidethinking > ~/omnews_briefings/\"$(date +%Y-%m-%d)\"_tts.txt ; msg=\"Daily Paper Markdown Cleaner Finished.\" osalert'",
       "description": "Create a TTS file for the current date on omnews briefing.",
       "execute": false
     },
@@ -51,20 +51,26 @@
     },
     {
       "name": "OMQueue Test Local (TEXT)",
-      "body": "bq --label omqueue-test-text --cwd \"${HOME}/Desktop\" --json --concurrency-key one-shot bash -c 'for i in {1..5}; do echo -n \"Linha: ${i}\"; sleep 0.5; done' | jq -r .jobId | xargs -I {} omqueue_follow --json {} | jq -r .output.payload.text",
+      "body": " bq --label omqueue-test-text --cwd \"${HOME}/Desktop\" --json --concurrency-key one-shot bash -c 'for i in {1..5}; do echo -n \"Linha: ${i}\"; sleep 0.5; done' | jq -r .jobId | xargs -I {} omqueue_follow --json {} | jq -r .output.payload.text",
       "description": "Queue the OMQueue text only test locally. If you can see the text, it is working.",
       "execute": false
     },
     {
       "name": "Sannux Rebuild (only used)",
-      "body": "for t in codex codex-ollama agy pi; do sannux setup \"$t\"; sannux rebuild \"$t\"; done",
+      "body": " for t in codex codex-ollama agy pi; do sannux setup \"$t\"; sannux rebuild \"$t\"; done",
       "description": "Rebuild selected Sannux Templates",
       "execute": false
     },
     {
       "name": "Change tmux popup size (temp)",
-      "body": "((T=600 W=50% H=50%; tmux setenv -g POPUP_WIDTH $W; tmux setenv -g POPUP_HEIGHT $H; sleep $T; tmux setenv -gu POPUP_WIDTH; tmux setenv -gu POPUP_HEIGHT) >/dev/null 2>&1 &)",
+      "body": " ((T=600 W=50% H=50%; tmux setenv -g POPUP_WIDTH $W; tmux setenv -g POPUP_HEIGHT $H; sleep $T; tmux setenv -gu POPUP_WIDTH; tmux setenv -gu POPUP_HEIGHT) >/dev/null 2>&1 &)",
       "description": "Set tmux width and height for popups and unset the variables after 10 minutes",
+      "execute": false
+    },
+    {
+      "name": "Reminder",
+      "body": " bq --in 60m --label \"bq-reminder\" -- bash -lc \"header='OMNews' body='Ativar OMNews.'; (osascript -e 'set volume output volume 100' > /dev/null 2>&1 & osalert > /dev/null 2>&1 & osascript -e 'display dialog \\\"${header}\\n\\n${body}\\\"¬' -e 'with title \\\"Alert\\\"¬' -e 'with icon stop¬' -e 'buttons {\\\"OK\\\"}¬' -e 'default button \\\"OK\\\"' > /dev/null 2>&1 &)\"",
+      "description": "Set a simple reminder using omqueue.",
       "execute": false
     }
   ]
