@@ -47,22 +47,42 @@ checker documentation for supported tools, dependencies, hook activation, and
 limits.
 
 After the checks pass, the existing `MODEL` and `LOCAL_MODEL_REASONING` route is
-used. The model is instructed only to read the staged diff, write an English
-Conventional Commit message, and commit that selection. `-v`/`--verbose` and
-additional Pi arguments remain supported; wrapper options before `--` are
-handled by `commit` itself. Keep `commit` and `check_staged` adjacent if copying
-them out of the dotfiles scripts directory.
+used. The host sends the staged diff in the prompt and gives this Sannux
+invocation a private temporary workspace, **not the repository**. By default, Pi
+receives only the `write` tool, without context-file, skill or prompt-template
+discovery. Its only job is to save an English Conventional Commit message to
+`/workspace/commit-message.txt`.
+
+The host then verifies the message and confirms HEAD and the staged tree did not
+change during generation, reruns the checks, and executes
+`git commit --file=...` with hooks enabled. Container tool availability is
+irrelevant to these checks: Prettier, Ruff and the other project tools run on
+the host, where the initial check ran. No `--no-verify` or other hook bypass is
+used.
+
+`-v`/`--verbose` and additional Pi arguments remain supported; wrapper options
+before `--` are handled by `commit` itself. The temporary workspace override and
+Pi options apply only to this invocation. They do not alter the shared Sannux
+image, launcher defaults, agent home, or Daily Paper Compose override. Keep
+`commit` and `check_staged` adjacent if copying them out of the dotfiles scripts
+directory.
 
 The command does not stage or auto-fix source files. Terminal-title updates are
 best-effort, so a missing TTY or tmux pane does not abort a non-interactive run.
 The configured model runner and its own environment requirements still apply.
 
-A successful model process is not proof of a commit. Before reporting success,
-`commit` verifies that HEAD changed and that its tree matches the staged tree
-captured before calling the model. If the model does nothing or commits
-different content, the command fails and asks you to inspect Git status. It does
-not roll back commits, restore files, or automatically retry. This is a
-postcondition check, not a sandbox or protection against concurrent edits.
+A successful model process is not proof of a usable message. Missing, empty,
+symlinked or malformed message files stop the command without a commit. The
+first line must have a Conventional Commit subject; the file is passed directly
+to Git, never evaluated as shell code. Temporary request/message files are
+removed on exit, including failure or interruption. Errors are not automatically
+retried.
+
+Before reporting success, `commit` also verifies that HEAD changed and its tree
+matches the selected tree. It never rolls back commits or restores files after a
+failure. These checks detect ordinary state changes; they are not a sandbox or
+atomic protection against concurrent edits. Avoid changing the selection while
+the message is being generated.
 
 Running this wrapper is optional: only an activated Git hook covers ordinary
 `git commit` calls. Neither this wrapper nor a local hook replaces review or

@@ -53,8 +53,8 @@ class CommitCommandTests(unittest.TestCase):
         self.make_command(
             "sannux_ephemeral",
             'cat >"$PROMPT_LOG"\n'
-            'git diff --cached --name-only >"$MODEL_LOG"\n'
-            "git commit -qm 'test commit'",
+            'printf "called\\n" >"$MODEL_LOG"\n'
+            'printf "chore: test commit\\n" >"$CURDIR/commit-message.txt"',
         )
 
     def run_git(
@@ -153,6 +153,30 @@ class CommitCommandTests(unittest.TestCase):
         self.assertEqual("valid\n", self.run_git("show", "HEAD:tracked.txt").stdout)
         self.assertFalse((self.repo / "model.log").exists())
 
+    def test_host_commits_message_written_in_an_isolated_model_workspace(self) -> None:
+        self.write("tracked.txt", "selected\n")
+        self.run_git("add", "tracked.txt")
+        (self.repo / ".git" / "hooks" / "pre-commit").symlink_to(
+            PROJECT_ROOT / ".githooks" / "pre-commit"
+        )
+        self.make_command(
+            "sannux_ephemeral",
+            'cat >"$PROMPT_LOG"\n'
+            'test -n "${CURDIR:-}" && test "$CURDIR" != "$PWD" || exit 91\n'
+            'test ! -e "$CURDIR/.git" || exit 92\n'
+            'printf "chore: document selected change\\n" >"$CURDIR/commit-message.txt"',
+        )
+
+        result = self.run_commit()
+
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertEqual(
+            "chore: document selected change\n",
+            self.run_git("log", "-1", "--format=%s").stdout,
+        )
+        self.assertEqual("selected\n", self.run_git("show", "HEAD:tracked.txt").stdout)
+        self.assertIn("+selected", (self.repo / "prompt.log").read_text())
+
     def test_no_staged_changes_does_not_call_model(self) -> None:
         result = self.run_commit()
 
@@ -184,12 +208,19 @@ class CommitCommandTests(unittest.TestCase):
         result = self.run_commit()
 
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
-        self.assertEqual("tracked.txt\n", (self.repo / "model.log").read_text())
+        self.assertEqual("called\n", (self.repo / "model.log").read_text())
+        self.assertEqual(
+            "tracked.txt\n",
+            self.run_git(
+                "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"
+            ).stdout,
+        )
         self.assertTrue((self.repo / "untracked.txt").exists())
         self.assertEqual("", self.run_git("diff", "--cached").stdout)
-        self.assertIn("staged diff", (self.repo / "prompt.log").read_text())
+        self.assertIn("+selected", (self.repo / "prompt.log").read_text())
+        self.assertNotIn("untracked.txt", (self.repo / "prompt.log").read_text())
 
-    def test_model_success_requires_committing_the_selected_tree(self) -> None:
+    def test_model_success_without_a_message_does_not_commit(self) -> None:
         self.write("tracked.txt", "selected\n")
         self.run_git("add", "tracked.txt")
         head_before = self.run_git("rev-parse", "HEAD").stdout
@@ -198,18 +229,17 @@ class CommitCommandTests(unittest.TestCase):
         result = self.run_commit()
 
         self.assertNotEqual(0, result.returncode)
-        self.assertIn("did not create the expected commit", result.stderr)
+        self.assertIn("did not write a commit message", result.stderr)
         self.assertEqual(head_before, self.run_git("rev-parse", "HEAD").stdout)
         self.assertEqual("selected\n", self.run_git("show", ":tracked.txt").stdout)
 
-    def test_model_committing_different_content_is_reported_without_rollback(
-        self,
-    ) -> None:
+    def test_concurrent_commit_is_reported_without_rollback(self) -> None:
         self.write("tracked.txt", "selected\n")
         self.run_git("add", "tracked.txt")
         self.make_command(
             "sannux_ephemeral",
             'cat >"$PROMPT_LOG"\n'
+            'printf "chore: selected change\\n" >"$CURDIR/commit-message.txt"\n'
             'printf "unexpected\\n" >tracked.txt\n'
             "git add tracked.txt\ngit commit -qm 'wrong content'",
         )
@@ -217,7 +247,7 @@ class CommitCommandTests(unittest.TestCase):
         result = self.run_commit()
 
         self.assertNotEqual(0, result.returncode)
-        self.assertIn("did not create the expected commit", result.stderr)
+        self.assertIn("changed during message generation", result.stderr)
         self.assertEqual(
             "unexpected\n", self.run_git("show", "HEAD:tracked.txt").stdout
         )
@@ -294,8 +324,8 @@ class CommitCommandTests(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         self.assertEqual(
-            "pyright\n",
-            (self.repo / "check.log").read_text(),
+            {"pyright"},
+            set((self.repo / "check.log").read_text().splitlines()),
         )
 
     def test_removing_python_sources_runs_pyright_even_without_a_py_suffix(
@@ -385,8 +415,8 @@ class CommitCommandTests(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         self.assertEqual(
-            "zsh -n ./nested/.zprofile\nzsh -n ./nested/.zshrc\n",
-            (self.repo / "check.log").read_text(),
+            {"zsh -n ./nested/.zprofile", "zsh -n ./nested/.zshrc"},
+            set((self.repo / "check.log").read_text().splitlines()),
         )
 
     def test_staged_symlink_does_not_make_prettier_reject_the_commit(self) -> None:
@@ -417,10 +447,15 @@ class CommitCommandTests(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         self.assertEqual(
-            "pyright\n",
-            (self.repo / "check.log").read_text(),
+            {"pyright"},
+            set((self.repo / "check.log").read_text().splitlines()),
         )
-        self.assertEqual("pyproject.toml\n", (self.repo / "model.log").read_text())
+        self.assertEqual(
+            "pyproject.toml\n",
+            self.run_git(
+                "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"
+            ).stdout,
+        )
 
     def test_prettierrc_javascript_configuration_blocks_on_failure(self) -> None:
         self.write(".prettierrc.js", "module.exports = {};\n")
@@ -529,7 +564,7 @@ class CommitCommandTests(unittest.TestCase):
         self.make_command(
             "sannux_ephemeral",
             'cat >"$PROMPT_LOG"\nprintf "%s\\n" "$*" >"$MODEL_LOG"\n'
-            "git commit -qm 'test commit'",
+            'printf "chore: test commit\\n" >"$CURDIR/commit-message.txt"',
         )
 
         result = self.run_commit("--verbose", "--", "--extra")

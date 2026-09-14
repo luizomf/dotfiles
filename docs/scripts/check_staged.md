@@ -96,9 +96,10 @@ git config --local core.hooksPath .githooks
 
 Once activated, normal `git commit`, including commits made by agents and
 `commit_dotfiles`, runs the shared checks. The hook itself does not call a model
-and does not need `MODEL`. `commit` still checks before calling its model, and
-an enabled hook checks again at commit time; there is no skip flag passed
-between them.
+and does not need `MODEL`. `commit` checks on the host before and after message
+generation, and an enabled hook checks again when the host makes the commit. Its
+model container only writes the message in a temporary workspace; it never needs
+to run the repository's hooks. There is no skip flag passed between these steps.
 
 To undo a newly added setting, use `git config --local --unset core.hooksPath`.
 If you replaced a previous local value, restore that value instead. This hook is
