@@ -69,7 +69,7 @@
     },
     {
       "name": "Reminder",
-      "body": " bq --in 1m --label \"bq-reminder\" -- bash -lc -- \"header='OMNews' body='Ativar OMNews.'; (osascript -e 'set volume output volume 100' > /dev/null 2>&1 & osalert > /dev/null 2>&1 & osascript -e \\\"display dialog \\\\\\\"${header}\\\\n\\\\n${body}\\\\\\\"¬\\\" -e 'with title \\\"Alert\\\"¬' -e 'with icon stop¬' -e 'buttons {\\\"OK\\\"}¬' -e 'default button \\\"OK\\\"' > /dev/null 2>&1 &)\"",
+      "body": " bq --in 60m --label \"bq-reminder\" -- bash -lc -- \"header='OMNews' body='Ativar OMNews.'; (osascript -e 'set volume output volume 100' > /dev/null 2>&1 & osalert > /dev/null 2>&1 & osascript -e \\\"display dialog \\\\\\\"${header}\\\\n\\\\n${body}\\\\\\\"¬\\\" -e 'with title \\\"Alert\\\"¬' -e 'with icon stop¬' -e 'buttons {\\\"OK\\\"}¬' -e 'default button \\\"OK\\\"' > /dev/null 2>&1 &)\"",
       "description": "Set a simple reminder using omqueue.",
       "execute": false
     }
