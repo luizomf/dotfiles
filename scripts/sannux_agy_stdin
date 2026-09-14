@@ -31,13 +31,31 @@ if [[ "${1:-}" == "agy" ]]; then
   shift
 fi
 
+agy_args=("$@")
+print_timeout_seconds="${OMNEWS_AI_TIMEOUT_SECONDS:-900}"
+if [[ ! "$print_timeout_seconds" =~ ^[1-9][0-9]*$ ]]; then
+  printf 'sannux_agy_stdin: OMNEWS_AI_TIMEOUT_SECONDS must be a positive integer\n' >&2
+  exit 2
+fi
+
+has_print_timeout=0
+for arg in "${agy_args[@]}"; do
+  if [[ "$arg" == "--print-timeout" || "$arg" == --print-timeout=* ]]; then
+    has_print_timeout=1
+    break
+  fi
+done
+if (( ! has_print_timeout )); then
+  agy_args+=(--print-timeout "${print_timeout_seconds}s")
+fi
+
 start_marker='<<<SANNUX_FINAL_RESPONSE>>>'
 end_marker='<<<SANNUX_END_RESPONSE>>>'
 prompt_path="/workspace/$(basename -- "$prompt_file")"
 launcher_prompt="Read and follow the complete task in ${prompt_path}. In your final response, print ${start_marker} on its own line, then the requested answer, then ${end_marker} on its own line. Do not place progress updates inside those markers."
 
 set +e
-"$script_dir/sannux_ephemeral" agy "$@" --print "$launcher_prompt" </dev/null >"$output_file"
+"$script_dir/sannux_ephemeral" agy "${agy_args[@]}" --print "$launcher_prompt" </dev/null >"$output_file"
 status=$?
 set -e
 
