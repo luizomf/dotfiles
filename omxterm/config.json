@@ -3,7 +3,7 @@
   "confirmClose": true,
   "logLevel": "info",
   "font": {
-    "family": "FiraCode Nerd Font Propo",
+    "family": "FiraCode Nerd Font",
     "size": 20,
     "lineHeight": 1.0
   },
