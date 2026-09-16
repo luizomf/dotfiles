@@ -29,6 +29,8 @@ brew "cmake"
 brew "cmatrix"
 # GNU File, Shell, and Text utilities
 brew "coreutils"
+# Like neofetch, but much faster because written mostly in C
+brew "fastfetch"
 # Simple, fast and user-friendly alternative to find
 brew "fd"
 # Command-line fuzzy finder written in Go
@@ -136,6 +138,8 @@ cask "google-chrome"
 cask "google-drive"
 # Open-source keystroke visualiser
 cask "keycastr"
+# GPU-based terminal emulator
+cask "kitty"
 # Open-source software for live streaming and screen recording
 cask "obs"
 # Build, run, and govern agents across the software development lifecycle
