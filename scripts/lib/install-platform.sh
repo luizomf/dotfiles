@@ -43,5 +43,5 @@ install_fedora_packages() {
   # Keep the same providers used by the interactive environment on fedoraair.
   # Personal services/projects (Ollama, EdgeTTS, etc.) are not provisioned here.
   brew install bash-completion@2 bat fzf gh glow hf lazygit neovim rtk \
-    trash-cli tree-sitter-cli tmux pi-coding-agent shellcheck
+    trash-cli tree-sitter-cli tmux pi-coding-agent shellcheck woff2 kitty
 }
