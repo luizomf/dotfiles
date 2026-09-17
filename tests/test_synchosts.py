@@ -333,6 +333,9 @@ class SyncHostsTests(unittest.TestCase):
             "sannux-data/agent-homes/pi.ephemeral-runs/run.ABC123/auth",
             "sannux-data/agent-homes/pi/.pi/agent/auth.json",
             "sannux-data/agent-homes/codex/.codex/auth.json",
+            "sannux-data/workspaces/pi-daily-paper-node-modules/package",
+            "sannux-data/workspaces/user-project/code",
+            "Desktop/tutoriais_e_cursos/omxterm-issue-278/source.txt",
         ]
         durable = [
             "Desktop/tutoriais_e_cursos/project/.scratch/evidence",
@@ -344,9 +347,7 @@ class SyncHostsTests(unittest.TestCase):
             ".pi/agent/sessions/conversation",
             "sannux-data/agent-homes/pi-daily-paper-sessions/.hidden",
             "sannux-data/agent-homes/pi/.pi/agent/sessions/session",
-            "sannux-data/workspaces/pi-daily-paper-node-modules/package",
             "sannux-data/agent-homes/pi/.pi/agent/RESOURCE_SNAPSHOT",
-            "sannux-data/workspaces/user-project/code",
         ]
         origin = self.root / "homes/m4128"
         for rel in transient + durable:
@@ -489,6 +490,8 @@ class SyncHostsTests(unittest.TestCase):
             "Desktop/tutoriais_e_cursos/loudterm/output/audio.wav",
             "Desktop/tutoriais_e_cursos/project/local.db-wal",
             "Desktop/tutoriais_e_cursos/project/.pi/session.json",
+            "sannux-data/workspaces/user-project/code",
+            "Desktop/tutoriais_e_cursos/omxterm-issue-278/source.txt",
         ]
         for host in ["m132", "m4128", "fedoraair"]:
             for rel in live:

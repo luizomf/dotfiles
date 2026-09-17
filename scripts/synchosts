@@ -218,6 +218,7 @@ sync_data_home() {
   if [[ "$directory" == "$projects_directory" ]]; then
     excludes+=(
       --exclude='tutoriais_e_cursos/'
+      --exclude='/omxterm-issue-278/'
       --exclude='.pi' --exclude='.codex' --exclude='.claude'
     )
   elif [[ "$directory" == '.pi/' ]]; then
@@ -226,6 +227,7 @@ sync_data_home() {
     # Completed DB backups travel; live DBs and sidecars keep the shared filters.
     # The operator keeps these snapshots and other sources idle during sync.
     excludes=(
+      --exclude='/workspaces/'
       --include='/backups/**.db'
       --include='/backups/**.sqlite'
       --include='/backups/**.sqlite3'
