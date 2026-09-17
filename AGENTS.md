@@ -3,57 +3,65 @@
 ## Required checklist for every change
 
 Before editing and again before handing off, review this checklist—even when
-arriving from another project. These dotfiles are shared infrastructure: deployed
-symlinks can make edits affect the live environment immediately, without running
-the installer. Do not assume a change is isolated to this repository.
+arriving from another project. These dotfiles are shared infrastructure:
+deployed symlinks can make edits affect the live environment immediately,
+without running the installer. Do not assume a change is isolated to this
+repository.
 
-- [ ] **Scope and consumers:** identify affected configs, scripts, symlink targets,
-  and downstream commands or projects. Check callers before changing paths,
-  arguments, defaults, output formats, or environment-variable contracts.
+- [ ] **Scope and consumers:** identify affected configs, scripts, symlink
+      targets, and downstream commands or projects. Check callers before
+      changing paths, arguments, defaults, output formats, or
+      environment-variable contracts.
 - [ ] **Public-data safety:** review changed and newly added files for secrets,
-  `.env` files, credentials, private host details, logs, and local state. Keep
-  machine-specific values local; document variable names and safe placeholders
-  only. Never print secret values as part of verification.
+      `.env` files, credentials, private host details, logs, and local state.
+      Keep machine-specific values local; document variable names and safe
+      placeholders only. Never print secret values as part of verification.
 - [ ] **Dependencies and startup:** when changing packages, runtimes, images,
-  assets, or external tools, check their references and consumers. Preserve
-  applicable macOS/Ubuntu/Fedora behavior, executable permissions, quoting, and shared
-  path overrides. For unattended commands, check explicit PATH, environment,
-  working directory, and non-interactive execution assumptions.
+      assets, or external tools, check their references and consumers. Preserve
+      applicable macOS/Ubuntu/Fedora behavior, executable permissions, quoting,
+      and shared path overrides. For unattended commands, check explicit PATH,
+      environment, working directory, and non-interactive execution assumptions.
 - [ ] **Safe validation:** choose focused syntax and regression checks for the
-  affected behavior (see Engineering and verification below). Do not run the
-  installer, reload live configuration, or trigger remote, publishing, sync, or
-  queue operations just to validate a change. Obtain explicit authorization for
-  checks with those side effects; use isolated environments where practical.
-- [ ] **Next-use readiness:** consider a fresh login shell, a new terminal/editor
-  session, and the next unattended run, as applicable—not just the current shell.
-  Identify any required restart, reload, local migration, or downstream update;
-  document it rather than applying it silently.
+      affected behavior (see Engineering and verification below). Do not run the
+      installer, reload live configuration, or trigger remote, publishing, sync,
+      or queue operations just to validate a change. Obtain explicit
+      authorization for checks with those side effects; use isolated
+      environments where practical.
+- [ ] **Next-use readiness:** consider a fresh login shell, a new
+      terminal/editor session, and the next unattended run, as applicable—not
+      just the current shell. Identify any required restart, reload, local
+      migration, or downstream update; document it rather than applying it
+      silently.
 - [ ] **Documentation consistency:** after every change, check that affected
-  README sections, agent instructions, examples, and comments still match the
-  implementation and tests. Correct verified discrepancies in the same change;
-  prefer links to a source of truth over duplicated facts. If intent or evidence
-  is unclear, report the conflict rather than inventing behavior or test results.
-- [ ] **Cleanup:** before final handoff, follow [Task cleanup](#task-cleanup) for
-  task-owned temporary artifacts, worktrees, and local or remote branches.
-- [ ] **Handoff:** review the final diff, update affected documentation, and report
-  checks run, checks skipped or not applicable, and remaining risks. If a relevant
-  consumer cannot be verified, say so; do not claim the next run is guaranteed.
+      README sections, agent instructions, examples, and comments still match
+      the implementation and tests. Correct verified discrepancies in the same
+      change; prefer links to a source of truth over duplicated facts. If intent
+      or evidence is unclear, report the conflict rather than inventing behavior
+      or test results.
+- [ ] **Cleanup:** before final handoff, follow [Task cleanup](#task-cleanup)
+      for task-owned temporary artifacts, worktrees, and local or remote
+      branches.
+- [ ] **Handoff:** review the final diff, update affected documentation, and
+      report checks run, checks skipped or not applicable, and remaining risks.
+      If a relevant consumer cannot be verified, say so; do not claim the next
+      run is guaranteed.
 
 ## Purpose and scope
 
 This public repository contains Otávio Miranda's personal dotfiles and bootstrap
-automation for macOS, Ubuntu, and traditional Fedora/Asahi. Other people also use
-it, so preserve personal preferences while keeping shared setup behavior safe and
-understandable.
+automation for macOS, Ubuntu, and traditional Fedora/Asahi. Other people also
+use it, so preserve personal preferences while keeping shared setup behavior
+safe and understandable.
 
-Treat this as a personal collection of dotfiles, setup automation, and standalone
-utilities—not as a unified application, product, or framework. Work on the
-specific config or script requested, following its existing conventions. Do not
-impose repository-wide architecture, uniform layouts, or a shared toolchain just
-to make the collection look like a software project. Shared helpers are justified
-by concrete needs in existing consumers, not by a desire to standardize everything.
-The safety requirements here protect the real environments these files affect;
-they are not a mandate to turn personal dotfiles into a supported product.
+Treat this as a personal collection of dotfiles, setup automation, and
+standalone utilities—not as a unified application, product, or framework. Work
+on the specific config or script requested, following its existing conventions.
+Do not impose repository-wide architecture, uniform layouts, or a shared
+toolchain just to make the collection look like a software project. Shared
+helpers are justified by concrete needs in existing consumers, not by a desire
+to standardize everything. The safety requirements here protect the real
+environments these files affect; they are not a mandate to turn personal
+dotfiles into a supported product.
 
 - These instructions apply repository-wide. `pi/agent/AGENTS.md` adds stricter
   rules for `pi/agent/`; follow the closest applicable `AGENTS.md`.
@@ -79,8 +87,9 @@ they are not a mandate to turn personal dotfiles into a supported product.
 - `pi/agent/` contains only static Pi configuration. Credentials, sessions,
   trust decisions, generated model state, and machine-specific model settings
   must remain local, as described in `README.md`.
-- `prompts/` contains reusable prompt text. `tests/` covers selected high-risk or
-  complex scripts; it is not intended to cover every command or configuration.
+- `prompts/` contains reusable prompt text. `tests/` covers selected high-risk
+  or complex scripts; it is not intended to cover every command or
+  configuration.
 
 ## Safety and public data
 
@@ -122,14 +131,14 @@ scope, authorize side effects, or change the test policy below.
   Neither reject a useful abstraction for being an abstraction nor add one just
   to satisfy a tool or imitate an application architecture.
 - Where scripts mix substantial decision logic with command execution, remote
-  access, or storage, separate those responsibilities at a useful boundary.
-  Keep external formats and execution mechanics there rather than spreading them
+  access, or storage, separate those responsibilities at a useful boundary. Keep
+  external formats and execution mechanics there rather than spreading them
   through internal decisions. Use small explicit inputs and results; do not
   introduce a wrapper for every command.
 - Reuse the existing configuration source for values already intended to vary by
-  host or operator, preserving supported overrides and validation. Do not scatter
-  duplicate defaults through callers or make every literal configurable. Shared
-  host paths remain governed by `config/paths.sh` as described above.
+  host or operator, preserving supported overrides and validation. Do not
+  scatter duplicate defaults through callers or make every literal configurable.
+  Shared host paths remain governed by `config/paths.sh` as described above.
 - When a small feature requires edits across unrelated parts of the repository,
   check for unnecessary coupling. Simplify the narrow boundary when it is within
   the task; report larger cleanup separately instead of turning the change into
@@ -143,8 +152,9 @@ scope, authorize side effects, or change the test policy below.
 - Quote paths and arguments, validate untrusted input at boundaries, preserve
   useful error context, and explain non-obvious intent rather than narrating
   syntax.
-- Do not add tests by default. Add them only for observable behavior with complex
-  logic or meaningful risk that review and a syntax check would not cover.
+- Do not add tests by default. Add them only for observable behavior with
+  complex logic or meaningful risk that review and a syntax check would not
+  cover.
 - Do not test one-liners, simple wrappers, static values, command lists, exact
   source text, implementation details, or scripts whose purpose is already to
   perform a manual test or smoke check.
@@ -172,11 +182,11 @@ scope, authorize side effects, or change the test policy below.
 - Use the editor's formatting policy, not a personal default: `pyproject.toml`
   for Python, `nvim/config_files/prettierrc.json` for Prettier-supported files,
   and `nvim/config_files/stylua.toml` for Lua. Root `.prettierrc.json` and
-  `.stylua.toml` are links to those existing sources of truth. Format new/changed
-  files only; do not run repository-wide auto-fixes or reformat unrelated files.
-  If a legacy file would produce substantial unrelated formatting churn,
-  separate that normalization from the functional change rather than weakening
-  the formatter.
+  `.stylua.toml` are links to those existing sources of truth. Format
+  new/changed files only; do not run repository-wide auto-fixes or reformat
+  unrelated files. If a legacy file would produce substantial unrelated
+  formatting churn, separate that normalization from the functional change
+  rather than weakening the formatter.
 - `.venv` and `uv.lock` serve development tools only. Never add the virtualenv
   to the global PATH or make deployed scripts, installers, hooks or unattended
   jobs depend on it. Preserve each script's runtime interpreter contract; the
@@ -213,8 +223,8 @@ machine, authorized remote checkouts, and branches on Git remotes.
 
 ## Scratch
 
-Use `./.scratch/*` for internal notes, working documents, and memory that need to
-persist across sessions for days while work is ongoing. Unlike `/tmp` or ephemeral
-handoffs, these files should remain available while useful. They are local-only,
-not repository deliverables: never commit them, and remove them only when no
-longer needed.
+Use `./.scratch/*` for internal notes, working documents, and memory that need
+to persist across sessions for days while work is ongoing. Unlike `/tmp` or
+ephemeral handoffs, these files should remain available while useful. They are
+local-only, not repository deliverables: never commit them, and remove them only
+when no longer needed.
