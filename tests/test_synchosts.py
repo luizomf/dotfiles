@@ -289,7 +289,6 @@ class SyncHostsTests(unittest.TestCase):
             "sannux-data/agent-homes/codex/.codex/hooks/state/lock",
             "sannux-data/agent-homes/codex/.codex/skills/.system/generated",
             "sannux-data/agent-homes/codex/.ssh/id_ed25519",
-            "sannux-data/worktrees/project/.codex/config.toml",
             "sannux-data/backups/omnews/export.db",
         ]
         local_only = [
@@ -297,6 +296,7 @@ class SyncHostsTests(unittest.TestCase):
             "sannux-data/agent-homes/pi/.local/node_modules/native.node",
             "sannux-data/agent-homes/codex.ephemeral-runs/run.ABC/.codex/config.toml",
             "sannux-data/worktrees/project/.git",
+            "sannux-data/worktrees/project/.codex/config.toml",
             "sannux-data/live/queue.sqlite3",
             "sannux-data/backups/omnews/export.db-wal",
         ]
@@ -491,6 +491,7 @@ class SyncHostsTests(unittest.TestCase):
             "Desktop/tutoriais_e_cursos/project/local.db-wal",
             "Desktop/tutoriais_e_cursos/project/.pi/session.json",
             "sannux-data/workspaces/user-project/code",
+            "sannux-data/worktrees/user-project/feature/code",
             "Desktop/tutoriais_e_cursos/omxterm-issue-278/source.txt",
         ]
         for host in ["m132", "m4128", "fedoraair"]:

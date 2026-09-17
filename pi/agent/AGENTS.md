@@ -13,6 +13,11 @@ Ask for clarification only when ambiguity materially affects the outcome,
 safety, scope, or authorization. Otherwise, make reasonable assumptions and
 proceed.
 
+Create new Git worktrees under `~/sannux-data/worktrees/<repo>/<worktree_name>`,
+not inside or alongside project checkouts. This host-local root is excluded from
+`synchosts`; transfer work explicitly when needed. Do not relocate existing
+worktrees just to apply this convention.
+
 Prefix supported commands with `rtk` (e.g. `rtk ls -lah`). Use
 `rtk proxy <command>` when bypassing RTK is necessary.
 

@@ -200,6 +200,14 @@ scope, authorize side effects, or change the test policy below.
   that do not alter the host. Review the final diff and report exactly what ran,
   what was skipped, and any remaining risk.
 
+## Git worktrees
+
+Create new Git worktrees under `~/sannux-data/worktrees/<repo>/<worktree_name>`,
+never inside the project checkout or in sibling directories under
+`$PROJECTS_DIR`. This host-local root is excluded from `synchosts`; transfer
+work explicitly when needed. Do not relocate existing worktrees as part of
+applying this convention.
+
 ## Task cleanup
 
 When finishing a task, remove temporary artifacts, worktrees, and branches that

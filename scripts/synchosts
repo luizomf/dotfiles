@@ -228,6 +228,7 @@ sync_data_home() {
     # The operator keeps these snapshots and other sources idle during sync.
     excludes=(
       --exclude='/workspaces/'
+      --exclude='/worktrees/'
       --include='/backups/**.db'
       --include='/backups/**.sqlite'
       --include='/backups/**.sqlite3'
