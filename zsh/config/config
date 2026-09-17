@@ -1,8 +1,9 @@
 #!/bin/sh
 # vim: set filetype=sh :
 
-SAVEHIST=1000000 # Thats way too big, but I'm testing something
-HISTSIZE=1000000
+# shellcheck disable=SC2034
+SAVEHIST=20000 # Thats way too big, but I'm testing something
+HISTSIZE=20000
 
 setopt BANG_HIST                 # Treat the '!' character specially during expansion.
 setopt EXTENDED_HISTORY          # Write the history file in the ":start:elapsed;command" format.
@@ -38,11 +39,14 @@ setopt GLOB_DOTS                 # Include dotfiles when globbing.
 
 # .zshrc
 export ZSH="$HOME/.oh-my-zsh"
+# shellcheck disable=SC2034
 ZSH_THEME="omtheme"
+# shellcheck disable=SC3030,2034
 plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
 
 # Keep terminal titles under the explicit scripts/title command.
+# shellcheck disable=SC2034
 DISABLE_AUTO_TITLE=true
-source $ZSH/oh-my-zsh.sh
+# shellcheck disable=SC2046,SC1091
+. "$ZSH"/oh-my-zsh.sh
 unfunction title 2>/dev/null || true
-
