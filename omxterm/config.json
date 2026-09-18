@@ -5,7 +5,8 @@
   "font": {
     "family": "FiraCode Nerd Font",
     "size": 20,
-    "lineHeight": 1.0
+    "lineHeight": 1.0,
+    "ligatures": false
   },
   "terminal": {
     "padding": {
