@@ -84,7 +84,7 @@ brew "pyenv"
 # Search tool like grep and The Silver Searcher
 brew "ripgrep"
 # Extremely fast non-cryptographic hash algorithm
-brew "xxhash", link: false
+brew "xxhash"
 # Utility that provides fast incremental file transfer
 brew "rsync"
 # CLI proxy to minimize LLM token consumption
