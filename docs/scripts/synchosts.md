@@ -57,6 +57,9 @@ The project-root transfer additionally retains its existing `.pi`, `.codex`,
 `.claude`, and nested `tutoriais_e_cursos/` exclusions. They do not suppress
 these directories inside the separately synchronized Pi/Sannux roots. The
 project-root `/omxterm-issue-278/` worktree is also explicitly excluded.
+`/*/release/` excludes each immediate project's root `release/` directory in
+both directions. Nested `release/` directories and other synchronized roots are
+unaffected; existing local and peer copies are not removed.
 
 **Backup exception:** `.db`, `.sqlite` and `.sqlite3` files beneath
 `~/sannux-data/backups/` travel; their sidecars remain excluded. Keep completed,
@@ -105,11 +108,14 @@ the known generated directories is ordinary project data.
 For an already-prepared peer, this transfers working files, private agent homes
 and notes, not the entire running environment. A few boundaries remain visible:
 
-- `~/dotfiles` itself is outside the rsync data roots. `pullall` runs on the
-  caller, does not push commits, and skips dirty checkouts. Uncommitted dotfiles
-  edits do not reach peers through this command. Commit and push intended
-  versioned changes, then pull the updated dotfiles on peers before using the
-  sync. Private sync data and scratch notes stay out of Git.
+- `~/dotfiles` itself is outside the rsync data roots. `pullall` runs over SSH
+  on the selected fleet, including `--additional-hosts`, using the host runner
+  beside `synchosts`. It does not push commits and skips dirty checkouts.
+  Uncommitted dotfiles edits do not reach peers through this command. Commit and
+  push intended versioned changes; the Git-update step pulls them on prepared
+  hosts before data collection. New hosts still need the shell/tools and
+  checkout required to run `pullall`. Private sync data and scratch notes stay
+  out of Git.
 - Project `.pi`, `.codex` and `.claude` directories retain their existing
   exclusions. Project-local agent settings may therefore differ even though the
   whole host `~/.pi/` travels.
@@ -169,11 +175,12 @@ Apple's OpenRSYNC rejects that option. Nothing is installed automatically.
 ## Workflow and failures
 
 The command validates the host list, merges Zsh history, saves/stages tmux
-state, runs `pullall`, then collects data from every peer before distributing
-it. If any collection fails, data and optional auth publication are blocked;
-already collected local files are not rolled back. Tmux publication is
-independent. A failed push does not stop other pushes or the separate auth
-phase. The summary reports failures and exits nonzero for incomplete work.
+state, runs `pullall` over SSH on the selected fleet (including additional
+hosts), then collects data from every peer before distributing it. If any
+collection fails, data and optional auth publication are blocked; already
+collected local files are not rolled back. Tmux publication is independent. A
+failed push does not stop other pushes or the separate auth phase. The summary
+reports failures and exits nonzero for incomplete work.
 
 Normal data uses the existing mtime-based `rsync -u` merge. It is not version
 control or an exact mirror: simultaneous edits are not resolved, and ordinary

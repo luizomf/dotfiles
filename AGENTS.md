@@ -200,6 +200,19 @@ scope, authorize side effects, or change the test policy below.
   that do not alter the host. Review the final diff and report exactly what ran,
   what was skipped, and any remaining risk.
 
+## Commit and push delivery
+
+For requested repository changes, complete delivery by committing and pushing
+that work to the intended branch after review and applicable checks, unless the
+user asks to leave it uncommitted or not to push. Do not ask for approval again
+merely to perform this default delivery. If a check or push fails, or the target
+branch is genuinely unclear, report the blocker and preserve the work rather
+than claiming completion.
+
+Stage only the task's reviewed changes, including pre-existing changes the user
+explicitly asks to finish. Preserve unrelated edits and never publish private
+wiki files, scratch notes, credentials, or local state.
+
 ## Git worktrees
 
 Create new Git worktrees under `~/sannux-data/worktrees/<repo>/<worktree_name>`,

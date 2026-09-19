@@ -118,7 +118,7 @@ if run_step 'tmux save' env -u TMUX -u TMUX_PANE "$script_dir/tmux-lazy" save --
   tmux_saved=1
 fi
 
-run_step 'pullall' run_all_hosts -- '. ~/.zshrc ; pullall'
+run_step 'pullall' "$host_runner" "$@" -- '. ~/.zshrc ; pullall'
 
 echo
 prline
@@ -219,6 +219,7 @@ sync_data_home() {
     excludes+=(
       --exclude='tutoriais_e_cursos/'
       --exclude='/omxterm-issue-278/'
+      --exclude='/*/release/'
       --exclude='.pi' --exclude='.codex' --exclude='.claude'
     )
   elif [[ "$directory" == '.pi/' ]]; then
