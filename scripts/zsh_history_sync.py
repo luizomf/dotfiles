@@ -1,4 +1,5 @@
 #!/usr/bin/env python3.14
+# Copyright (c) 2026 Luiz Otávio Miranda
 """Merge the zsh history of every known host into the local history file.
 
 Hosts that are offline are skipped, never fatal: their entries simply arrive on
@@ -14,9 +15,12 @@ import subprocess
 import sys
 import tempfile
 import time
-from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+  from collections.abc import Iterator, Sequence
 
 HOME = Path.home()
 CURR_ZSH_HISTORY = HOME / ".zsh_history"
@@ -114,7 +118,8 @@ def list_hosts(additional_hosts: Sequence[str]) -> list[str]:
   command = [str(HOST_RUNNER), "--list"]
   if additional_hosts:
     command.extend(["--additional-hosts", *additional_hosts])
-  result = subprocess.run(
+  # Fixed local runner, literal argv; the runner validates additional SSH aliases.
+  result = subprocess.run(  # noqa: S603
     command, check=True, capture_output=True, text=True, timeout=HOST_LIST_TIMEOUT
   )
   return result.stdout.splitlines()
@@ -123,7 +128,8 @@ def list_hosts(additional_hosts: Sequence[str]) -> list[str]:
 def read_remote_history(host: str) -> bytes | None:
   """Return the host's raw history, or None when it cannot be read."""
   try:
-    out = subprocess.run(
+    # The runner validates host aliases; the remote command is fixed, not user text.
+    out = subprocess.run(  # noqa: S603
       [
         str(HOST_RUNNER),
         "--host",
@@ -150,7 +156,9 @@ def read_remote_history(host: str) -> bytes | None:
 
 def is_local_host(host: str) -> bool:
   """Every machine shares this host list, so each one finds itself in it."""
-  return host.split(".")[0].lower() == socket.gethostname().split(".")[0].lower()
+  return (
+    host.partition(".")[0].lower() == socket.gethostname().partition(".")[0].lower()
+  )
 
 
 def collect_entries(
@@ -217,7 +225,7 @@ def write_history(curr_history_path: Path, entries: Sequence[ZshHistoryEntry]) -
       os.fsync(tmp_file.fileno())
 
     tmp_path.chmod(mode)
-    os.replace(tmp_path, curr_history_path)
+    tmp_path.replace(curr_history_path)
   except BaseException:
     tmp_path.unlink(missing_ok=True)
     raise
