@@ -3,10 +3,7 @@
   "defaultModel": "gpt-5.6-sol",
   "defaultThinkingLevel": "medium",
   "theme": "omtheme",
-  "enabledModels": [
-    "gpt-*",
-    "ollama/*"
-  ],
+  "enabledModels": ["gpt-*", "ollama/*"],
   "compaction": {
     "enabled": true
   },
@@ -22,7 +19,7 @@
     "-../../.codex/skills/",
     "-../../.claude/skills/"
   ],
-  "lastChangelogVersion": "0.85.1",
+  "lastChangelogVersion": "0.86.0",
   "outputPad": 1,
   "steeringMode": "one-at-a-time",
   "enableSkillCommands": true,
