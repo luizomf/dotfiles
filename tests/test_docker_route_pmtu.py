@@ -1,11 +1,13 @@
+# Copyright (c) 2026 Luiz Otávio Miranda
 """Control-flow tests only: no real firewall, files in /run, or subprocesses."""
+
+from __future__ import annotations
 
 import importlib.machinery
 import importlib.util
 import subprocess
 import unittest
 from pathlib import Path
-from typing import Optional
 from unittest.mock import mock_open, patch
 
 candidate_path = (
@@ -21,9 +23,9 @@ loader.exec_module(m)
 class Fake:
   def __init__(
     self,
-    fail_insert: Optional[int] = None,
-    timeout_insert: Optional[int] = None,
-    timeout_delete: Optional[int] = None,
+    fail_insert: int | None = None,
+    timeout_insert: int | None = None,
+    timeout_delete: int | None = None,
   ) -> None:
     self.state: set[tuple[str, tuple[str, ...]]] = set()
     self.inserts = 0
@@ -33,7 +35,9 @@ class Fake:
     self.timeout_delete = timeout_delete
 
   def run(
-    self, args: list[str], check: bool = True
+    self,
+    args: list[str],
+    check: bool = True,  # noqa: FBT001, FBT002 - mirrors production callable
   ) -> subprocess.CompletedProcess[str]:
     _ = check
     action = args[5]
@@ -114,9 +118,11 @@ class CandidateTests(unittest.TestCase):
 
   def test_rollback_exception_does_not_skip_remaining_or_mask_original(self):
     fake = Fake(fail_insert=4, timeout_delete=1)
-    with patch("builtins.print") as output:
-      with self.assertRaises(subprocess.CalledProcessError):
-        self.execute(fake, "apply")
+    with (
+      patch("builtins.print") as output,
+      self.assertRaises(subprocess.CalledProcessError),
+    ):
+      self.execute(fake, "apply")
     self.assertEqual(fake.deletes, 3)
     self.assertEqual(len(fake.state), 1)
     self.assertTrue(any("ROLLBACK" in str(call) for call in output.call_args_list))
