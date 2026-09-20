@@ -25,7 +25,8 @@ packages and replaces shell, editor, terminal, Git, tmux, and Pi configuration.
 Existing targets are moved to a timestamped directory under
 `~/.dotfiles-backups/`, but you should still keep your own backup.
 
-Install Git first, then run:
+Install Git first. For a **new checkout** (`~/dotfiles` must not already exist),
+run:
 
 ```bash
 git clone https://github.com/luizomf/dotfiles.git ~/dotfiles
@@ -33,8 +34,11 @@ cd ~/dotfiles
 ./install.sh
 ```
 
-The repository is expected to live at `~/dotfiles`. Start a new login shell when
-the installation finishes.
+The repository must live at `~/dotfiles`. If you already cloned it, **do not
+clone again**: use `cd ~/dotfiles && ./install.sh`. Run the installer as your
+normal user, **not** with `sudo ./install.sh`; it requests elevated permissions
+for individual system operations. Start a new login shell when installation
+finishes.
 
 Python setup failures preserve the original error and do not stop independent
 configuration steps. The installer skips the remaining Python setup and its
@@ -65,12 +69,44 @@ authorization may expire during a long installation. Third-party commands that
 require interaction may fail rather than complete unattended. No privileges are
 granted by this flag.
 
-Configure Git identity separately in `~/.gitconfig.local` when needed.
+### Local terminal: authenticate once, then skip installer prompts
+
+**First installation only:** clone to the explicit destination, regardless of
+which directory your terminal is currently in. `sudo -v` asks for your password
+before the installer disables prompts.
 
 ```bash
 # 🚨 DANGEROUS (I mean it)
-export OM_INSTALL_ASSUME_YES=1 && git clone https://github.com/luizomf/dotfiles && cd dotfiles && ./install.sh
+git clone https://github.com/luizomf/dotfiles.git ~/dotfiles &&
+  cd ~/dotfiles &&
+  sudo -v &&
+  OM_INSTALL_ASSUME_YES=1 ./install.sh
 ```
+
+**Already cloned?** Use this instead; do not create another nested checkout:
+
+```bash
+cd ~/dotfiles && sudo -v && OM_INSTALL_ASSUME_YES=1 ./install.sh
+```
+
+If you see `sudo: a password is required`, authorization is missing or expired.
+In a local terminal, authenticate again with `sudo -v` and rerun the command
+above. If authorization keeps expiring, use normal interactive mode instead:
+
+```bash
+cd ~/dotfiles && env -u OM_INSTALL_ASSUME_YES ./install.sh
+```
+
+### Fully unattended automation
+
+`sudo -v` is an interactive preparation step, not a solution for a job with
+nobody available to enter a password. Provision the job user's required sudo
+permissions beforehand. In that same execution environment, `sudo -n true`
+checks basic non-interactive access; it does not prove permission for every
+command the installer needs. Missing permission causes failure, not a prompt. Do
+not run the whole installer as root to work around this.
+
+Configure Git identity separately in `~/.gitconfig.local` when needed.
 
 50/50 chance everything is gonna be OK.
 
