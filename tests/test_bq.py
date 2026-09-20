@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Luiz Otávio Miranda
+
 import io
 import json
 import os
@@ -10,7 +12,7 @@ import tempfile
 import textwrap
 import time
 import unittest
-from contextlib import redirect_stderr
+from contextlib import redirect_stderr, suppress
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -82,16 +84,22 @@ class BqCliTests(unittest.TestCase):
                 elif arguments[:2] == ["definition", "apply"]:
                     with open(arguments[2], encoding="utf-8") as handle:
                         document = json.load(handle)
-                    with open(os.environ["FAKE_DEFINITION_LOG"], "a", encoding="utf-8") as handle:
+                    with open(
+                        os.environ["FAKE_DEFINITION_LOG"], "a", encoding="utf-8"
+                    ) as handle:
                         handle.write(json.dumps(document) + "\\n")
-                    definition_id = document.get("definitionId", f"created-{uuid.uuid4()}")
+                    definition_id = document.get(
+                        "definitionId", f"created-{uuid.uuid4()}"
+                    )
                     print(json.dumps({"result": {"definitionId": definition_id}}))
                 elif arguments[:2] == ["definition", "enable"]:
                     print("{}")
                 elif arguments[0] == "trigger":
                     print(json.dumps({"job": {"jobId": "job-123", "state": "queued"}}))
                 else:
-                    raise SystemExit(f"unsupported fake omqueue arguments: {arguments!r}")
+                    raise SystemExit(
+                        f"unsupported fake omqueue arguments: {arguments!r}"
+                    )
                 """
       ),
       encoding="utf-8",
@@ -102,7 +110,8 @@ class BqCliTests(unittest.TestCase):
     with tempfile.TemporaryFile() as submission_stdin:
       submission_stdin.write(b"leave this unread")
       submission_stdin.seek(0)
-      result = subprocess.run(
+      # BQ is repository-owned and this test controls every literal argument.
+      result = subprocess.run(  # noqa: S603
         [str(BQ), "--", "/usr/bin/true"],
         stdin=submission_stdin,
         text=True,
@@ -124,7 +133,8 @@ class BqCliTests(unittest.TestCase):
     ]
     for value in values:
       with self.subTest(value=value):
-        result = subprocess.run(
+        # BQ is repository-owned and this test controls every literal argument.
+        result = subprocess.run(  # noqa: S603
           [str(BQ), "--stdin", "--", "/usr/bin/true"],
           input=value.encode("utf-8"),
           capture_output=True,
@@ -255,7 +265,8 @@ class BqCliTests(unittest.TestCase):
       "stdin": stdin_text,
     }
 
-    result = subprocess.run(
+    # BQ is repository-owned and this test controls every literal argument.
+    result = subprocess.run(  # noqa: S603
       [str(BQ), "--internal-run"],
       input=json.dumps(trigger_input, ensure_ascii=False).encode("utf-8"),
       capture_output=True,
@@ -294,7 +305,8 @@ class BqCliTests(unittest.TestCase):
   def test_stdin_rejects_an_interactive_terminal(self) -> None:
     master, slave = pty.openpty()
     self.addCleanup(os.close, master)
-    result = subprocess.run(
+    # BQ is repository-owned and this test controls every literal argument.
+    result = subprocess.run(  # noqa: S603
       [str(BQ), "--stdin", "--", "/usr/bin/true"],
       stdin=slave,
       capture_output=True,
@@ -322,7 +334,8 @@ class BqCliTests(unittest.TestCase):
       "workingDirectory": str(self.root),
     }
 
-    result = subprocess.run(
+    # BQ is repository-owned and this test controls every literal argument.
+    result = subprocess.run(  # noqa: S603
       [str(BQ), "--internal-run"],
       input=json.dumps(trigger_input).encode(),
       capture_output=True,
@@ -367,7 +380,8 @@ class BqCliTests(unittest.TestCase):
     local_environment = self.environment()
     local_environment["BQ_UNRELATED_TEST"] = "must not reach the payload"
 
-    first = subprocess.run(
+    # BQ is repository-owned and this test controls every literal argument.
+    first = subprocess.run(  # noqa: S603
       [
         str(BQ),
         "--stdin",
@@ -386,7 +400,8 @@ class BqCliTests(unittest.TestCase):
       env=local_environment,
       check=False,
     )
-    second = subprocess.run(
+    # BQ is repository-owned and this test controls every literal argument.
+    second = subprocess.run(  # noqa: S603
       [
         str(BQ),
         "--at",
@@ -458,7 +473,8 @@ class BqCliTests(unittest.TestCase):
 
     for timing in values:
       with self.subTest(timing=timing):
-        result = subprocess.run(
+        # BQ is repository-owned and this test controls every literal argument.
+        result = subprocess.run(  # noqa: S603
           [str(BQ), *timing, "--", "/usr/bin/true"],
           text=True,
           capture_output=True,
@@ -475,7 +491,8 @@ class BqCliTests(unittest.TestCase):
     environment = self.environment()
     environment["BQ_OMQUEUE"] = str(self.root / "missing-omqueue")
 
-    result = subprocess.run(
+    # BQ is repository-owned and this test controls every literal argument.
+    result = subprocess.run(  # noqa: S603
       [str(BQ), "--", "/usr/bin/touch", str(marker)],
       text=True,
       capture_output=True,
@@ -493,7 +510,8 @@ class BqCliTests(unittest.TestCase):
     config_path.symlink_to(self.root / "missing-config-target")
     marker = self.root / "must-not-run-from-dangling-config"
 
-    result = subprocess.run(
+    # BQ is repository-owned and this test controls every literal argument.
+    result = subprocess.run(  # noqa: S603
       [str(BQ), "--", "/usr/bin/touch", str(marker)],
       text=True,
       capture_output=True,
@@ -511,7 +529,8 @@ class BqCliTests(unittest.TestCase):
     config_path.parent.chmod(0)
     marker = self.root / "must-not-run-from-unreadable-config"
     try:
-      result = subprocess.run(
+      # BQ is repository-owned and this test controls every literal argument.
+      result = subprocess.run(  # noqa: S603
         [str(BQ), "--", "/usr/bin/touch", str(marker)],
         text=True,
         capture_output=True,
@@ -526,7 +545,8 @@ class BqCliTests(unittest.TestCase):
     self.assertFalse(marker.exists())
 
   def test_json_immediate_submission_prints_only_accepted_job(self) -> None:
-    result = subprocess.run(
+    # BQ is repository-owned and this test controls every literal argument.
+    result = subprocess.run(  # noqa: S603
       [str(BQ), "--json", "--", "/usr/bin/true"],
       input=b"",
       capture_output=True,
@@ -554,7 +574,8 @@ class BqCliTests(unittest.TestCase):
     )
     self.install_definition_fake()
 
-    result = subprocess.run(
+    # BQ is repository-owned and this test controls every literal argument.
+    result = subprocess.run(  # noqa: S603
       [str(BQ), "--setup"],
       capture_output=True,
       env=self.environment(),
@@ -587,7 +608,8 @@ class BqCliTests(unittest.TestCase):
   def test_lazy_concurrency_setup_does_not_contaminate_json_stdout(self) -> None:
     self.install_definition_fake()
 
-    result = subprocess.run(
+    # BQ is repository-owned and this test controls every literal argument.
+    result = subprocess.run(  # noqa: S603
       [
         str(BQ),
         "--json",
@@ -611,13 +633,15 @@ class BqCliTests(unittest.TestCase):
     self.assertIn(b"ready concurrency key", result.stderr)
 
   def test_json_rejects_scheduling_and_setup(self) -> None:
-    scheduled = subprocess.run(
+    # BQ is repository-owned and this test controls every literal argument.
+    scheduled = subprocess.run(  # noqa: S603
       [str(BQ), "--json", "--in", "1m", "--", "/usr/bin/true"],
       capture_output=True,
       env=self.environment(),
       check=False,
     )
-    setup = subprocess.run(
+    # BQ is repository-owned and this test controls every literal argument.
+    setup = subprocess.run(  # noqa: S603
       [str(BQ), "--setup", "--json"],
       capture_output=True,
       env=self.environment(),
@@ -646,7 +670,9 @@ class BqCliTests(unittest.TestCase):
                 import sys
                 import time
 
-                leader_marker, child_marker, ready_marker = map(pathlib.Path, sys.argv[1:])
+                leader_marker, child_marker, ready_marker = map(
+                    pathlib.Path, sys.argv[1:]
+                )
                 child_code = '''
                 import pathlib, signal, sys, time
                 marker = pathlib.Path(sys.argv[1])
@@ -659,7 +685,13 @@ class BqCliTests(unittest.TestCase):
                 while True: time.sleep(1)
                 '''
                 child_ready = ready_marker.with_suffix(".child")
-                subprocess.Popen([sys.executable, "-c", child_code, str(child_marker), str(child_ready)])
+                subprocess.Popen([
+                    sys.executable,
+                    "-c",
+                    child_code,
+                    str(child_marker),
+                    str(child_ready),
+                ])
                 while not child_ready.exists():
                     time.sleep(0.01)
                 def stop(signum, frame):
@@ -683,7 +715,8 @@ class BqCliTests(unittest.TestCase):
       "workingDirectory": str(self.root),
       "stdin": "durable input",
     }
-    process = subprocess.Popen(
+    # BQ is repository-owned and this test controls every literal argument.
+    process = subprocess.Popen(  # noqa: S603
       [str(BQ), "--internal-run"],
       stdin=subprocess.PIPE,
       stdout=subprocess.DEVNULL,
@@ -693,14 +726,10 @@ class BqCliTests(unittest.TestCase):
     )
 
     def terminate_process_group() -> None:
-      try:
+      with suppress(ProcessLookupError):
         os.killpg(process.pid, signal.SIGKILL)
-      except ProcessLookupError:
-        pass
-      try:
+      with suppress(subprocess.TimeoutExpired):
         process.wait(timeout=1)
-      except subprocess.TimeoutExpired:
-        pass
 
     self.addCleanup(terminate_process_group)
     assert process.stdin is not None
@@ -721,7 +750,8 @@ class BqCliTests(unittest.TestCase):
     self.assertTrue(child_marker.exists())
 
   def test_invalid_utf8_stdin_fails_without_submitting(self) -> None:
-    result = subprocess.run(
+    # BQ is repository-owned and this test controls every literal argument.
+    result = subprocess.run(  # noqa: S603
       [str(BQ), "--stdin", "--", "/usr/bin/true"],
       input=b"\xff",
       capture_output=True,
@@ -743,7 +773,8 @@ class BqCliTests(unittest.TestCase):
     )
     self.fake_omqueue.chmod(0o755)
 
-    result = subprocess.run(
+    # BQ is repository-owned and this test controls every literal argument.
+    result = subprocess.run(  # noqa: S603
       [str(BQ), "--stdin", "--", "/usr/bin/true"],
       input=("á" * 100).encode("utf-8"),
       capture_output=True,
@@ -755,7 +786,8 @@ class BqCliTests(unittest.TestCase):
     self.assertIn(b"exceeds resource limit", result.stderr)
 
   def test_help_warns_that_stdin_is_durable_and_not_for_secrets(self) -> None:
-    result = subprocess.run(
+    # BQ is repository-owned and this test controls every literal argument.
+    result = subprocess.run(  # noqa: S603
       [str(BQ), "--help"],
       capture_output=True,
       env=self.environment(),
@@ -770,7 +802,8 @@ class BqCliTests(unittest.TestCase):
     self.assertIn("secrets", result.stdout)
 
   def test_default_immediate_submission_keeps_human_acceptance_line(self) -> None:
-    result = subprocess.run(
+    # BQ is repository-owned and this test controls every literal argument.
+    result = subprocess.run(  # noqa: S603
       [str(BQ), "--", "/usr/bin/true"],
       input=b"",
       capture_output=True,

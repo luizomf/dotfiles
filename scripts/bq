@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Luiz Otávio Miranda
 
 """Submit work to OMQueue or a non-durable local background fallback."""
 
@@ -15,7 +16,8 @@ import tempfile
 import time
 import uuid
 from collections.abc import Generator, Mapping
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import NoReturn, TextIO, TypedDict, TypeGuard
@@ -86,13 +88,17 @@ def is_string_list(value: object) -> TypeGuard[list[str]]:
 
 def usage(stream: TextIO = sys.stdout) -> None:
   print(
-    """Usage:
-  bq --setup
-  bq [--cwd DIR] [--concurrency-key KEY] [--label LABEL] [--stdin] [--json] [--] EXECUTABLE [ARGUMENTS...]
-  bq [--cwd DIR] [--concurrency-key KEY] [--label LABEL] [--stdin] --in DURATION [--every DURATION --count N] -- EXECUTABLE [ARGUMENTS...]
-  bq [--cwd DIR] [--concurrency-key KEY] [--label LABEL] [--stdin] --at DATETIME [--every DURATION --count N] -- EXECUTABLE [ARGUMENTS...]
-  bq [--cwd DIR] [--concurrency-key KEY] [--label LABEL] [--stdin] --cron EXPRESSION [--tz IANA_ZONE] -- EXECUTABLE [ARGUMENTS...]
-
+    "Usage:\n"
+    "  bq --setup\n"
+    "  bq [--cwd DIR] [--concurrency-key KEY] [--label LABEL] [--stdin]"
+    " [--json] [--] EXECUTABLE [ARGUMENTS...]\n"
+    "  bq [--cwd DIR] [--concurrency-key KEY] [--label LABEL] [--stdin]"
+    " --in DURATION [--every DURATION --count N] -- EXECUTABLE [ARGUMENTS...]\n"
+    "  bq [--cwd DIR] [--concurrency-key KEY] [--label LABEL] [--stdin]"
+    " --at DATETIME [--every DURATION --count N] -- EXECUTABLE [ARGUMENTS...]\n"
+    "  bq [--cwd DIR] [--concurrency-key KEY] [--label LABEL] [--stdin]"
+    " --cron EXPRESSION [--tz IANA_ZONE] -- EXECUTABLE [ARGUMENTS...]\n"
+    """
 Backend:
   A configured bq installation uses OMQueue exactly as before. Without
   ~/.config/bq/config.json, bq starts one non-durable local background process.
@@ -167,7 +173,8 @@ def run_omqueue(
   if not executable:
     fail(f"OMQueue CLI not found: {OMQUEUE}")
 
-  return subprocess.run(
+  # OMQUEUE intentionally selects an executable, but argv is literal and shell-free.
+  return subprocess.run(  # noqa: S603
     [executable, *arguments],
     check=False,
     text=True,
@@ -184,7 +191,7 @@ def linux_session_environment(runtime_path: Path, user_id: int) -> dict[str, str
   if not (
     stat.S_ISDIR(runtime_metadata.st_mode)
     and runtime_metadata.st_uid == user_id
-    and stat.S_IMODE(runtime_metadata.st_mode) == 0o700
+    and stat.S_IMODE(runtime_metadata.st_mode) == PRIVATE_RUNTIME_MODE
   ):
     return {}
 
@@ -350,7 +357,7 @@ def apply_definition(
   try:
     result = run_omqueue(["definition", "apply", document_path, "--json"], capture=True)
   finally:
-    os.unlink(document_path)
+    Path(document_path).unlink()
 
   if result.returncode != 0:
     sys.stderr.write(result.stderr)
@@ -437,7 +444,8 @@ def resolve_executable(value: str, working_directory: str) -> str:
     candidate = Path(value).expanduser()
     if not candidate.is_absolute():
       candidate = Path(working_directory) / candidate
-    executable = os.path.abspath(candidate)
+    # Preserve symlink paths so the submitted command matches the caller's spelling.
+    executable = os.path.abspath(candidate)  # noqa: PTH100
   else:
     executable = shutil.which(value) or ""
 
@@ -452,7 +460,10 @@ def resolve_executable(value: str, working_directory: str) -> str:
 
 DURATION_PATTERN = re.compile(r"^([1-9][0-9]*)([mhd])$")
 ISO_OFFSET_PATTERN = re.compile(r"(?:Z|[+-][0-9]{2}:[0-9]{2})$")
+MIN_FINITE_RUNS = 2
 MAX_FINITE_RUNS = 100
+PRIVATE_RUNTIME_MODE = 0o700
+INTERNAL_LOCAL_ARGUMENT_COUNT = 2
 
 
 def parse_duration(value: str, option: str) -> timedelta:
@@ -506,26 +517,27 @@ def valid_time_zone(candidates: list[str]) -> str | None:
       continue
     try:
       ZoneInfo(candidate)
-      return candidate
     except (ValueError, ZoneInfoNotFoundError):
       continue
+    else:
+      return candidate
   return None
 
 
 def system_time_zone() -> str:
   candidates = [os.environ.get("TZ", "")]
-  try:
+  with suppress(OSError):
     candidates.append(Path("/etc/timezone").read_text(encoding="utf-8").strip())
-  except OSError:
-    pass
 
   try:
     target = str(Path("/etc/localtime").resolve())
   except OSError:
     target = ""
-  for marker in ("/zoneinfo/", "/usr/share/zoneinfo/"):
-    if marker in target:
-      candidates.append(target.split(marker, 1)[1])
+  candidates.extend(
+    target.split(marker, 1)[1]
+    for marker in ("/zoneinfo/", "/usr/share/zoneinfo/")
+    if marker in target
+  )
 
   detected = valid_time_zone(candidates)
   if detected is None:
@@ -539,68 +551,88 @@ def option_value(arguments: list[str], index: int, option: str) -> str:
   return arguments[index + 1]
 
 
-def parse_submission(
-  arguments: list[str],
-) -> tuple[dict[str, object], dict[str, object], str | None, str | None, bool]:
-  working_directory = os.getcwd()
-  timing: dict[str, object] = {}
+@dataclass
+class SubmissionOptions:
+  working_directory: str
+  timing: dict[str, object]
   concurrency_key: str | None = None
   label: str | None = None
-  label_supplied = False
-  capture_stdin = False
-  json_output = False
-  index = 0
+  label_supplied: bool = False
+  capture_stdin: bool = False
+  json_output: bool = False
 
+
+def apply_timing_option(
+  timing: dict[str, object],
+  arguments: list[str],
+  index: int,
+) -> int | None:
+  option = arguments[index]
+  if option in ("--in", "--at", "--cron", "--tz", "--every"):
+    timing[option[2:]] = option_value(arguments, index, option)
+  elif option == "--count":
+    try:
+      timing["count"] = int(option_value(arguments, index, option))
+    except ValueError:
+      fail("--count requires an integer", 2)
+  else:
+    return None
+  return index + 2
+
+
+def apply_submission_option(
+  options: SubmissionOptions,
+  arguments: list[str],
+  index: int,
+) -> int | None:
+  option = arguments[index]
+  timing_index = apply_timing_option(options.timing, arguments, index)
+  if timing_index is not None:
+    return timing_index
+  if option == "--cwd":
+    options.working_directory = resolve_directory(
+      option_value(arguments, index, option)
+    )
+  elif option == "--concurrency-key":
+    options.concurrency_key = option_value(arguments, index, option)
+    if not options.concurrency_key:
+      fail("--concurrency-key requires a non-empty value", 2)
+  elif option == "--label":
+    if options.label_supplied:
+      fail("--label may be supplied only once", 2)
+    options.label = option_value(arguments, index, option)
+    options.label_supplied = True
+  elif option == "--stdin":
+    options.capture_stdin = True
+    return index + 1
+  elif option == "--json":
+    options.json_output = True
+    return index + 1
+  elif option.startswith("--"):
+    fail(f"unknown bq option: {option}; use -- before command options", 2)
+  else:
+    return None
+  return index + 2
+
+
+def scan_submission_options(
+  arguments: list[str],
+) -> tuple[SubmissionOptions, int]:
+  options = SubmissionOptions(working_directory=str(Path.cwd()), timing={})
+  index = 0
   while index < len(arguments):
-    option = arguments[index]
-    if option == "--":
+    if arguments[index] == "--":
       index += 1
       break
-    if option == "--cwd":
-      working_directory = resolve_directory(option_value(arguments, index, option))
-      index += 2
-      continue
-    if option == "--concurrency-key":
-      concurrency_key = option_value(arguments, index, option)
-      if not concurrency_key:
-        fail("--concurrency-key requires a non-empty value", 2)
-      index += 2
-      continue
-    if option == "--label":
-      if label_supplied:
-        fail("--label may be supplied only once", 2)
-      label = option_value(arguments, index, option)
-      label_supplied = True
-      index += 2
-      continue
-    if option == "--stdin":
-      capture_stdin = True
-      index += 1
-      continue
-    if option == "--json":
-      json_output = True
-      index += 1
-      continue
-    if option in ("--in", "--at", "--cron", "--tz", "--every"):
-      timing[option[2:]] = option_value(arguments, index, option)
-      index += 2
-      continue
-    if option == "--count":
-      value = option_value(arguments, index, option)
-      try:
-        timing["count"] = int(value)
-      except ValueError:
-        fail("--count requires an integer", 2)
-      index += 2
-      continue
-    if option.startswith("--"):
-      fail(f"unknown bq option: {option}; use -- before command options", 2)
-    break
+    next_index = apply_submission_option(options, arguments, index)
+    if next_index is None:
+      break
+    index = next_index
+  return options, index
 
-  if index >= len(arguments):
-    usage(sys.stderr)
-    fail("missing executable", 2)
 
+def validate_submission_timing(options: SubmissionOptions) -> None:
+  timing = options.timing
   modes = [name for name in ("in", "at", "cron") if name in timing]
   if len(modes) > 1:
     fail("use only one of --in, --at, or --cron", 2)
@@ -614,30 +646,55 @@ def parse_submission(
     fail("--every requires --in or --at", 2)
   if "count" in timing:
     count = timing["count"]
-    if not isinstance(count, int) or not 2 <= count <= MAX_FINITE_RUNS:
-      fail(f"--count must be from 2 through {MAX_FINITE_RUNS}", 2)
-  if json_output and timing:
+    if not isinstance(count, int) or not MIN_FINITE_RUNS <= count <= MAX_FINITE_RUNS:
+      fail(
+        f"--count must be from {MIN_FINITE_RUNS} through {MAX_FINITE_RUNS}",
+        2,
+      )
+  if options.json_output and timing:
     fail("--json is supported only for immediate submissions", 2)
 
-  executable = resolve_executable(arguments[index], working_directory)
+
+def capture_submission_input() -> str:
+  if sys.stdin.isatty():
+    fail("--stdin requires piped or redirected UTF-8 input", 2)
+  try:
+    return sys.stdin.buffer.read().decode("utf-8")
+  except UnicodeDecodeError:
+    fail("--stdin input is not valid UTF-8", 2)
+
+
+def parse_submission(
+  arguments: list[str],
+) -> tuple[dict[str, object], dict[str, object], str | None, str | None, bool]:
+  options, executable_index = scan_submission_options(arguments)
+  if executable_index >= len(arguments):
+    usage(sys.stderr)
+    fail("missing executable", 2)
+  validate_submission_timing(options)
+
+  executable = resolve_executable(
+    arguments[executable_index], options.working_directory
+  )
   trigger_input: dict[str, object] = {
     "executable": executable,
-    "arguments": arguments[index + 1 :],
-    "workingDirectory": str(Path(working_directory).resolve()),
+    "arguments": arguments[executable_index + 1 :],
+    "workingDirectory": str(Path(options.working_directory).resolve()),
     "ollamaEnvironment": {
       name: value
       for name in FORWARDED_OLLAMA_ENVIRONMENT
       if (value := os.environ.get(name))
     },
   }
-  if capture_stdin:
-    if sys.stdin.isatty():
-      fail("--stdin requires piped or redirected UTF-8 input", 2)
-    try:
-      trigger_input["stdin"] = sys.stdin.buffer.read().decode("utf-8")
-    except UnicodeDecodeError:
-      fail("--stdin input is not valid UTF-8", 2)
-  return trigger_input, timing, concurrency_key, label, json_output
+  if options.capture_stdin:
+    trigger_input["stdin"] = capture_submission_input()
+  return (
+    trigger_input,
+    options.timing,
+    options.concurrency_key,
+    options.label,
+    options.json_output,
+  )
 
 
 def submit_now(
@@ -661,7 +718,7 @@ def submit_now(
     arguments.append("--json")
     result = run_omqueue(arguments, capture=True)
   finally:
-    os.unlink(document_path)
+    Path(document_path).unlink()
 
   if result.returncode != 0:
     sys.stderr.write(result.stderr)
@@ -685,7 +742,7 @@ def create_schedule(document: dict[str, object]) -> str:
   try:
     applied = run_omqueue(["schedule", "apply", document_path, "--json"], capture=True)
   finally:
-    os.unlink(document_path)
+    Path(document_path).unlink()
 
   if applied.returncode != 0:
     sys.stderr.write(applied.stderr)
@@ -708,37 +765,39 @@ def create_schedule(document: dict[str, object]) -> str:
   return schedule_id
 
 
-def schedule_submission(
+def schedule_cron_submission(
   trigger_input: dict[str, object],
   timing: dict[str, object],
   definition_id: str,
   label: str | None,
 ) -> None:
-  if "cron" in timing:
-    cron = timing["cron"]
-    time_zone = timing.get("tz") or system_time_zone()
-    document: dict[str, object] = {
-      "definitionId": definition_id,
-      "triggerInput": trigger_input,
-      "timeZone": time_zone,
-      "cron": cron,
-      "latePolicy": "fire_once",
-    }
-    if label is not None:
-      document["label"] = label
-    schedule_id = create_schedule(document)
-    print(f"bq: scheduled {schedule_id} cron={cron!r} timeZone={time_zone}")
-    return
+  cron = timing["cron"]
+  time_zone = timing.get("tz") or system_time_zone()
+  document: dict[str, object] = {
+    "definitionId": definition_id,
+    "triggerInput": trigger_input,
+    "timeZone": time_zone,
+    "cron": cron,
+    "latePolicy": "fire_once",
+  }
+  if label is not None:
+    document["label"] = label
+  schedule_id = create_schedule(document)
+  print(f"bq: scheduled {schedule_id} cron={cron!r} timeZone={time_zone}")
 
-  if "in" in timing:
-    delay = parse_duration(str(timing["in"]), "--in")
-    try:
-      first = ceil_to_minute(datetime.now(timezone.utc) + delay)
-    except OverflowError:
-      fail("--in duration produces an out-of-range date", 2)
-  else:
-    first = parse_instant(str(timing["at"]))
 
+def first_schedule_instant(timing: dict[str, object]) -> datetime:
+  if "in" not in timing:
+    return parse_instant(str(timing["at"]))
+  delay = parse_duration(str(timing["in"]), "--in")
+  try:
+    return ceil_to_minute(datetime.now(timezone.utc) + delay)
+  except OverflowError:
+    fail("--in duration produces an out-of-range date", 2)
+
+
+def schedule_instants(timing: dict[str, object]) -> list[str]:
+  first = first_schedule_instant(timing)
   interval = (
     parse_duration(str(timing["every"]), "--every")
     if "every" in timing
@@ -747,16 +806,29 @@ def schedule_submission(
   count = timing.get("count", 1)
   if not isinstance(count, int) or isinstance(count, bool):
     fail("invalid internal repetition count")
-  instants: list[str] = []
-  for occurrence in range(count):
-    try:
-      instants.append(format_instant(first + interval * occurrence))
-    except (OverflowError, ValueError):
-      fail("repetition produces an out-of-range date", 2)
+  try:
+    return [
+      format_instant(first + interval * occurrence) for occurrence in range(count)
+    ]
+  except (OverflowError, ValueError):
+    fail("repetition produces an out-of-range date", 2)
 
+
+def schedule_submission(
+  trigger_input: dict[str, object],
+  timing: dict[str, object],
+  definition_id: str,
+  label: str | None,
+) -> None:
+  if "cron" in timing:
+    schedule_cron_submission(trigger_input, timing, definition_id, label)
+    return
+
+  instants = schedule_instants(timing)
+  count = len(instants)
   scheduled: list[tuple[str, str]] = []
   for occurrence, at in enumerate(instants):
-    document = {
+    document: dict[str, object] = {
       "definitionId": definition_id,
       "triggerInput": trigger_input,
       "timeZone": "UTC",
@@ -813,6 +885,7 @@ def submit_local_background(
   trigger_input: dict[str, object],
   timing: dict[str, object],
   concurrency_key: str | None,
+  *,
   json_output: bool,
 ) -> None:
   due = local_due_instant(timing)
@@ -830,7 +903,8 @@ def submit_local_background(
     trigger_file.flush()
     trigger_file.seek(0)
     try:
-      process = subprocess.Popen(
+      # Fixed interpreter and repository-owned bq path; input travels over stdin.
+      process = subprocess.Popen(  # noqa: S603
         command,
         cwd=working_directory,
         env=local_background_environment(os.environ),
@@ -872,7 +946,9 @@ def submit(arguments: list[str]) -> None:
     arguments
   )
   if not queue_configuration_present():
-    submit_local_background(trigger_input, timing, concurrency_key, json_output)
+    submit_local_background(
+      trigger_input, timing, concurrency_key, json_output=json_output
+    )
     return
 
   definition_id = definition_for_concurrency_key(
@@ -994,8 +1070,9 @@ def internal_run() -> NoReturn:
         os.dup2(stdin_file.fileno(), 0)
     if sys.platform == "darwin":
       taskpolicy = "/usr/sbin/taskpolicy"
-      os.execv(taskpolicy, [taskpolicy, "-a", executable, *arguments])
-    os.execv(executable, [executable, *arguments])
+      # Literal exec is the command runner's core contract; no shell is involved.
+      os.execv(taskpolicy, [taskpolicy, "-a", executable, *arguments])  # noqa: S606
+    os.execv(executable, [executable, *arguments])  # noqa: S606
   except OSError as error:
     fail(f"cannot execute {executable}: {error}")
 
@@ -1005,7 +1082,7 @@ def main() -> None:
   if arguments == [INTERNAL_RUN]:
     internal_run()
   if arguments[:1] == [INTERNAL_LOCAL_RUN]:
-    if len(arguments) != 2:
+    if len(arguments) != INTERNAL_LOCAL_ARGUMENT_COUNT:
       fail(f"{INTERNAL_LOCAL_RUN} requires one internal instant", 2)
     internal_local_run(arguments[1])
   if arguments and arguments[0] == "--setup":
