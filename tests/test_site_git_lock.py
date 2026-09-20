@@ -1,4 +1,7 @@
+# Copyright (c) 2026 Otávio Miranda
 """Exercise the sourced public lock functions against a disposable local repo."""
+
+from __future__ import annotations
 
 import os
 import platform
@@ -8,10 +11,12 @@ import subprocess
 import tempfile
 import time
 import unittest
-from collections.abc import Mapping
 from contextlib import suppress
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+  from collections.abc import Mapping
 
 HELPER = Path(__file__).resolve().parents[1] / "scripts/site_git_automation_lock"
 
@@ -26,9 +31,10 @@ class SiteGitLockTest(unittest.TestCase):
     self.env["SITE_GIT_LOCK_TIMEOUT_SECONDS"] = "0"
 
   def execute(
-    self, body: str, overrides: Optional[Mapping[str, str]] = None
+    self, body: str, overrides: Mapping[str, str] | None = None
   ) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
+    # Safe: fixed Bash/helper paths and test-defined shell body on a local fixture.
+    return subprocess.run(  # noqa: S603
       [
         "/bin/bash",
         "-c",
@@ -49,7 +55,8 @@ class SiteGitLockTest(unittest.TestCase):
     body: str = 'printf "READY\\n"; IFS= read -r finish',
     timeout: str = "0",
   ) -> subprocess.Popen[str]:
-    process = subprocess.Popen(
+    # Safe: fixed Bash/helper paths and test-defined holder body on a local fixture.
+    process = subprocess.Popen(  # noqa: S603
       [
         "/bin/bash",
         "-c",
@@ -140,7 +147,8 @@ class SiteGitLockTest(unittest.TestCase):
 
   def test_repeated_acquire_does_not_abandon_existing_lock(self):
     owner = self.holder(
-      'if site_git_lock_acquire "$2"; then exit 90; fi; printf "READY\\n"; IFS= read -r finish'
+      'if site_git_lock_acquire "$2"; then exit 90; '
+      'fi; printf "READY\\n"; IFS= read -r finish'
     )
     self.ready(owner)
     blocked = self.execute('site_git_lock_acquire "$2"')
