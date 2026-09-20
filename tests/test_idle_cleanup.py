@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Otávio Miranda
+
 import importlib.machinery
 import importlib.util
 import json
@@ -12,6 +14,8 @@ from typing import NoReturn
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
+ARGPARSE_ERROR = 2
+APPLY_IDLE_CHECK_COUNT = 2
 loader = importlib.machinery.SourceFileLoader(
   "cleanup", str(ROOT / "scripts/clear_sannux_transients")
 )
@@ -45,7 +49,7 @@ class CleanupTests(unittest.TestCase):
   def test_preview_and_apply_preserve_persistent_homes_and_parent(self):
     cleanup.clean(self.home, idle_check=allow_cleanup)
     self.assertTrue(self.run_dir.exists())
-    cleanup.clean(self.home, True, allow_cleanup)
+    cleanup.clean(self.home, apply=True, idle_check=allow_cleanup)
     self.assertFalse(self.run_dir.exists())
     self.assertEqual(list(self.sessions.iterdir()), [])
     self.assertEqual(self.persistent.read_text(), "persistent fixture")
@@ -54,20 +58,20 @@ class CleanupTests(unittest.TestCase):
     (self.sessions / "link").symlink_to(
       self.persistent.parent, target_is_directory=True
     )
-    cleanup.clean(self.home, True, allow_cleanup)
+    cleanup.clean(self.home, apply=True, idle_check=allow_cleanup)
     self.assertTrue(self.persistent.exists())
 
   def test_symlink_namespace_rejected_before_any_deletion(self):
     (self.root / "codex.ephemeral-runs").symlink_to(self.persistent.parent)
     with self.assertRaises(RuntimeError):
-      cleanup.clean(self.home, True, allow_cleanup)
+      cleanup.clean(self.home, apply=True, idle_check=allow_cleanup)
     self.assertTrue(self.run_dir.exists())
 
   def test_symlink_session_root_rejected(self):
     shutil.rmtree(self.sessions)
     self.sessions.symlink_to(self.persistent.parent)
     with self.assertRaises(RuntimeError):
-      cleanup.clean(self.home, True, allow_cleanup)
+      cleanup.clean(self.home, apply=True, idle_check=allow_cleanup)
     self.assertTrue(self.persistent.exists())
 
   def test_unknown_names_and_history_are_not_cleanup_targets(self):
@@ -75,7 +79,7 @@ class CleanupTests(unittest.TestCase):
     unknown.mkdir()
     history = self.home / ".local/state/daily-paper-tts/attempt"
     history.mkdir(parents=True)
-    _entries, preserved = cleanup.clean(self.home, True, allow_cleanup)
+    _entries, preserved = cleanup.clean(self.home, apply=True, idle_check=allow_cleanup)
     self.assertIn(unknown, preserved)
     self.assertTrue(history.exists())
     self.assertTrue(unknown.exists())
@@ -86,7 +90,7 @@ class CleanupTests(unittest.TestCase):
       raise RuntimeError(message)
 
     with self.assertRaises(RuntimeError):
-      cleanup.clean(self.home, True, busy)
+      cleanup.clean(self.home, apply=True, idle_check=busy)
     self.assertTrue(self.run_dir.exists())
 
   def test_changed_parent_is_rejected_at_apply_boundary(self):
@@ -94,25 +98,29 @@ class CleanupTests(unittest.TestCase):
 
     def idle(root: Path) -> None:
       calls.append(root)
-      if len(calls) == 2:
+      if len(calls) == APPLY_IDLE_CHECK_COUNT:
         self.run_dir.parent.rename(self.root / "saved-fixture")
         (self.root / "pi.ephemeral-runs").symlink_to(self.persistent.parent)
 
     with self.assertRaises(RuntimeError):
-      cleanup.clean(self.home, True, idle)
+      cleanup.clean(self.home, apply=True, idle_check=idle)
     self.assertTrue(self.persistent.exists())
     self.assertTrue((self.sessions / ".hidden").exists())
 
   def test_foreign_owner_is_rejected(self):
-    with patch.object(cleanup.os, "getuid", return_value=os.getuid() + 10000):
-      with self.assertRaises(RuntimeError):
-        cleanup.clean(self.home, True, allow_cleanup)
+    with (
+      patch.object(cleanup.os, "getuid", return_value=os.getuid() + 10000),
+      self.assertRaises(RuntimeError),
+    ):
+      cleanup.clean(self.home, apply=True, idle_check=allow_cleanup)
     self.assertTrue(self.run_dir.exists())
 
   def test_mount_is_rejected_before_deletion(self):
-    with patch.object(cleanup.os.path, "ismount", return_value=True):
-      with self.assertRaises(RuntimeError):
-        cleanup.clean(self.home, True, allow_cleanup)
+    with (
+      patch.object(cleanup.os.path, "ismount", return_value=True),
+      self.assertRaises(RuntimeError),
+    ):
+      cleanup.clean(self.home, apply=True, idle_check=allow_cleanup)
     self.assertTrue(self.run_dir.exists())
 
   def test_container_bind_and_remote_context_are_rejected(self):
@@ -125,27 +133,34 @@ class CleanupTests(unittest.TestCase):
         return "fixture-container"
       return json.dumps([{"Mounts": [{"Source": str(self.run_dir)}]}])
 
-    with patch.object(cleanup, "command", side_effect=fake):
-      with self.assertRaisesRegex(RuntimeError, "mounts agent homes"):
-        cleanup.assert_idle(self.root)
-    with patch.object(cleanup, "command", side_effect=["", "ssh://remote"]):
-      with self.assertRaisesRegex(RuntimeError, "local Unix-socket"):
-        cleanup.assert_idle(self.root)
+    with (
+      patch.object(cleanup, "command", side_effect=fake),
+      self.assertRaisesRegex(RuntimeError, "mounts agent homes"),
+    ):
+      cleanup.assert_idle(self.root)
+    with (
+      patch.object(cleanup, "command", side_effect=["", "ssh://remote"]),
+      self.assertRaisesRegex(RuntimeError, "local Unix-socket"),
+    ):
+      cleanup.assert_idle(self.root)
 
   def test_unavailable_inspection_fails_closed(self):
-    with patch.object(cleanup, "command", side_effect=OSError("unavailable")):
-      with self.assertRaises(OSError):
-        cleanup.clean(self.home, True)
+    with (
+      patch.object(cleanup, "command", side_effect=OSError("unavailable")),
+      self.assertRaises(OSError),
+    ):
+      cleanup.clean(self.home, apply=True)
     self.assertTrue(self.run_dir.exists())
 
   def test_apply_requires_operator_confirmation(self):
-    result = subprocess.run(
+    # Safe: invoke the fixed repository script with a fixture-only HOME.
+    result = subprocess.run(  # noqa: S603
       [sys.executable, str(ROOT / "scripts/clear_sannux_transients"), "--apply"],
       env={**os.environ, "HOME": str(self.home)},
       capture_output=True,
       check=False,
     )
-    self.assertEqual(result.returncode, 2)
+    self.assertEqual(result.returncode, ARGPARSE_ERROR)
     self.assertTrue(self.run_dir.exists())
 
 
@@ -157,7 +172,7 @@ class StopTests(unittest.TestCase):
       fake = root / "fake"
       fake.write_text(
         f"#!{sys.executable}\n"
-        + """import pathlib,sys,os
+        """import pathlib,sys,os
 root=pathlib.Path(os.environ['FIXTURE'])
 name=pathlib.Path(sys.argv[0]).name
 with (root/'log').open('a') as f: f.write(name+' '+ ' '.join(sys.argv[1:])+'\\n')
@@ -172,7 +187,8 @@ if name=='pkill' and mode!='stuck':
       fake.chmod(0o755)
       for name in ["pgrep", "pkill", "sleep", "clear_tts_cache"]:
         (root / name).symlink_to(fake)
-      result = subprocess.run(
+      # Safe: invoke the copied fixture script with fixture-only executables.
+      result = subprocess.run(  # noqa: S603
         ["/bin/bash", str(root / "stop")],
         env={
           **os.environ,

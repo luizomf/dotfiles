@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Luiz Otávio Miranda
 """Explicit idle maintenance, not runtime-history retention or launcher cleanup."""
 
 import argparse
@@ -13,6 +14,7 @@ from pathlib import Path
 
 NAMESPACE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]*\.ephemeral-runs")
 RUN = re.compile(r"run\.[A-Za-z0-9]{6}")
+PROCESS_FIELDS = 2
 
 
 def directory(path: Path) -> tuple[int, int]:
@@ -22,7 +24,8 @@ def directory(path: Path) -> tuple[int, int]:
     or path.resolve() != path
     or info.st_uid != os.getuid()
   ):
-    raise RuntimeError(f"Refusing noncanonical, symlinked or foreign directory: {path}")
+    message = f"Refusing noncanonical, symlinked or foreign directory: {path}"
+    raise RuntimeError(message)
   return info.st_dev, info.st_ino
 
 
@@ -54,7 +57,8 @@ def plan(home: Path) -> tuple[Path, list[Path], list[Path]]:
 
 
 def command(*argv: str) -> str:
-  return subprocess.check_output(argv, text=True, timeout=15)
+  # Every caller supplies a fixed executable and internally constructed arguments.
+  return subprocess.check_output(argv, text=True, timeout=15)  # noqa: S603
 
 
 def assert_idle(root: Path) -> None:
@@ -62,13 +66,12 @@ def assert_idle(root: Path) -> None:
   processes = command("ps", "-axo", "pid=,command=")
   for line in processes.splitlines():
     fields = line.strip().split(None, 1)
-    if len(fields) != 2 or fields[0] == str(os.getpid()):
+    if len(fields) != PROCESS_FIELDS or fields[0] == str(os.getpid()):
       continue
     args = fields[1]
     if "sannux_ephemeral" in args or "run-pi-ephemeral.sh" in args or str(root) in args:
-      raise RuntimeError(
-        "A launcher or process references agent homes; maintenance is not idle"
-      )
+      message = "A launcher or process references agent homes; maintenance is not idle"
+      raise RuntimeError(message)
   endpoint = command(
     "docker", "context", "inspect", "--format", "{{.Endpoints.docker.Host}}"
   ).strip()
@@ -76,16 +79,19 @@ def assert_idle(root: Path) -> None:
     os.environ.get("DOCKER_HOST")
     and not os.environ["DOCKER_HOST"].startswith("unix://")
   ):
-    raise RuntimeError("A reachable local Unix-socket Docker context is required")
+    message = "A reachable local Unix-socket Docker context is required"
+    raise RuntimeError(message)
   ids = command("docker", "ps", "-q").split()
   for ident in ids:
     records = json.loads(command("docker", "inspect", ident))
     if len(records) != 1:
-      raise RuntimeError("Ambiguous container inspection")
+      message = "Ambiguous container inspection"
+      raise RuntimeError(message)
     for mount in records[0].get("Mounts", []):
       source = Path(mount["Source"]).resolve()
       if source == root or root in source.parents or source in root.parents:
-        raise RuntimeError(f"Container {ident} mounts agent homes; refusing cleanup")
+        message = f"Container {ident} mounts agent homes; refusing cleanup"
+        raise RuntimeError(message)
 
 
 def validate_tree(path: Path) -> None:
@@ -93,17 +99,50 @@ def validate_tree(path: Path) -> None:
   if path.is_symlink() or not path.is_dir():
     return
   if os.path.ismount(path):
-    raise RuntimeError(f"Refusing mounted directory: {path}")
+    message = f"Refusing mounted directory: {path}"
+    raise RuntimeError(message)
   for current, dirs, _ in os.walk(path, followlinks=False):
     for name in dirs:
       child = Path(current) / name
       if not child.is_symlink() and os.path.ismount(child):
-        raise RuntimeError(f"Refusing mounted directory: {child}")
+        message = f"Refusing mounted directory: {child}"
+        raise RuntimeError(message)
+
+
+def remove_validated(
+  root: Path,
+  entries: list[Path],
+  identities: dict[Path, tuple[int, int, int]],
+  parents: dict[Path, tuple[int, int]],
+  idle_check: Callable[[Path], None],
+) -> None:
+  if not shutil.rmtree.avoids_symlink_attacks:
+    message = "This Python lacks symlink-safe directory removal"
+    raise RuntimeError(message)
+  idle_check(root)
+  for parent, identity in parents.items():
+    if directory(parent) != identity:
+      message = "Cleanup parent changed after validation"
+      raise RuntimeError(message)
+  # This is deliberately manual, quiescent maintenance. The checks are
+  # not a lock against a new launcher: keep all work idle until it ends.
+  for entry in entries:
+    if directory(entry.parent) != parents[entry.parent]:
+      message = "Cleanup parent changed after validation"
+      raise RuntimeError(message)
+    info = entry.lstat()
+    if (info.st_dev, info.st_ino, info.st_mode) != identities[entry]:
+      message = "Cleanup entry changed after validation"
+      raise RuntimeError(message)
+    if stat.S_ISDIR(info.st_mode):
+      shutil.rmtree(entry)
+    else:
+      entry.unlink()  # Includes symlinks themselves, never their targets.
 
 
 def clean(
   home: Path,
-  apply: bool = False,
+  apply: bool = False,  # noqa: FBT001, FBT002 - preserved callable contract
   idle_check: Callable[[Path], None] = assert_idle,
 ) -> tuple[list[Path], list[Path]]:
   root, entries, preserved = plan(home)
@@ -114,28 +153,11 @@ def clean(
   parents: dict[Path, tuple[int, int]] = {}
   for entry in entries:
     parents[entry.parent] = directory(entry.parent)
-    s = entry.lstat()
-    identities[entry] = (s.st_dev, s.st_ino, s.st_mode)
+    info = entry.lstat()
+    identities[entry] = (info.st_dev, info.st_ino, info.st_mode)
     validate_tree(entry)
   if apply:
-    if not shutil.rmtree.avoids_symlink_attacks:
-      raise RuntimeError("This Python lacks symlink-safe directory removal")
-    idle_check(root)
-    for parent, identity in parents.items():
-      if directory(parent) != identity:
-        raise RuntimeError("Cleanup parent changed after validation")
-    # This is deliberately manual, quiescent maintenance. The checks are
-    # not a lock against a new launcher: keep all work idle until it ends.
-    for entry in entries:
-      if directory(entry.parent) != parents[entry.parent]:
-        raise RuntimeError("Cleanup parent changed after validation")
-      s = entry.lstat()
-      if (s.st_dev, s.st_ino, s.st_mode) != identities[entry]:
-        raise RuntimeError("Cleanup entry changed after validation")
-      if stat.S_ISDIR(s.st_mode):
-        shutil.rmtree(entry)
-      else:
-        entry.unlink()  # Includes symlinks themselves, never their targets.
+    remove_validated(root, entries, identities, parents, idle_check)
   return entries, preserved
 
 
