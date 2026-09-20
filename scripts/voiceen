@@ -2,7 +2,12 @@
 
 set -euo pipefail
 
-export PROJECTS_DIR="${PROJECTS_DIR:-$HOME/Desktop/tutoriais_e_cursos}"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+if [[ -n "${OM_PATHS_FILE:-}" || -z "${PROJECTS_DIR:-}" ]]; then
+  # shellcheck source=/dev/null
+  source "${OM_PATHS_FILE:-${script_dir}/../config/paths.sh}"
+fi
+export PROJECTS_DIR
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 export PIP_NO_INDEX=1
@@ -10,7 +15,7 @@ export UV_OFFLINE=1
 export UV_NO_SYNC=1
 
 (
-cd "${HOME}/Desktop/tutoriais_e_cursos/omnivoicetts" || exit 1
+cd "${PROJECTS_DIR}/omnivoicetts" || exit 1
 # ./scripts/clear_cache
 # pkill -9 -f '[o]mnivoicetts' || true
 cat | ./scripts/female-en \
