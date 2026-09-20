@@ -118,6 +118,10 @@ if [[ "$REPO_DIR" != "$HOME/dotfiles" ]]; then
 fi
 
 confirm_installation
+configure_install_interaction
+if [[ "${OM_INSTALL_ASSUME_YES:-0}" == "1" ]]; then
+  loginfo "Unattended mode: prompts disabled; sudo must already be authorized. Logs and errors remain visible."
+fi
 
 OP_SYSTEM=""
 case "$(uname -s)" in

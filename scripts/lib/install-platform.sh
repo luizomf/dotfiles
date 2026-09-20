@@ -1,6 +1,20 @@
 #!/usr/bin/env bash
 # Source-only installer policy. No commands run until a function is called.
 
+configure_install_interaction() {
+  [[ "${OM_INSTALL_ASSUME_YES:-0}" == "1" ]] || return 0
+
+  # Homebrew honors NONINTERACTIVE; Git must not ask for HTTPS credentials.
+  export NONINTERACTIVE=1 GIT_TERMINAL_PROMPT=0
+  unset INTERACTIVE
+  # Also prevent stdin prompts in third-party installers and Git identity setup.
+  exec < /dev/null
+  # Keep privilege checks non-interactive even when a controlling TTY exists.
+  # This function only affects this installer, not the user's shell.
+  # shellcheck disable=SC2329 # Installed for subsequent sudo calls in install.sh.
+  sudo() { command sudo -n "$@"; }
+}
+
 detect_install_platform() {
   local kernel=$1 distro=${2:-} ostree=${3:-0}
   case "$kernel:$distro" in

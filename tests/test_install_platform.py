@@ -46,6 +46,52 @@ class InstallPlatformTests(unittest.TestCase):
       check=False,
     )
 
+  def test_unattended_mode_disables_prompts_and_requires_noninteractive_sudo(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      sudo = Path(tmp) / "sudo"
+      sudo.write_text('#!/bin/sh\nprintf "sudo"; printf " <%s>" "$@"; printf "\\n"\n')
+      sudo.chmod(0o755)
+      result = self.shell(
+        """
+        set -Eeuo pipefail
+        export PATH="$2:$PATH"
+        OM_INSTALL_ASSUME_YES=1
+        INTERACTIVE=1
+        exec <<< 'must-not-be-read'
+        configure_install_interaction
+        /bin/bash -c '
+          printf "brew=%s git=%s interactive=%s\\n" \\
+            "$NONINTERACTIVE" "$GIT_TERMINAL_PROMPT" "${INTERACTIVE-unset}"
+        '
+        if read -r answer; then exit 99; fi
+        sudo dnf install -y patch
+        printf 'LOGS_REMAIN_VISIBLE\\n'
+        """,
+        tmp,
+      )
+      self.assertEqual(result.returncode, 0, result.stderr)
+      self.assertIn("brew=1 git=0 interactive=unset", result.stdout)
+      self.assertIn("sudo <-n> <dnf> <install> <-y> <patch>", result.stdout)
+      self.assertIn("LOGS_REMAIN_VISIBLE", result.stdout)
+
+  def test_normal_mode_preserves_input_and_sudo_behavior(self):
+    result = self.shell("""
+      set -Eeuo pipefail
+      OM_INSTALL_ASSUME_YES=0
+      unset NONINTERACTIVE GIT_TERMINAL_PROMPT
+      INTERACTIVE=1
+      sudo() { printf 'existing sudo\\n'; }
+      exec <<< 'answer'
+      configure_install_interaction
+      read -r answer
+      printf '%s %s %s %s\\n' "$answer" "$INTERACTIVE" \\
+        "${NONINTERACTIVE-unset}" "${GIT_TERMINAL_PROMPT-unset}"
+      sudo true
+    """)
+    self.assertEqual(result.returncode, 0, result.stderr)
+    self.assertIn("answer 1 unset unset", result.stdout)
+    self.assertIn("existing sudo", result.stdout)
+
   def test_expected_subshell_probe_does_not_report_installation_failure(self):
     result = self.run_error_policy("""
             probe() {

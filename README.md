@@ -55,6 +55,18 @@ workflow; see [hook setup and dependencies](docs/scripts/check_staged.md).
 
 If you're feeling lucky... bet on it:
 
+`OM_INSTALL_ASSUME_YES=1` enables unattended mode, not quiet mode: logs and
+errors remain visible. It skips confirmation and Git identity prompts, enables
+Homebrew's non-interactive installer, disables Git credential prompts, and
+closes stdin for child installers. Direct `sudo` calls use `-n`: missing
+authorization fails instead of waiting for a password. Provision sudo access
+beforehand; an interactive `sudo -v` can help for a local run, but its cached
+authorization may expire during a long installation. Third-party commands that
+require interaction may fail rather than complete unattended. No privileges are
+granted by this flag.
+
+Configure Git identity separately in `~/.gitconfig.local` when needed.
+
 ```bash
 # 🚨 DANGEROUS (I mean it)
 export OM_INSTALL_ASSUME_YES=1 && git clone https://github.com/luizomf/dotfiles && cd dotfiles && ./install.sh
