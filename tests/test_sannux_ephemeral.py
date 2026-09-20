@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Otávio Miranda
+
 import json
 import os
 import re
@@ -73,7 +75,8 @@ class SannuxEphemeralTests(unittest.TestCase):
     }
 
   def run_script(self, *arguments: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
+    # Safe: fixed repository script, test-supplied literals, and fake Docker PATH.
+    return subprocess.run(  # noqa: S603
       [str(SANNUX_EPHEMERAL), *arguments],
       stdin=subprocess.DEVNULL,
       text=True,
