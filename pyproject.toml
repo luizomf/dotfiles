@@ -16,7 +16,8 @@ dev = [
 
 [tool.ruff]
 line-length = 88
-indent-width = 4
+# Keep Python formatting aligned with .editorconfig.
+indent-width = 2
 target-version = "py39"
 fix = false
 unsafe-fixes = false
