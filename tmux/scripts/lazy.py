@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Copyright (c) 2026 Luiz Otávio Miranda
 """Save tmux structure and activate restored windows on demand (no daemon)."""
 
 from __future__ import annotations
@@ -84,9 +85,9 @@ def is_object_list(value: object) -> TypeGuard[list[object]]:
 
 
 def default_socket() -> Path:
-  return (
-    Path(os.environ.get("TMUX_TMPDIR", "/tmp")) / f"tmux-{os.getuid()}" / "default"
-  ).resolve()
+  # tmux uses /tmp, not Python's platform-dependent temporary directory.
+  base = os.environ.get("TMUX_TMPDIR", "/tmp")  # noqa: S108
+  return (Path(base) / f"tmux-{os.getuid()}" / "default").resolve()
 
 
 def socket_path(explicit: Path | None = None) -> Path:
@@ -101,7 +102,8 @@ def state_directory(socket: Path) -> Path:
   # exporting it into pane environments (which would leak into custom servers).
   binary = shutil.which("tmux")
   if binary and socket.exists():
-    owner = subprocess.run(
+    # Resolved tmux executable; socket and option are separate, shell-free arguments.
+    owner = subprocess.run(  # noqa: S603
       [binary, "-S", str(socket), "show-option", "-gqv", "@lazy_state_dir"],
       text=True,
       capture_output=True,
@@ -139,40 +141,49 @@ def atomic_json(path: Path, value: object) -> None:
 def read_json_object(path: Path) -> dict[object, object]:
   value: object = json.loads(path.read_text())
   if not is_object_mapping(value):
-    raise TypeError("Expected a JSON object")
+    message = "Expected a JSON object"
+    raise TypeError(message)
   return value
 
 
 def validate_version(value: object) -> SnapshotVersion:
   if value != 1 or not isinstance(value, (bool, int, float)):
-    raise ValueError("Unsupported or empty lazy snapshot")
+    message = "Unsupported or empty lazy snapshot"
+    raise ValueError(message)
   return value
 
 
 def validate_cwd(value: object) -> Cwd:
   if not is_object_mapping(value):
-    raise ValueError("cwd must be explicitly home-relative or absolute")
+    message = "cwd must be explicitly home-relative or absolute"
+    raise ValueError(message)
   cwd_values = value
   if set(cwd_values) not in ({"home"}, {"absolute"}):
-    raise ValueError("cwd must be explicitly home-relative or absolute")
+    message = "cwd must be explicitly home-relative or absolute"
+    raise ValueError(message)
   path = next(iter(cwd_values.values()))
   if not isinstance(path, str) or any(c in path for c in "\t\r\n\0"):
-    raise ValueError("cwd containing control characters is not supported")
+    message = "cwd containing control characters is not supported"
+    raise ValueError(message)
   if "home" in cwd_values:
     if Path(path).is_absolute() or ".." in Path(path).parts:
-      raise ValueError("Home-relative cwd must remain inside home")
+      message = "Home-relative cwd must remain inside home"
+      raise ValueError(message)
     return {"home": path}
   if not Path(path).is_absolute():
-    raise ValueError("Absolute cwd must be absolute")
+    message = "Absolute cwd must be absolute"
+    raise ValueError(message)
   return {"absolute": path}
 
 
 def validate_focus(value: object) -> FocusRecord:
   if not is_object_mapping(value):
-    raise ValueError("Invalid saved focus")
+    message = "Invalid saved focus"
+    raise ValueError(message)
   fields = value
   if set(fields) != {"session", "window"}:
-    raise ValueError("Invalid saved focus")
+    message = "Invalid saved focus"
+    raise ValueError(message)
   return {"session": fields["session"], "window": fields["window"]}
 
 
@@ -182,107 +193,156 @@ def validate_identity(
   uid = values["uid"]
   name = values["name"]
   if not isinstance(uid, str) or not uid or uid in identities:
-    raise ValueError("Snapshot identities must be nonempty and unique")
+    message = "Snapshot identities must be nonempty and unique"
+    raise ValueError(message)
   identities.add(uid)
   if not isinstance(name, str) or any(c in name for c in "\t\r\n\0"):
-    raise ValueError("Names containing tabs/newlines are not supported")
+    message = "Names containing tabs/newlines are not supported"
+    raise ValueError(message)
   return uid, name
+
+
+def validate_pane(value: object) -> PaneRecord:
+  if not is_object_mapping(value):
+    message = "Invalid pane record"
+    raise ValueError(message)
+  active = value.get("active")
+  if set(value) != {"cwd", "title", "active"} or not isinstance(active, bool):
+    message = "Invalid pane record"
+    raise ValueError(message)
+  cwd = validate_cwd(value["cwd"])
+  title = value["title"]
+  if not isinstance(title, str) or any(c in title for c in "\t\r\n"):
+    message = "Invalid pane title"
+    raise ValueError(message)
+  return {"cwd": cwd, "title": title, "active": active}
+
+
+def validate_window(
+  value: object, identities: set[str], indices: set[int]
+) -> WindowRecord:
+  if not is_object_mapping(value):
+    message = "Invalid window record"
+    raise ValueError(message)
+  if set(value) != {"uid", "index", "name", "active", "zoom", "layout", "panes"}:
+    message = "Invalid window record"
+    raise ValueError(message)
+  uid, name = validate_identity(value, identities)
+  active = value["active"]
+  zoom = value["zoom"]
+  if not isinstance(active, bool) or not isinstance(zoom, bool):
+    message = "Invalid window active/zoom flags"
+    # Invalid serialized records consistently raise ValueError, including types.
+    raise ValueError(message)  # noqa: TRY004
+  index = value["index"]
+  raw_panes = value["panes"]
+  if not is_object_list(raw_panes) or (
+    not isinstance(index, int) or index < 0 or index in indices or not raw_panes
+  ):
+    message = "Invalid window index or empty window"
+    raise ValueError(message)
+  indices.add(index)
+  layout = value["layout"]
+  if not isinstance(layout, str) or (
+    layout and not re.fullmatch(r"[0-9a-f]+,[0-9x,{}\[\]]+", layout)
+  ):
+    message = "Invalid saved layout"
+    raise ValueError(message)
+  return {
+    "uid": uid,
+    "index": index,
+    "name": name,
+    "active": active,
+    "zoom": zoom,
+    "layout": layout,
+    "panes": [validate_pane(pane) for pane in raw_panes],
+  }
+
+
+def validate_session(value: object, identities: set[str]) -> SessionRecord:
+  if not is_object_mapping(value):
+    message = "Invalid session record"
+    raise ValueError(message)
+  raw_windows = value.get("windows")
+  if set(value) != {"uid", "name", "windows"} or not is_object_list(raw_windows):
+    message = "Invalid session record"
+    raise ValueError(message)
+  uid, name = validate_identity(value, identities)
+  if not raw_windows or not name or ":" in name or "." in name:
+    message = "Invalid session name or empty session"
+    raise ValueError(message)
+  # Window indices are session-local; identities are snapshot-wide.
+  indices: set[int] = set()
+  return {
+    "uid": uid,
+    "name": name,
+    "windows": [validate_window(window, identities, indices) for window in raw_windows],
+  }
 
 
 def validate_state(state: object) -> Snapshot:
   if not is_object_mapping(state):
-    raise ValueError("Unsupported or empty lazy snapshot")
-  record = state
-  version = validate_version(record.get("version"))
-  sessions_value = record.get("sessions")
-  if not sessions_value:
-    raise ValueError("Unsupported or empty lazy snapshot")
-  if set(record) != {"version", "sessions", "focus"} or not is_object_list(
-    sessions_value
-  ):
-    raise ValueError("Unexpected snapshot fields")
-  raw_sessions = sessions_value
-  focus = validate_focus(record["focus"])
-
+    message = "Unsupported or empty lazy snapshot"
+    raise ValueError(message)
+  version = validate_version(state.get("version"))
+  raw_sessions = state.get("sessions")
+  if not raw_sessions:
+    message = "Unsupported or empty lazy snapshot"
+    raise ValueError(message)
+  if set(state) != {"version", "sessions", "focus"} or not is_object_list(raw_sessions):
+    message = "Unexpected snapshot fields"
+    raise ValueError(message)
+  focus = validate_focus(state["focus"])
   identities: set[str] = set()
-  sessions: list[SessionRecord] = []
-  for raw_session in raw_sessions:
-    if not is_object_mapping(raw_session):
-      raise ValueError("Invalid session record")
-    session_values = raw_session
-    raw_windows = session_values.get("windows")
-    if set(session_values) != {"uid", "name", "windows"} or not is_object_list(
-      raw_windows
-    ):
-      raise ValueError("Invalid session record")
-    session_uid, session_name = validate_identity(session_values, identities)
-    if (
-      not raw_windows or not session_name or ":" in session_name or "." in session_name
-    ):
-      raise ValueError("Invalid session name or empty session")
+  return {
+    "version": version,
+    "sessions": [validate_session(session, identities) for session in raw_sessions],
+    "focus": focus,
+  }
 
-    indices: set[int] = set()
-    windows: list[WindowRecord] = []
-    for raw_window in raw_windows:
-      if not is_object_mapping(raw_window):
-        raise ValueError("Invalid window record")
-      window_values = raw_window
-      if set(window_values) != {
-        "uid",
-        "index",
-        "name",
-        "active",
-        "zoom",
-        "layout",
-        "panes",
-      }:
-        raise ValueError("Invalid window record")
-      window_uid, window_name = validate_identity(window_values, identities)
-      active = window_values["active"]
-      zoom = window_values["zoom"]
-      if not isinstance(active, bool) or not isinstance(zoom, bool):
-        raise ValueError("Invalid window active/zoom flags")
-      index = window_values["index"]
-      raw_panes = window_values["panes"]
-      if not is_object_list(raw_panes) or (
-        not isinstance(index, int) or index < 0 or index in indices or not raw_panes
-      ):
-        raise ValueError("Invalid window index or empty window")
-      indices.add(index)
-      layout = window_values["layout"]
-      if not isinstance(layout, str) or (
-        layout and not re.fullmatch(r"[0-9a-f]+,[0-9x,{}\[\]]+", layout)
-      ):
-        raise ValueError("Invalid saved layout")
 
-      panes: list[PaneRecord] = []
-      for raw_pane in raw_panes:
-        if not is_object_mapping(raw_pane):
-          raise ValueError("Invalid pane record")
-        pane_values = raw_pane
-        active_pane = pane_values.get("active")
-        if set(pane_values) != {"cwd", "title", "active"} or not isinstance(
-          active_pane, bool
-        ):
-          raise ValueError("Invalid pane record")
-        cwd = validate_cwd(pane_values["cwd"])
-        title = pane_values["title"]
-        if not isinstance(title, str) or any(c in title for c in "\t\r\n"):
-          raise ValueError("Invalid pane title")
-        panes.append({"cwd": cwd, "title": title, "active": active_pane})
-      windows.append(
+def parse_resurrect_records(
+  text: str,
+) -> tuple[
+  dict[str, SessionRecord], dict[tuple[str, int], list[list[str]]], str | None
+]:
+  """Collect structure records without interpreting saved process commands."""
+  pane_field_count = 11
+  window_required_fields = 7
+  sessions: dict[str, SessionRecord] = {}
+  panes: dict[tuple[str, int], list[list[str]]] = {}
+  selected: str | None = None
+  for line in text.splitlines():
+    fields = line.split("\t")
+    if fields[0] == "grouped_session":
+      message = "Grouped sessions are not supported"
+      raise ValueError(message)
+    if fields[0] == "pane":
+      if len(fields) != pane_field_count:
+        message = "Unsupported Resurrect pane record"
+        raise ValueError(message)
+      panes.setdefault((fields[1], int(fields[2])), []).append(fields)
+    elif fields[0] == "window":
+      if len(fields) < window_required_fields:
+        message = "Unsupported Resurrect window record"
+        raise ValueError(message)
+      session = sessions.setdefault(
+        fields[1], {"uid": str(uuid.uuid4()), "name": fields[1], "windows": []}
+      )
+      session["windows"].append(
         {
-          "uid": window_uid,
-          "index": index,
-          "name": window_name,
-          "active": active,
-          "zoom": zoom,
-          "layout": layout,
-          "panes": panes,
+          "uid": str(uuid.uuid4()),
+          "index": int(fields[2]),
+          "name": fields[3].removeprefix(":"),
+          "active": fields[4] == "1",
+          "zoom": "Z" in fields[5],
+          "layout": fields[6],
+          "panes": [],
         }
       )
-    sessions.append({"uid": session_uid, "name": session_name, "windows": windows})
-  return {"version": version, "sessions": sessions, "focus": focus}
+    elif fields[0] == "state" and len(fields) > 1:
+      selected = fields[1]
+  return sessions, panes, selected
 
 
 class LazyTmux:
@@ -292,6 +352,7 @@ class LazyTmux:
     socket: str | Path,
     home: str | Path,
     shell: str,
+    *,
     quiet: bool = False,
   ) -> None:
     self.root = Path(directory).expanduser().resolve()
@@ -306,10 +367,12 @@ class LazyTmux:
     self.env["HOME"] = str(self.home)
     binary = shutil.which("tmux")
     if not binary:
-      raise RuntimeError("tmux is required in PATH (prefer Homebrew)")
+      message = "tmux is required in PATH (prefer Homebrew)"
+      raise RuntimeError(message)
     self.binary = binary
     if not Path(shell).is_absolute() or not os.access(shell, os.X_OK):
-      raise ValueError("Select an executable absolute shell path with --shell")
+      message = "Select an executable absolute shell path with --shell"
+      raise ValueError(message)
 
   @contextmanager
   def locked(self) -> Generator[None, None, None]:
@@ -325,7 +388,8 @@ class LazyTmux:
       command += ["-N", "-f", "/dev/null"]
     else:
       command += ["-f", str(configuration)]
-    result = subprocess.run(
+    # Shell-free argv; callers quote the deliberate tmux run-shell/login commands.
+    result = subprocess.run(  # noqa: S603
       [*command, *args],
       env=self.env,
       text=True,
@@ -334,7 +398,8 @@ class LazyTmux:
       check=False,
     )
     if result.returncode:
-      raise RuntimeError(f"tmux {args[0]}: {result.stderr.strip()}")
+      message = f"tmux {args[0]}: {result.stderr.strip()}"
+      raise RuntimeError(message)
     return result.stdout.removesuffix("\n")
 
   def alive(self) -> bool:
@@ -347,9 +412,8 @@ class LazyTmux:
         return False
       raise
     if owner and Path(owner).resolve() != self.root:
-      raise RuntimeError(
-        "This server uses another lazy state directory; refusing to redirect it"
-      )
+      message = "This server uses another lazy state directory; refusing to redirect it"
+      raise RuntimeError(message)
     return True
 
   def notify(self, message: str, *, in_tmux: bool = False) -> None:
@@ -369,20 +433,26 @@ class LazyTmux:
   def decode_cwd(self, cwd: Cwd) -> str:
     path = self.home / cwd["home"] if "home" in cwd else Path(cwd["absolute"])
     if not path.is_dir():
-      raise RuntimeError(f"Missing cwd; activation refused: {path}")
+      message = f"Missing cwd; activation refused: {path}"
+      raise RuntimeError(message)
     return str(path)
 
   def panes(self, window: str | None = None) -> list[list[str]]:
     target = ["-t", window] if window else ["-a"]
     fields = (
-      "#{pane_id}\t#{pane_pid}\t#{pane_current_path}\t#{@lazy_cwd}\t#{pane_active}"
+      "#{pane_id}",
+      "#{pane_pid}",
+      "#{pane_current_path}",
+      "#{@lazy_cwd}",
+      "#{pane_active}",
     )
     rows = [
       line.split("\t")
-      for line in self.tmux("list-panes", *target, "-F", fields).splitlines()
+      for line in self.tmux("list-panes", *target, "-F", "\t".join(fields)).splitlines()
     ]
-    if any(len(row) != 5 for row in rows):
-      raise ValueError("Pane data contains unsupported tabs/newlines")
+    if any(len(row) != len(fields) for row in rows):
+      message = "Pane data contains unsupported tabs/newlines"
+      raise ValueError(message)
     return rows
 
   def load(self) -> Snapshot:
@@ -391,37 +461,9 @@ class LazyTmux:
 
   def import_snapshot(self, snapshot: Path) -> None:
     if self.state_file.exists():
-      raise RuntimeError("A lazy snapshot already exists; refusing to overwrite it")
-    sessions: dict[str, SessionRecord] = {}
-    panes: dict[tuple[str, int], list[list[str]]] = {}
-    selected: str | None = None
-    for line in Path(snapshot).read_text().splitlines():
-      f = line.split("\t")
-      if f[0] == "grouped_session":
-        raise ValueError("Grouped sessions are not supported")
-      if f[0] == "pane":
-        if len(f) != 11:
-          raise ValueError("Unsupported Resurrect pane record")
-        panes.setdefault((f[1], int(f[2])), []).append(f)
-      elif f[0] == "window":
-        if len(f) < 7:
-          raise ValueError("Unsupported Resurrect window record")
-        session = sessions.setdefault(
-          f[1], {"uid": str(uuid.uuid4()), "name": f[1], "windows": []}
-        )
-        session["windows"].append(
-          {
-            "uid": str(uuid.uuid4()),
-            "index": int(f[2]),
-            "name": f[3].removeprefix(":"),
-            "active": f[4] == "1",
-            "zoom": "Z" in f[5],
-            "layout": f[6],
-            "panes": [],
-          }
-        )
-      elif f[0] == "state" and len(f) > 1:
-        selected = f[1]
+      message = "A lazy snapshot already exists; refusing to overwrite it"
+      raise RuntimeError(message)
+    sessions, panes, selected = parse_resurrect_records(Path(snapshot).read_text())
     for session in sessions.values():
       session["windows"].sort(key=lambda w: w["index"])
       for window in session["windows"]:
@@ -439,7 +481,8 @@ class LazyTmux:
             cwd = self.encode_cwd(raw)
           window["panes"].append({"cwd": cwd, "title": p[6], "active": p[8] == "1"})
     if not sessions:
-      raise ValueError("No sessions in the supplied snapshot")
+      message = "No sessions in the supplied snapshot"
+      raise ValueError(message)
     chosen = (
       sessions[selected] if selected in sessions else next(iter(sessions.values()))
     )
@@ -476,7 +519,8 @@ class LazyTmux:
 
   def configure(self) -> None:
     if not self.alive():
-      raise RuntimeError("No running tmux server to configure")
+      message = "No running tmux server to configure"
+      raise RuntimeError(message)
     self.tmux("set-option", "-g", "@lazy_state_dir", str(self.root))
     self.tmux("set-option", "-g", "default-shell", self.shell)
     generation = self.tmux("show-option", "-gqv", "@lazy_generation") or str(
@@ -512,7 +556,8 @@ class LazyTmux:
       return
     version = re.search(r"(\d+)\.(\d+)", self.tmux("-V"))
     if not version or tuple(map(int, version.groups())) < (3, 5):
-      raise RuntimeError("tmux >= 3.5 is required; prefer Homebrew tmux in PATH")
+      message = "tmux >= 3.5 is required; prefer Homebrew tmux in PATH"
+      raise RuntimeError(message)
     if not self.state_file.exists():
       resurrect = self.home / ".local/share/tmux/resurrect/last"
       if self.socket == default_socket() and resurrect.is_file():
@@ -540,9 +585,12 @@ class LazyTmux:
         config.flush()
         self.tmux("start-server", configuration=config.name)
       if self.tmux("show-option", "-gqv", "@lazy_boot_owner") != token:
-        raise RuntimeError(
-          "Another tmux server started concurrently; left it unchanged. Attach or retry."
+        message = (
+          "Another tmux server started concurrently; "
+          "left it unchanged. Attach or retry."
         )
+        # The outer handler reports partial startup only after ownership is proven.
+        raise RuntimeError(message)  # noqa: TRY301
       started = True
       self.tmux(
         "new-session",
@@ -580,7 +628,7 @@ class LazyTmux:
       self.tmux("set-option", "-g", "@lazy_attach", sid)
       atomic_json(
         self.root / "focus.json",
-        {"session": self.uid(sid), "window": self.uid(wid, True)},
+        {"session": self.uid(sid), "window": self.uid(wid, window=True)},
       )
       # Config errors precede real user shell startup. Missing cwd leaves a
       # visible pending window for correction/retry, never a silent fallback.
@@ -591,7 +639,8 @@ class LazyTmux:
     except BaseException:
       if started:
         print(
-          "tmux-lazy: restore incomplete; inspect the partial server before stopping it. "
+          "tmux-lazy: restore incomplete; inspect the partial server "
+          "before stopping it. "
           "The saved snapshot was not replaced.",
           file=sys.stderr,
         )
@@ -609,7 +658,8 @@ class LazyTmux:
     }
     for session in state["sessions"]:
       if session["name"] == "__lazy_bootstrap":
-        raise ValueError("Reserved bootstrap session name in snapshot")
+        message = "Reserved bootstrap session name in snapshot"
+        raise ValueError(message)
       dimensions = re.match(r"^[0-9a-f]+,(\d+)x(\d+),", session["windows"][0]["layout"])
       width, height = map(int, dimensions.groups()) if dimensions else (120, 40)
       sid = self.tmux(
@@ -708,7 +758,8 @@ class LazyTmux:
     directories = [self.decode_cwd(validate_cwd(json.loads(p[3]))) for p in rows]
     for row, cwd in zip(rows, directories):
       if row[1] not in ("", "0"):
-        raise RuntimeError("Marked pane already has a process; refusing to replace it")
+        message = "Marked pane already has a process; refusing to replace it"
+        raise RuntimeError(message)
       self.tmux(
         "respawn-pane",
         "-t",
@@ -721,7 +772,7 @@ class LazyTmux:
     self.tmux("set-option", "-w", "-u", "-t", window, "@lazy_pending")
     # No success message here: display-message can freeze pane redraw.
 
-  def uid(self, target: str, window: bool = False) -> str:
+  def uid(self, target: str, *, window: bool = False) -> str:
     args = ["-w"] if window else []
     uid = self.tmux("show-option", *args, "-qv", "-t", target, "@lazy_uid")
     if not uid:
@@ -747,27 +798,27 @@ class LazyTmux:
       self.activate(window)
       atomic_json(
         self.root / "focus.json",
-        {"session": self.uid(session), "window": self.uid(window, True)},
+        {"session": self.uid(session), "window": self.uid(window, window=True)},
       )
       self.tmux("set-option", "-g", "@lazy_attach", session)
     finally:
       if self.alive():
         self.tmux("wait-for", "-S", "lazy-visit-complete")
 
-  def save(self, if_running: bool = False) -> None:
+  def save(self, *, if_running: bool = False) -> None:
     if not self.alive():
       if if_running:
         return
-      raise RuntimeError("No running tmux server to save")
+      message = "No running tmux server to save"
+      raise RuntimeError(message)
     sessions: list[SessionRecord] = []
     for line in self.tmux(
       "list-sessions", "-F", "#{session_id}\t#{session_name}\t#{session_grouped}"
     ).splitlines():
       sid, name, grouped = line.split("\t")
       if grouped == "1":
-        raise ValueError(
-          "Grouped sessions are unsupported; previous snapshot left intact"
-        )
+        message = "Grouped sessions are unsupported; previous snapshot left intact"
+        raise ValueError(message)
       session: SessionRecord = {
         "uid": self.uid(sid),
         "name": name,
@@ -782,9 +833,8 @@ class LazyTmux:
       ).splitlines():
         wid, index, name, layout, active, zoom, linked = window_line.split("\t")
         if linked == "1":
-          raise ValueError(
-            "Linked windows are unsupported; previous snapshot left intact"
-          )
+          message = "Linked windows are unsupported; previous snapshot left intact"
+          raise ValueError(message)
         panes: list[PaneRecord] = []
         for pane_row in self.panes(wid):
           cwd_value: object = json.loads(pane_row[3]) if pane_row[3] else None
@@ -804,7 +854,7 @@ class LazyTmux:
           )
         session["windows"].append(
           {
-            "uid": self.uid(wid, True),
+            "uid": self.uid(wid, window=True),
             "index": int(index),
             "name": name,
             "layout": layout,
@@ -853,7 +903,7 @@ class LazyTmux:
     }
 
 
-def main() -> None:
+def argument_parser() -> argparse.ArgumentParser:
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument(
     "--socket",
@@ -894,15 +944,39 @@ def main() -> None:
   sub.add_parser("stop", parents=[quiet_options]).add_argument(
     "--yes", action="store_true", required=True
   )
-  args = parser.parse_args()
+  return parser
+
+
+def attach(app: LazyTmux) -> None:
+  """Replace the launcher with an interactive client after releasing the state lock."""
+  target = app.tmux("show-option", "-gqv", "@lazy_attach")
+  command = [app.binary, "-S", str(app.socket)]
+  if os.environ.get("TERM_PROGRAM") == "OMXTerm":
+    command += ["-T", "sync"]
+  command += ["attach-session"]
+  sessions = app.tmux("list-sessions", "-F", "#{session_id}").splitlines()
+  if target in sessions:
+    command += ["-t", target]
+  # Replace the launcher with the resolved tmux binary and explicit argv, no shell.
+  os.execvpe(app.binary, command, app.env)  # noqa: S606
+
+
+# Keep command dispatch explicit under one lock; attach must happen outside it.
+def main() -> None:  # noqa: C901
+  args = argument_parser().parse_args()
   os.umask(0o077)
   socket = socket_path(args.socket)
   shell = args.shell or os.environ.get("SHELL") or pwd.getpwuid(os.getuid()).pw_shell
   app = LazyTmux(
-    args.state_dir or state_directory(socket), socket, args.home, shell, args.quiet
+    args.state_dir or state_directory(socket),
+    socket,
+    args.home,
+    shell,
+    quiet=args.quiet,
   )
   if args.action == "start" and (os.environ.get("TMUX") or not os.isatty(0)):
-    raise RuntimeError("Run start from a normal terminal outside tmux")
+    message = "Run start from a normal terminal outside tmux"
+    raise RuntimeError(message)
   with app.locked():
     # Another launcher may be constructing the server with /bin/sh. Resolve
     # implicit shell selection only after its startup lock has been released.
@@ -917,7 +991,7 @@ def main() -> None:
     elif args.action == "visit":
       app.visit(args.window, args.session, args.generation)
     elif args.action == "save":
-      app.save(args.if_running)
+      app.save(if_running=args.if_running)
     elif args.action == "export":
       app.export(args.destination)
     elif args.action == "status":
@@ -926,15 +1000,7 @@ def main() -> None:
       app.tmux("kill-server")
       app.notify("Tmux server stopped; only explicitly saved structure will return")
   if args.action == "start":
-    target = app.tmux("show-option", "-gqv", "@lazy_attach")
-    command = [app.binary, "-S", str(socket)]
-    if os.environ.get("TERM_PROGRAM") == "OMXTerm":
-      command += ["-T", "sync"]
-    command += ["attach-session"]
-    sessions = app.tmux("list-sessions", "-F", "#{session_id}").splitlines()
-    if target in sessions:
-      command += ["-t", target]
-    os.execvpe(app.binary, command, app.env)
+    attach(app)
 
 
 if __name__ == "__main__":
@@ -951,7 +1017,8 @@ if __name__ == "__main__":
     print(f"tmux-lazy: {exc}", file=sys.stderr)
     binary = shutil.which("tmux")
     if os.environ.get("TMUX") and binary:
-      subprocess.run(
+      # -l makes the error literal; no shell interprets it.
+      subprocess.run(  # noqa: S603
         [binary, "display-message", "-l", f"tmux-lazy: {exc}"],
         check=False,
       )

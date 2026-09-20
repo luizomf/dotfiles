@@ -1,3 +1,4 @@
+# Copyright (c) 2026 Luiz Otávio Miranda
 """Real tmux integration on private sockets; never touch an existing server."""
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ import time
 import unittest
 from pathlib import Path
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 if TYPE_CHECKING:
   from typing_extensions import TypeGuard
@@ -38,7 +40,21 @@ class LazyTmuxTests(unittest.TestCase):
       raise unittest.SkipTest(reason)
     cls.tmux_binary = TMUX
 
-  def test_import_visit_save_and_restart_preserve_pending_and_running_windows(self):
+  def setUp(self) -> None:
+    # Error notifications otherwise inherit TMUX and can reach the user's server.
+    # Shell startup files must not run from the caller's ENV/BASH_ENV either.
+    environment = dict(os.environ)
+    for key in ("TMUX", "TMUX_PANE", "TMUX_LAZY_STATE_DIR", "ENV", "BASH_ENV"):
+      environment.pop(key, None)
+    cleanup = patch.dict(os.environ, environment, clear=True)
+    cleanup.start()
+    self.addCleanup(cleanup.stop)
+
+  # One continuous lifecycle proves that running panes survive activation/restart
+  # and that quiet saves do not hide output from the same attached client.
+  def test_import_visit_save_and_restart_preserve_pending_and_running_windows(  # noqa: PLR0915
+    self,
+  ):
     with tempfile.TemporaryDirectory(prefix="lazy-demo-test-") as temporary:
       root = Path(temporary).resolve()
       home = root / "home"
@@ -79,7 +95,8 @@ class LazyTmuxTests(unittest.TestCase):
       env["TERM"] = "xterm-256color"
 
       def run(*args: str) -> str:
-        result = subprocess.run(
+        # Repository CLI, private state/socket and fixture arguments; no shell.
+        result = subprocess.run(  # noqa: S603
           [*cli, *args],
           env=env,
           text=True,
@@ -92,7 +109,8 @@ class LazyTmuxTests(unittest.TestCase):
         return result.stdout
 
       def tmux(*args: str) -> str:
-        return subprocess.run(
+        # Resolved tmux with explicit private socket and test-authored argv.
+        return subprocess.run(  # noqa: S603
           [self.tmux_binary, "-S", str(trial / "socket"), *args],
           env=env,
           text=True,
@@ -169,7 +187,8 @@ class LazyTmuxTests(unittest.TestCase):
         # A real attached client exercises the same hook as the user's
         # terminal, including session switches rather than only next-window.
         master, slave = pty.openpty()
-        client = subprocess.Popen(
+        # Only attach to this test's private server, without shell interpretation.
+        client = subprocess.Popen(  # noqa: S603
           [
             self.tmux_binary,
             "-S",
@@ -250,7 +269,8 @@ class LazyTmuxTests(unittest.TestCase):
           self.assertTrue(json.loads(run("status", "--quiet"))["running"])
           self.assertEqual(run("stop", "--yes", "--quiet"), "")
           saved_bytes = (trial / "state.json").read_bytes()
-          failed = subprocess.run(
+          # Fixed CLI arguments target the private stopped server, without a shell.
+          failed = subprocess.run(  # noqa: S603
             [*cli, "save", "--quiet"],
             env=env,
             text=True,
@@ -277,7 +297,8 @@ class LazyTmuxTests(unittest.TestCase):
           os.close(master)
       finally:
         if (trial / "socket").exists():
-          subprocess.run(
+          # Cleanup is restricted to this test's explicit private socket.
+          subprocess.run(  # noqa: S603
             [self.tmux_binary, "-S", str(trial / "socket"), "kill-server"],
             env=env,
             capture_output=True,
@@ -344,7 +365,8 @@ class LazyTmuxTests(unittest.TestCase):
           state = snapshot(version)
           state_file.write_text(json.dumps(state))
           destination = root / f"export-{type(version).__name__}"
-          result = subprocess.run(
+          # Shell-free export to a fixture directory, with an explicit private socket.
+          result = subprocess.run(  # noqa: S603
             [*cli, str(destination), "--quiet"],
             text=True,
             capture_output=True,
@@ -369,7 +391,8 @@ class LazyTmuxTests(unittest.TestCase):
         with self.subTest(level=level):
           state_file.write_text(json.dumps(invalid))
           destination = root / f"invalid-{level}"
-          result = subprocess.run(
+          # Invalid data is read from JSON, not interpolated into a shell command.
+          result = subprocess.run(  # noqa: S603
             [*cli, str(destination), "--quiet"],
             text=True,
             capture_output=True,
@@ -379,7 +402,9 @@ class LazyTmuxTests(unittest.TestCase):
           self.assertNotEqual(result.returncode, 0)
           self.assertFalse(destination.exists())
 
-  def test_layout_round_trip_remaps_home_and_missing_cwd_never_partially_activates(
+  # Keep the source/destination round trip together: the second boot must consume
+  # the first server's actual saved layout, focus and pending-pane state.
+  def test_layout_round_trip_remaps_home_and_missing_cwd_never_partially_activates(  # noqa: PLR0915
     self,
   ):
     with tempfile.TemporaryDirectory(prefix="lazy-layout-") as temporary:
@@ -453,7 +478,8 @@ class LazyTmuxTests(unittest.TestCase):
       def cli(
         *args: str, home: Path | None = None, success: bool = True
       ) -> subprocess.CompletedProcess[str]:
-        result = subprocess.run(
+        # Repository CLI with private fixture paths and separate argv, no shell.
+        result = subprocess.run(  # noqa: S603
           [
             sys.executable,
             str(SCRIPT),
@@ -480,7 +506,8 @@ class LazyTmuxTests(unittest.TestCase):
         return result
 
       def tmux(*args: str) -> str:
-        return subprocess.run(
+        # Test-authored argv and the explicit private socket, no shell.
+        return subprocess.run(  # noqa: S603
           [self.tmux_binary, "-S", str(socket), *args],
           env=env,
           text=True,
@@ -585,7 +612,8 @@ class LazyTmuxTests(unittest.TestCase):
         self.assertEqual(snapshot.read_bytes(), invalid_bytes)
       finally:
         if socket.exists():
-          subprocess.run(
+          # Never kill a default/inherited server: this socket belongs to the test.
+          subprocess.run(  # noqa: S603
             [self.tmux_binary, "-S", str(socket), "kill-server"],
             env=env,
             capture_output=True,
@@ -612,8 +640,10 @@ class LazyTmuxTests(unittest.TestCase):
         f"real={real_tmux!r}; socket={str(socket)!r}\n"
         f"marker=pathlib.Path({str(root / 'created')!r})\n"
         'if "start-server" in sys.argv[1:] and not marker.exists():\n'
-        ' subprocess.run([real,"-S",socket,"-f","/dev/null","new-session","-d","-s","native-winner","/bin/sh"],check=True)\n'
-        ' subprocess.run([real,"-S",socket,"set-option","-g","history-limit","12345"],check=True)\n'
+        ' subprocess.run([real,"-S",socket,"-f","/dev/null",\n'
+        '  "new-session","-d","-s","native-winner","/bin/sh"],check=True)\n'
+        ' subprocess.run([real,"-S",socket,"set-option","-g",\n'
+        '  "history-limit","12345"],check=True)\n'
         ' marker.write_text("created")\n'
         "os.execv(real,[real,*sys.argv[1:]])\n"
       )
@@ -626,7 +656,8 @@ class LazyTmuxTests(unittest.TestCase):
       for key in ("TMUX", "TMUX_PANE", "TMUX_LAZY_STATE_DIR"):
         env.pop(key, None)
       try:
-        result = subprocess.run(
+        # The test-owned wrapper injects a race on the private socket, without a shell.
+        result = subprocess.run(  # noqa: S603
           [
             sys.executable,
             str(SCRIPT),
@@ -653,7 +684,8 @@ class LazyTmuxTests(unittest.TestCase):
           (["show-option", "-gqv", "history-limit"], "12345"),
           (["show-option", "-gqv", "@lazy_state_dir"], ""),
         ]:
-          check = subprocess.run(
+          # Inspect only the test's private server, using literal argv.
+          check = subprocess.run(  # noqa: S603
             [real_tmux, "-S", str(socket), *args],
             env=env,
             text=True,
@@ -665,7 +697,8 @@ class LazyTmuxTests(unittest.TestCase):
         self.assertFalse((root / "state/state.json").exists())
       finally:
         if socket.exists():
-          subprocess.run(
+          # The resolved real tmux cleans up only this test-owned socket.
+          subprocess.run(  # noqa: S603
             [real_tmux, "-S", str(socket), "kill-server"],
             env=env,
             capture_output=True,
