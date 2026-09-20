@@ -1,4 +1,5 @@
 #!/usr/bin/env python3.14
+# Copyright (c) 2026 Luiz Otávio Miranda
 
 """Animate frames on the terminal and measure how fast it really renders them.
 
@@ -22,8 +23,10 @@ import sys
 import termios
 import time
 import tty
-from collections.abc import Callable
-from typing import Literal, NamedTuple
+from typing import TYPE_CHECKING, Literal, NamedTuple
+
+if TYPE_CHECKING:
+  from collections.abc import Callable
 
 CursorMode = Literal["hide", "show", "blink", "toggle"]
 
@@ -78,7 +81,9 @@ FRAME_POOL = 120
 CSI_RE = re.compile(rb"\x1b\[[0-9;?]*[A-Za-z]")
 DSR_RE = re.compile(rb"\x1b\[[0-9]+;[0-9]+R")
 
-INPUT_PROMPT = "› "
+# Intentional visual prompt glyph, not an ASCII comparison operator.
+INPUT_PROMPT = "› "  # noqa: RUF001
+C0_CONTROL_LIMIT = 0x20
 
 # Synchronized output (DECSET 2026): the terminal is asked to hold the frame
 # and present it whole. Every modern TUI wraps its redraws in this; xterm.js
@@ -131,7 +136,7 @@ class TypedLine:
       elif byte in (0x0D, 0x0A):
         self.text = ""
         self.decoder.reset()
-      elif byte < 0x20:
+      elif byte < C0_CONTROL_LIMIT:
         continue
       else:
         self.text += self.decoder.decode(bytes([byte]))
@@ -304,10 +309,14 @@ def percentile(sorted_values: list[float], q: float) -> float:
   return sorted_values[index]
 
 
-def run_scene(
+# Keep frame preparation and the measured loop together: splitting the mode
+# branches into per-frame helpers would change the benchmark's Python overhead.
+# The independent scene knobs are explicit rather than hidden in an options object.
+def run_scene(  # noqa: C901, PLR0912, PLR0913, PLR0915
   name: str,
   out_fd: int,
   in_fd: int,
+  *,
   seconds: float,
   target_fps: float,
   use_rtt: bool,
@@ -319,7 +328,8 @@ def run_scene(
   width, height = shutil.get_terminal_size()
   height = max(1, height - 1)
   input_row = height + 1
-  rng = random.Random(hash(name) & 0xFFFF)
+  # Seeded scene variation, not security-sensitive randomness.
+  rng = random.Random(hash(name) & 0xFFFF)  # noqa: S311
 
   frames = [render(width, height, n, rng) for n in range(FRAME_POOL)]
   # With an input line the cursor sequences wrap the input redraw too, so the
@@ -450,7 +460,7 @@ def run_verify(out_fd: int, in_fd: int) -> None:
 
 
 def report(
-  results: list[Stats], rtt_used: bool, cursor: CursorMode, stalled: list[str]
+  results: list[Stats], *, rtt_used: bool, cursor: CursorMode, stalled: list[str]
 ) -> None:
   baseline = next((s.fps for s in results if s.scene == "ascii" and s.fps), None)
   mode = (
@@ -461,7 +471,10 @@ def report(
   print(
     f"\nmode: {mode}   cursor: {cursor}   term: {os.environ.get('TERM_PROGRAM', '?')}\n"
   )
-  header = f"{'scene':<9}{'frames':>7}{'fps':>9}{'p50 ms':>9}{'p95 ms':>9}{'max ms':>9}{'MiB/s':>9}{'rel':>7}"
+  header = (
+    f"{'scene':<9}{'frames':>7}{'fps':>9}{'p50 ms':>9}"
+    f"{'p95 ms':>9}{'max ms':>9}{'MiB/s':>9}{'rel':>7}"
+  )
   print(header)
   print("-" * len(header))
   for s in results:
@@ -545,7 +558,9 @@ def parse_args() -> Args:
   return parser.parse_args(namespace=Args())
 
 
-def main() -> int:
+# Keep terminal setup, mode dispatch and unconditional restoration in one place
+# so each CLI branch can be checked against the same terminal lifecycle.
+def main() -> int:  # noqa: C901, PLR0912
   args = parse_args()
 
   if args.list_scenes:
@@ -597,12 +612,12 @@ def main() -> int:
           name,
           out_fd,
           in_fd,
-          args.seconds,
-          args.fps,
-          rtt_used,
-          args.cursor,
-          typed,
-          args.sync,
+          seconds=args.seconds,
+          target_fps=args.fps,
+          use_rtt=rtt_used,
+          cursor=args.cursor,
+          typed=typed,
+          sync=args.sync,
         )
         results.append(stats)
         if aborted:
@@ -625,7 +640,7 @@ def main() -> int:
     return 0
 
   if results:
-    report(results, rtt_used, args.cursor, stalled)
+    report(results, rtt_used=rtt_used, cursor=args.cursor, stalled=stalled)
     if args.input_line:
       print(
         "note: --input adds a cursor move and a line redraw per frame.\n"
