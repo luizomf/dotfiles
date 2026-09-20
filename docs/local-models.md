@@ -22,16 +22,15 @@ already exported `LOCAL_MODEL` wins over the fallback, including in child
 shells. For an existing terminal, explicitly export the new value and refresh
 `MODEL`; merely sourcing the file preserves the old exported value.
 
-`commit`, `ollama_os`, `ask`, `llm_clean`, `translate_ptbr`,
-`translate_ptbr_clean`, and `apply_persona` consume `MODEL`. Explicit command
-arguments and legacy per-command `MODEL=...` overrides remain independent.
-`test_models` consumes `LOCAL_MODEL`. It first runs
-`sannux_ephemeral --refresh-pi-resources`, then makes real host/container model
-calls (including Daily's launcher). The refresh prepares extensions, skills,
-helpers and nested Codex auth, but **does not generate or synchronize model
-catalogs**. Run it manually with consumers idle; it is not a static check or a
-complete runner installer. `OMNIVOICE_MODEL` is a separate TTS model, not this
-chat-model default.
+`commit`, `ollama_os`, `ask`, `llm_clean`, `translate_ptbr`, and
+`translate_ptbr_clean` consume `MODEL`. Explicit command arguments and legacy
+per-command `MODEL=...` overrides remain independent. `test_models` consumes
+`LOCAL_MODEL`. It first runs `sannux_ephemeral --refresh-pi-resources`, then
+makes real host/container model calls (including Daily's launcher). The refresh
+prepares extensions, skills, helpers and nested Codex auth, but **does not
+generate or synchronize model catalogs**. Run it manually with consumers idle;
+it is not a static check or a complete runner installer. `OMNIVOICE_MODEL` is a
+separate TTS model, not this chat-model default.
 
 This does not make every application's configuration environment-aware. Literal
 Pi/Codex model IDs, Omnews runner argv, named profiles, and fallback chains must
