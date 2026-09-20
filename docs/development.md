@@ -8,8 +8,18 @@ shell scripts and Bash 3.2 compatibility where their current contracts require
 it.
 
 The installer syncs the checkout's ignored `.venv` from the lockfile. Set
-`OM_INSTALL_SKIP_TOOLCHAINS=1` to skip that step. For an existing checkout, use
-Python 3.10 or newer and run:
+`OM_INSTALL_SKIP_TOOLCHAINS=1` to skip that step.
+
+Python setup is recoverable: if pyenv, uv, tool installation, or sync fails, the
+installer continues independent configuration and reports an incomplete
+installation with a nonzero exit status. Later steps in that Python setup group
+and its final checks are skipped, so `.venv`, Ruff, or Pyright may be
+unavailable. The original command error remains in the terminal output; the
+final summary identifies the operation and exit code. Other installer failures
+remain fatal.
+
+For manual recovery of the development environment, use Python 3.10 or newer and
+run:
 
 ```sh
 uv sync --locked

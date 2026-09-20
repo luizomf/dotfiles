@@ -33,7 +33,7 @@ install_fedora_packages() {
     aria2 autoconf automake bzip2-devel cmake curl fd-find ffmpeg-free \
     gcc gcc-c++ gdbm-devel gettext git glibc-langpack-en htop libffi-devel \
     libtool llvm lua lua-devel luarocks make nano ncurses-devel ninja-build \
-    openssl openssl-devel pkgconf python3-devel readline-devel ripgrep \
+    openssl openssl-devel patch pkgconf python3-devel readline-devel ripgrep \
     sqlite sqlite-devel tcl tcl-devel tk tk-devel tree unzip util-linux \
     vim-enhanced wget xz-devel zlib-devel zsh fastfetch tmux just
 

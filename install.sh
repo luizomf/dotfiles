@@ -8,6 +8,9 @@ readonly REPO_DIR BACKUP_DIR
 
 # shellcheck source=scripts/lib/install-platform.sh
 source "$REPO_DIR/scripts/lib/install-platform.sh"
+# shellcheck source=scripts/lib/install-python.sh
+source "$REPO_DIR/scripts/lib/install-python.sh"
+python_failure=""
 
 # Make user-managed tools visible during reruns before shell config is linked.
 export PATH="$HOME/.local/bin:$HOME/.pyenv/bin:$PATH"
@@ -34,7 +37,7 @@ logerror() {
 # expected probes inside guarded substitutions, while omitting a parent ERR for
 # some failed subshells. EXIT handles both without claiming a successful run failed.
 # shellcheck disable=SC2154 # exit_status is assigned inside this EXIT trap.
-trap 'exit_status=$?; if (( BASH_SUBSHELL == 0 && exit_status != 0 )); then logerror "Installation failed (exit $exit_status)."; fi' EXIT
+trap 'exit_status=$?; if (( BASH_SUBSHELL == 0 && exit_status != 0 )); then logerror "Installation incomplete (exit $exit_status)."; if [[ -n "${python_failure:-}" ]]; then logerror "$python_failure"; fi; fi' EXIT
 
 run_remote_script() (
   local shell_path=$1
@@ -42,9 +45,9 @@ run_remote_script() (
   shift 2
 
   local script_path
-  script_path=$(mktemp)
+  script_path=$(mktemp) || return $?
   trap 'rm -f "$script_path"' EXIT
-  curl -fsSL "$url" -o "$script_path"
+  curl -fsSL "$url" -o "$script_path" || return $?
   "$shell_path" "$script_path" "$@"
 )
 
@@ -239,17 +242,6 @@ if [[ ! -d "$LAZY_PATH" ]]; then
   git clone https://github.com/folke/lazy.nvim.git --filter=blob:none "$LAZY_PATH"
 fi
 
-if ! command -v pyenv > /dev/null 2>&1; then
-  loginfo "Instalando pyenv..."
-  require_new_toolchain_dir "$HOME/.pyenv"
-  run_remote_script /bin/bash https://pyenv.run
-fi
-
-if ! command -v uv > /dev/null 2>&1; then
-  loginfo "Instalando uv..."
-  run_remote_script /bin/sh https://astral.sh/uv/install.sh
-fi
-
 if ! command -v nvm > /dev/null 2>&1 && [[ ! -s "$HOME/.nvm/nvm.sh" ]]; then
   loginfo "Instalando nvm..."
   require_new_toolchain_dir "$HOME/.nvm"
@@ -265,38 +257,17 @@ if [[ "${OM_INSTALL_SKIP_TOOLCHAINS:-0}" != "1" ]]; then
   nvm install --lts
   nvm install-latest-npm
   npm install --global prettier
-
-  loginfo "Configurando Python..."
-  export PYENV_ROOT="$HOME/.pyenv"
-  export PATH="$PYENV_ROOT/bin:$PYENV_ROOT/shims:$HOME/.local/bin:$PATH"
-  eval "$(pyenv init -)"
-  PYTHON_VERSION=${OM_PYTHON_VERSION:-}
-  if [[ -z "$PYTHON_VERSION" ]]; then
-    PYTHON_VERSION=$(pyenv install --list | awk '
-      $1 ~ /^3\.14\.[0-9]+$/ { version = $1 }
-      END { print version }
-    ')
-  fi
-  if [[ -z "$PYTHON_VERSION" ]]; then
-    logerror "Nenhuma versão estável do Python 3.14 foi encontrada pelo pyenv."
-    exit 1
-  fi
-  pyenv install --skip-existing "$PYTHON_VERSION"
-  pyenv global "$PYTHON_VERSION"
-
-  if ! uv tool list | grep -q '^pyright '; then
-    uv tool install pyright
-  fi
-  if ! uv tool list | grep -q '^ruff '; then
-    uv tool install ruff
-  fi
-
-  loginfo "Syncing the dotfiles development environment from uv.lock..."
-  # Always target this checkout, not the caller's cwd or another active venv.
-  UV_PROJECT_ENVIRONMENT="$REPO_DIR/.venv" uv sync \
-    --project "$REPO_DIR" --locked --python "$(pyenv which python)"
 else
   loginfo "Toolchain setup skipped; run 'uv sync --locked' in $REPO_DIR to prepare development tools."
+fi
+
+if configure_install_python; then
+  loginfo "Python setup completed (or toolchain configuration explicitly skipped)."
+else
+  python_status=$?
+  python_failure="Python: $PYTHON_SETUP_STEP (exit $python_status). Remaining Python setup and its checks were skipped; see the original error above."
+  logerror "$python_failure"
+  loginfo "Continuing independent installation steps..."
 fi
 
 loginfo "Criando links de configuração..."
@@ -392,7 +363,10 @@ if [[ "$OP_SYSTEM" == "ubuntu" ]]; then
   required_commands+=(ghostty)
 fi
 if [[ "${OM_INSTALL_SKIP_TOOLCHAINS:-0}" != "1" ]]; then
-  required_commands+=(node npm prettier pyenv python uv pyright ruff)
+  required_commands+=(node npm prettier)
+fi
+if [[ "${OM_INSTALL_SKIP_TOOLCHAINS:-0}" != "1" && -z "$python_failure" ]]; then
+  required_commands+=(pyenv python uv pyright ruff)
   for development_tool in python pyright ruff; do
     if [[ ! -x "$REPO_DIR/.venv/bin/$development_tool" ]]; then
       logerror "Development tool not found: $REPO_DIR/.venv/bin/$development_tool"
@@ -444,6 +418,11 @@ fi
 
 loginfo "Configuring repository-local Git hooks (preserving existing setups)..."
 "$REPO_DIR/scripts/setup_git_hooks"
+
+if [[ -n "$python_failure" ]]; then
+  loginfo "Independent installation steps completed. Open a new terminal to load the configuration."
+  exit 1
+fi
 
 printf '\n%s\n' \
   "Instalação automática concluída." \

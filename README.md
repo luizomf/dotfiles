@@ -36,6 +36,13 @@ cd ~/dotfiles
 The repository is expected to live at `~/dotfiles`. Start a new login shell when
 the installation finishes.
 
+Python setup failures preserve the original error and do not stop independent
+configuration steps. The installer skips the remaining Python setup and its
+checks, then reports the failed operation and exit code at the end and exits
+nonzero. This is an incomplete installation, not success. Other failures still
+stop the installer immediately. Fix the reported cause before rerunning; nothing
+is rolled back automatically.
+
 The installer also enables this checkout's pre-commit checks, unless an existing
 hook setup must be preserved. A plain clone does not activate Git hooks. For an
 existing installation, run `./scripts/setup_git_hooks` after updating, without
