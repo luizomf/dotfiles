@@ -27,66 +27,66 @@ OMQUEUE = os.environ.get("BQ_OMQUEUE", "omqueue")
 INTERNAL_RUN = "--internal-run"
 INTERNAL_LOCAL_RUN = "--internal-local-run"
 FORWARDED_OLLAMA_ENVIRONMENT = (
-    "OLLAMA_HOST",
-    "OLLAMA_TIMEOUT_MS",
-    "OLLAMA_LOAD_TIMEOUT",
-    "OLLAMA_KEEP_ALIVE",
+  "OLLAMA_HOST",
+  "OLLAMA_TIMEOUT_MS",
+  "OLLAMA_LOAD_TIMEOUT",
+  "OLLAMA_KEEP_ALIVE",
 )
 
 
 class Config(TypedDict):
-    definitionId: str
-    concurrencyDefinitions: dict[str, str]
+  definitionId: str
+  concurrencyDefinitions: dict[str, str]
 
 
 class OptionalInternalRunInput(TypedDict, total=False):
-    stdin: str
-    ollamaEnvironment: dict[str, str]
+  stdin: str
+  ollamaEnvironment: dict[str, str]
 
 
 class InternalRunInput(OptionalInternalRunInput):
-    executable: str
-    arguments: list[str]
-    workingDirectory: str
+  executable: str
+  arguments: list[str]
+  workingDirectory: str
 
 
 LOCAL_BACKGROUND_ENVIRONMENT_KEYS = (
-    "HOME",
-    "LANG",
-    "LC_ALL",
-    "LC_CTYPE",
-    "LOGNAME",
-    "PATH",
-    "SHELL",
-    "TMPDIR",
-    "TZ",
-    "USER",
-    "XDG_CONFIG_HOME",
-    "XDG_RUNTIME_DIR",
-    "XDG_STATE_HOME",
+  "HOME",
+  "LANG",
+  "LC_ALL",
+  "LC_CTYPE",
+  "LOGNAME",
+  "PATH",
+  "SHELL",
+  "TMPDIR",
+  "TZ",
+  "USER",
+  "XDG_CONFIG_HOME",
+  "XDG_RUNTIME_DIR",
+  "XDG_STATE_HOME",
 )
 
 
 def fail(message: str, status: int = 1) -> NoReturn:
-    print(f"bq: {message}", file=sys.stderr)
-    raise SystemExit(status)
+  print(f"bq: {message}", file=sys.stderr)
+  raise SystemExit(status)
 
 
 def is_object_dict(value: object) -> TypeGuard[dict[object, object]]:
-    return isinstance(value, dict)
+  return isinstance(value, dict)
 
 
 def is_object_list(value: object) -> TypeGuard[list[object]]:
-    return isinstance(value, list)
+  return isinstance(value, list)
 
 
 def is_string_list(value: object) -> TypeGuard[list[str]]:
-    return is_object_list(value) and all(isinstance(item, str) for item in value)
+  return is_object_list(value) and all(isinstance(item, str) for item in value)
 
 
 def usage(stream: TextIO = sys.stdout) -> None:
-    print(
-        """Usage:
+  print(
+    """Usage:
   bq --setup
   bq [--cwd DIR] [--concurrency-key KEY] [--label LABEL] [--stdin] [--json] [--] EXECUTABLE [ARGUMENTS...]
   bq [--cwd DIR] [--concurrency-key KEY] [--label LABEL] [--stdin] --in DURATION [--every DURATION --count N] -- EXECUTABLE [ARGUMENTS...]
@@ -156,310 +156,298 @@ Examples:
   bq --at '2026-07-28T09:00:00-03:00' -- ./daily-task
   bq --in 1h --every 30m --count 4 -- ./reminder
   bq --cron '0 9 * * 1-5' --tz America/Sao_Paulo -- ./weekday-task""",
-        file=stream,
-    )
+    file=stream,
+  )
 
 
 def run_omqueue(
-    arguments: list[str], *, capture: bool = False
+  arguments: list[str], *, capture: bool = False
 ) -> subprocess.CompletedProcess[str]:
-    executable = shutil.which(OMQUEUE)
-    if not executable:
-        fail(f"OMQueue CLI not found: {OMQUEUE}")
+  executable = shutil.which(OMQUEUE)
+  if not executable:
+    fail(f"OMQueue CLI not found: {OMQUEUE}")
 
-    return subprocess.run(
-        [executable, *arguments],
-        check=False,
-        text=True,
-        capture_output=capture,
-    )
+  return subprocess.run(
+    [executable, *arguments],
+    check=False,
+    text=True,
+    capture_output=capture,
+  )
 
 
 def linux_session_environment(runtime_path: Path, user_id: int) -> dict[str, str]:
-    try:
-        runtime_metadata = runtime_path.lstat()
-    except OSError:
-        return {}
+  try:
+    runtime_metadata = runtime_path.lstat()
+  except OSError:
+    return {}
 
-    if not (
-        stat.S_ISDIR(runtime_metadata.st_mode)
-        and runtime_metadata.st_uid == user_id
-        and stat.S_IMODE(runtime_metadata.st_mode) == 0o700
-    ):
-        return {}
+  if not (
+    stat.S_ISDIR(runtime_metadata.st_mode)
+    and runtime_metadata.st_uid == user_id
+    and stat.S_IMODE(runtime_metadata.st_mode) == 0o700
+  ):
+    return {}
 
-    environment = {"XDG_RUNTIME_DIR": str(runtime_path)}
-    bus_path = runtime_path / "bus"
-    try:
-        bus_metadata = bus_path.lstat()
-    except OSError:
-        return environment
-    if stat.S_ISSOCK(bus_metadata.st_mode) and bus_metadata.st_uid == user_id:
-        environment["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={bus_path}"
+  environment = {"XDG_RUNTIME_DIR": str(runtime_path)}
+  bus_path = runtime_path / "bus"
+  try:
+    bus_metadata = bus_path.lstat()
+  except OSError:
     return environment
+  if stat.S_ISSOCK(bus_metadata.st_mode) and bus_metadata.st_uid == user_id:
+    environment["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={bus_path}"
+  return environment
 
 
 def write_json_document(value: object) -> str:
-    with tempfile.NamedTemporaryFile(
-        mode="w", encoding="utf-8", prefix="bq-", suffix=".json", delete=False
-    ) as handle:
-        json.dump(value, handle, ensure_ascii=False, separators=(",", ":"))
-        handle.write("\n")
-        return handle.name
+  with tempfile.NamedTemporaryFile(
+    mode="w", encoding="utf-8", prefix="bq-", suffix=".json", delete=False
+  ) as handle:
+    json.dump(value, handle, ensure_ascii=False, separators=(",", ":"))
+    handle.write("\n")
+    return handle.name
 
 
 def queue_configuration_present() -> bool:
-    try:
-        CONFIG_PATH.lstat()
-    except FileNotFoundError:
-        return False
-    except OSError as error:
-        fail(f"cannot inspect configuration {CONFIG_PATH}: {error}")
-    return True
+  try:
+    CONFIG_PATH.lstat()
+  except FileNotFoundError:
+    return False
+  except OSError as error:
+    fail(f"cannot inspect configuration {CONFIG_PATH}: {error}")
+  return True
 
 
 def load_config() -> Config:
-    try:
-        config_value: object = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError, TypeError):
-        fail(f"not configured; run 'bq --setup' (expected {CONFIG_PATH})")
+  try:
+    config_value: object = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+  except (OSError, json.JSONDecodeError, TypeError):
+    fail(f"not configured; run 'bq --setup' (expected {CONFIG_PATH})")
 
-    if not is_object_dict(config_value):
-        fail(f"invalid configuration in {CONFIG_PATH}")
+  if not is_object_dict(config_value):
+    fail(f"invalid configuration in {CONFIG_PATH}")
 
-    definition_id = config_value.get("definitionId")
-    if not isinstance(definition_id, str) or not definition_id:
-        fail(f"invalid Definition identity in {CONFIG_PATH}")
+  definition_id = config_value.get("definitionId")
+  if not isinstance(definition_id, str) or not definition_id:
+    fail(f"invalid Definition identity in {CONFIG_PATH}")
 
-    concurrency_value = config_value.get("concurrencyDefinitions", {})
-    if not is_object_dict(concurrency_value):
-        fail(f"invalid concurrency Definition mapping in {CONFIG_PATH}")
-    concurrency_definitions: dict[str, str] = {}
-    for key, value in concurrency_value.items():
-        if (
-            not isinstance(key, str)
-            or not key
-            or not isinstance(value, str)
-            or not value
-        ):
-            fail(f"invalid concurrency Definition mapping in {CONFIG_PATH}")
-        concurrency_definitions[key] = value
+  concurrency_value = config_value.get("concurrencyDefinitions", {})
+  if not is_object_dict(concurrency_value):
+    fail(f"invalid concurrency Definition mapping in {CONFIG_PATH}")
+  concurrency_definitions: dict[str, str] = {}
+  for key, value in concurrency_value.items():
+    if not isinstance(key, str) or not key or not isinstance(value, str) or not value:
+      fail(f"invalid concurrency Definition mapping in {CONFIG_PATH}")
+    concurrency_definitions[key] = value
 
-    return {
-        "definitionId": definition_id,
-        "concurrencyDefinitions": concurrency_definitions,
-    }
+  return {
+    "definitionId": definition_id,
+    "concurrencyDefinitions": concurrency_definitions,
+  }
 
 
 def load_definition_id() -> str:
-    return str(load_config()["definitionId"])
+  return str(load_config()["definitionId"])
 
 
 def save_config(config: Config) -> None:
-    CONFIG_PATH.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    temporary = CONFIG_PATH.with_suffix(f".{os.getpid()}.tmp")
-    temporary.write_text(
-        json.dumps(config, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    temporary.chmod(0o600)
-    temporary.replace(CONFIG_PATH)
+  CONFIG_PATH.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+  temporary = CONFIG_PATH.with_suffix(f".{os.getpid()}.tmp")
+  temporary.write_text(
+    json.dumps(config, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+  )
+  temporary.chmod(0o600)
+  temporary.replace(CONFIG_PATH)
 
 
 @contextmanager
 def config_lock() -> Generator[None, None, None]:
-    CONFIG_PATH.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    descriptor = os.open(CONFIG_LOCK_PATH, os.O_CREAT | os.O_RDWR, 0o600)
-    try:
-        os.fchmod(descriptor, 0o600)
-        fcntl.flock(descriptor, fcntl.LOCK_EX)
-        yield
-    finally:
-        fcntl.flock(descriptor, fcntl.LOCK_UN)
-        os.close(descriptor)
+  CONFIG_PATH.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+  descriptor = os.open(CONFIG_LOCK_PATH, os.O_CREAT | os.O_RDWR, 0o600)
+  try:
+    os.fchmod(descriptor, 0o600)
+    fcntl.flock(descriptor, fcntl.LOCK_EX)
+    yield
+  finally:
+    fcntl.flock(descriptor, fcntl.LOCK_UN)
+    os.close(descriptor)
 
 
 def definition_document(
-    concurrency_key: str | None = None,
+  concurrency_key: str | None = None,
 ) -> dict[str, object]:
-    script_path = str(Path(__file__).resolve())
-    document: dict[str, object] = {
-        "command": {
-            "executable": script_path,
-            "arguments": [INTERNAL_RUN],
-            "workingDirectory": str(Path.home()),
+  script_path = str(Path(__file__).resolve())
+  document: dict[str, object] = {
+    "command": {
+      "executable": script_path,
+      "arguments": [INTERNAL_RUN],
+      "workingDirectory": str(Path.home()),
+    },
+    "triggerInputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "executable": {"type": "string", "minLength": 1, "pattern": "^/"},
+        "arguments": {
+          "type": "array",
+          "items": {"type": "string"},
         },
-        "triggerInputSchema": {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
-            "type": "object",
-            "properties": {
-                "executable": {"type": "string", "minLength": 1, "pattern": "^/"},
-                "arguments": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                },
-                "workingDirectory": {
-                    "type": "string",
-                    "minLength": 1,
-                    "pattern": "^/",
-                },
-                "stdin": {"type": "string"},
-                "ollamaEnvironment": {
-                    "type": "object",
-                    "properties": {
-                        name: {"type": "string", "minLength": 1}
-                        for name in FORWARDED_OLLAMA_ENVIRONMENT
-                    },
-                    "additionalProperties": False,
-                },
-            },
-            "required": ["executable", "arguments", "workingDirectory"],
-            "additionalProperties": False,
+        "workingDirectory": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^/",
         },
-        "resourceLimits": {
-            "triggerInputBytes": 1048576,
-            "attemptOutputBytes": 67108864,
-            "resultArtifactBytes": 16777216,
+        "stdin": {"type": "string"},
+        "ollamaEnvironment": {
+          "type": "object",
+          "properties": {
+            name: {"type": "string", "minLength": 1}
+            for name in FORWARDED_OLLAMA_ENVIRONMENT
+          },
+          "additionalProperties": False,
         },
-        "retryPolicy": {"maxAttempts": 1},
-    }
-    if concurrency_key is not None:
-        document["concurrencyKey"] = concurrency_key
-    return document
+      },
+      "required": ["executable", "arguments", "workingDirectory"],
+      "additionalProperties": False,
+    },
+    "resourceLimits": {
+      "triggerInputBytes": 1048576,
+      "attemptOutputBytes": 67108864,
+      "resultArtifactBytes": 16777216,
+    },
+    "retryPolicy": {"maxAttempts": 1},
+  }
+  if concurrency_key is not None:
+    document["concurrencyKey"] = concurrency_key
+  return document
 
 
 def current_definition_revision(definition_id: str) -> int:
-    result = run_omqueue(
-        ["definition", "inspect", definition_id, "--json"], capture=True
-    )
-    if result.returncode != 0:
-        sys.stderr.write(result.stderr)
-        raise SystemExit(result.returncode)
-    try:
-        revision = json.loads(result.stdout)["definition"]["currentRevision"]
-    except (json.JSONDecodeError, KeyError, TypeError):
-        fail("OMQueue returned an invalid Definition inspection")
-    if not isinstance(revision, int) or isinstance(revision, bool) or revision < 1:
-        fail("OMQueue returned an invalid Definition revision")
-    return revision
+  result = run_omqueue(["definition", "inspect", definition_id, "--json"], capture=True)
+  if result.returncode != 0:
+    sys.stderr.write(result.stderr)
+    raise SystemExit(result.returncode)
+  try:
+    revision = json.loads(result.stdout)["definition"]["currentRevision"]
+  except (json.JSONDecodeError, KeyError, TypeError):
+    fail("OMQueue returned an invalid Definition inspection")
+  if not isinstance(revision, int) or isinstance(revision, bool) or revision < 1:
+    fail("OMQueue returned an invalid Definition revision")
+  return revision
 
 
 def apply_definition(
-    existing_definition_id: str | None,
-    concurrency_key: str | None = None,
+  existing_definition_id: str | None,
+  concurrency_key: str | None = None,
 ) -> str:
-    document = definition_document(concurrency_key)
-    if existing_definition_id is not None:
-        document["definitionId"] = existing_definition_id
-        document["baseRevision"] = current_definition_revision(existing_definition_id)
+  document = definition_document(concurrency_key)
+  if existing_definition_id is not None:
+    document["definitionId"] = existing_definition_id
+    document["baseRevision"] = current_definition_revision(existing_definition_id)
 
-    document_path = write_json_document(document)
-    try:
-        result = run_omqueue(
-            ["definition", "apply", document_path, "--json"], capture=True
-        )
-    finally:
-        os.unlink(document_path)
+  document_path = write_json_document(document)
+  try:
+    result = run_omqueue(["definition", "apply", document_path, "--json"], capture=True)
+  finally:
+    os.unlink(document_path)
 
-    if result.returncode != 0:
-        sys.stderr.write(result.stderr)
-        raise SystemExit(result.returncode)
-    try:
-        definition_id = json.loads(result.stdout)["result"]["definitionId"]
-    except (json.JSONDecodeError, KeyError, TypeError):
-        fail("OMQueue returned an invalid Definition response")
-    if not isinstance(definition_id, str) or not definition_id:
-        fail("OMQueue returned an invalid Definition identity")
-    if existing_definition_id is not None and definition_id != existing_definition_id:
-        fail("OMQueue returned a different Definition identity")
+  if result.returncode != 0:
+    sys.stderr.write(result.stderr)
+    raise SystemExit(result.returncode)
+  try:
+    definition_id = json.loads(result.stdout)["result"]["definitionId"]
+  except (json.JSONDecodeError, KeyError, TypeError):
+    fail("OMQueue returned an invalid Definition response")
+  if not isinstance(definition_id, str) or not definition_id:
+    fail("OMQueue returned an invalid Definition identity")
+  if existing_definition_id is not None and definition_id != existing_definition_id:
+    fail("OMQueue returned a different Definition identity")
 
-    return definition_id
+  return definition_id
 
 
 def enable_definition(definition_id: str) -> None:
-    enabled = run_omqueue(
-        ["definition", "enable", definition_id, "--json"], capture=True
-    )
-    if enabled.returncode != 0:
-        sys.stderr.write(enabled.stderr)
-        raise SystemExit(enabled.returncode)
+  enabled = run_omqueue(["definition", "enable", definition_id, "--json"], capture=True)
+  if enabled.returncode != 0:
+    sys.stderr.write(enabled.stderr)
+    raise SystemExit(enabled.returncode)
 
 
 def setup() -> None:
-    with config_lock():
-        if queue_configuration_present():
-            config = load_config()
-            existing_definition_id: str | None = config["definitionId"]
-            concurrency_definitions = config["concurrencyDefinitions"]
-        else:
-            existing_definition_id = None
-            concurrency_definitions = {}
+  with config_lock():
+    if queue_configuration_present():
+      config = load_config()
+      existing_definition_id: str | None = config["definitionId"]
+      concurrency_definitions = config["concurrencyDefinitions"]
+    else:
+      existing_definition_id = None
+      concurrency_definitions = {}
 
-        definition_id = apply_definition(existing_definition_id)
-        reconciled_definitions = {
-            key: apply_definition(value, key)
-            for key, value in sorted(concurrency_definitions.items())
-        }
-        save_config(
-            {
-                "definitionId": definition_id,
-                "concurrencyDefinitions": reconciled_definitions,
-            }
-        )
-        enable_definition(definition_id)
-        for concurrency_definition_id in reconciled_definitions.values():
-            enable_definition(concurrency_definition_id)
-    print(f"bq: ready (Definition {definition_id})")
+    definition_id = apply_definition(existing_definition_id)
+    reconciled_definitions = {
+      key: apply_definition(value, key)
+      for key, value in sorted(concurrency_definitions.items())
+    }
+    save_config(
+      {
+        "definitionId": definition_id,
+        "concurrencyDefinitions": reconciled_definitions,
+      }
+    )
+    enable_definition(definition_id)
+    for concurrency_definition_id in reconciled_definitions.values():
+      enable_definition(concurrency_definition_id)
+  print(f"bq: ready (Definition {definition_id})")
 
 
 def definition_for_concurrency_key(
-    concurrency_key: str | None, *, diagnostics_to_stderr: bool = False
+  concurrency_key: str | None, *, diagnostics_to_stderr: bool = False
 ) -> str:
-    if concurrency_key is None:
-        return load_definition_id()
+  if concurrency_key is None:
+    return load_definition_id()
 
-    with config_lock():
-        config = load_config()
-        concurrency_definitions = config["concurrencyDefinitions"]
-        existing = concurrency_definitions.get(concurrency_key)
-        if existing is not None:
-            return existing
+  with config_lock():
+    config = load_config()
+    concurrency_definitions = config["concurrencyDefinitions"]
+    existing = concurrency_definitions.get(concurrency_key)
+    if existing is not None:
+      return existing
 
-        definition_id = apply_definition(None, concurrency_key)
-        concurrency_definitions[concurrency_key] = definition_id
-        save_config(config)
-        enable_definition(definition_id)
-        print(
-            f"bq: ready concurrency key {concurrency_key!r} "
-            f"(Definition {definition_id})",
-            file=sys.stderr if diagnostics_to_stderr else sys.stdout,
-        )
-        return definition_id
+    definition_id = apply_definition(None, concurrency_key)
+    concurrency_definitions[concurrency_key] = definition_id
+    save_config(config)
+    enable_definition(definition_id)
+    print(
+      f"bq: ready concurrency key {concurrency_key!r} (Definition {definition_id})",
+      file=sys.stderr if diagnostics_to_stderr else sys.stdout,
+    )
+    return definition_id
 
 
 def resolve_directory(value: str) -> str:
-    directory = Path(value).expanduser().resolve()
-    if not directory.is_dir():
-        fail(f"working directory does not exist: {value}", 2)
-    return str(directory)
+  directory = Path(value).expanduser().resolve()
+  if not directory.is_dir():
+    fail(f"working directory does not exist: {value}", 2)
+  return str(directory)
 
 
 def resolve_executable(value: str, working_directory: str) -> str:
-    if os.sep in value:
-        candidate = Path(value).expanduser()
-        if not candidate.is_absolute():
-            candidate = Path(working_directory) / candidate
-        executable = os.path.abspath(candidate)
-    else:
-        executable = shutil.which(value) or ""
+  if os.sep in value:
+    candidate = Path(value).expanduser()
+    if not candidate.is_absolute():
+      candidate = Path(working_directory) / candidate
+    executable = os.path.abspath(candidate)
+  else:
+    executable = shutil.which(value) or ""
 
-    if (
-        not executable
-        or not Path(executable).is_file()
-        or not os.access(executable, os.X_OK)
-    ):
-        fail(f"executable not found or not executable: {value}", 2)
-    return executable
+  if (
+    not executable
+    or not Path(executable).is_file()
+    or not os.access(executable, os.X_OK)
+  ):
+    fail(f"executable not found or not executable: {value}", 2)
+  return executable
 
 
 DURATION_PATTERN = re.compile(r"^([1-9][0-9]*)([mhd])$")
@@ -468,577 +456,571 @@ MAX_FINITE_RUNS = 100
 
 
 def parse_duration(value: str, option: str) -> timedelta:
-    match = DURATION_PATTERN.fullmatch(value)
-    if match is None:
-        fail(f"{option} requires a duration such as 10m, 2h, or 1d", 2)
-    amount = int(match.group(1))
-    unit = match.group(2)
-    try:
-        if unit == "m":
-            return timedelta(minutes=amount)
-        if unit == "h":
-            return timedelta(hours=amount)
-        return timedelta(days=amount)
-    except OverflowError:
-        fail(f"{option} duration is too large", 2)
+  match = DURATION_PATTERN.fullmatch(value)
+  if match is None:
+    fail(f"{option} requires a duration such as 10m, 2h, or 1d", 2)
+  amount = int(match.group(1))
+  unit = match.group(2)
+  try:
+    if unit == "m":
+      return timedelta(minutes=amount)
+    if unit == "h":
+      return timedelta(hours=amount)
+    return timedelta(days=amount)
+  except OverflowError:
+    fail(f"{option} duration is too large", 2)
 
 
 def parse_instant(value: str) -> datetime:
-    if ISO_OFFSET_PATTERN.search(value) is None:
-        fail("--at requires ISO 8601 with Z or a numeric UTC offset", 2)
-    try:
-        instant = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        fail("--at requires a valid ISO 8601 date-time", 2)
-    if instant.tzinfo is None:
-        fail("--at requires an explicit UTC offset", 2)
-    if instant.second != 0 or instant.microsecond != 0:
-        fail("--at must be aligned to a whole minute", 2)
-    try:
-        return instant.astimezone(timezone.utc)
-    except (OverflowError, ValueError):
-        fail("--at offset produces an out-of-range UTC date", 2)
+  if ISO_OFFSET_PATTERN.search(value) is None:
+    fail("--at requires ISO 8601 with Z or a numeric UTC offset", 2)
+  try:
+    instant = datetime.fromisoformat(value.replace("Z", "+00:00"))
+  except ValueError:
+    fail("--at requires a valid ISO 8601 date-time", 2)
+  if instant.tzinfo is None:
+    fail("--at requires an explicit UTC offset", 2)
+  if instant.second != 0 or instant.microsecond != 0:
+    fail("--at must be aligned to a whole minute", 2)
+  try:
+    return instant.astimezone(timezone.utc)
+  except (OverflowError, ValueError):
+    fail("--at offset produces an out-of-range UTC date", 2)
 
 
 def ceil_to_minute(instant: datetime) -> datetime:
-    if instant.second == 0 and instant.microsecond == 0:
-        return instant
-    return instant.replace(second=0, microsecond=0) + timedelta(minutes=1)
+  if instant.second == 0 and instant.microsecond == 0:
+    return instant
+  return instant.replace(second=0, microsecond=0) + timedelta(minutes=1)
 
 
 def format_instant(instant: datetime) -> str:
-    return instant.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:00Z")
+  return instant.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:00Z")
 
 
 def valid_time_zone(candidates: list[str]) -> str | None:
-    for candidate in candidates:
-        if not candidate or candidate.startswith(":"):
-            continue
-        if "/" not in candidate and any(character.isdigit() for character in candidate):
-            continue
-        try:
-            ZoneInfo(candidate)
-            return candidate
-        except (ValueError, ZoneInfoNotFoundError):
-            continue
-    return None
+  for candidate in candidates:
+    if not candidate or candidate.startswith(":"):
+      continue
+    if "/" not in candidate and any(character.isdigit() for character in candidate):
+      continue
+    try:
+      ZoneInfo(candidate)
+      return candidate
+    except (ValueError, ZoneInfoNotFoundError):
+      continue
+  return None
 
 
 def system_time_zone() -> str:
-    candidates = [os.environ.get("TZ", "")]
-    try:
-        candidates.append(Path("/etc/timezone").read_text(encoding="utf-8").strip())
-    except OSError:
-        pass
+  candidates = [os.environ.get("TZ", "")]
+  try:
+    candidates.append(Path("/etc/timezone").read_text(encoding="utf-8").strip())
+  except OSError:
+    pass
 
-    try:
-        target = str(Path("/etc/localtime").resolve())
-    except OSError:
-        target = ""
-    for marker in ("/zoneinfo/", "/usr/share/zoneinfo/"):
-        if marker in target:
-            candidates.append(target.split(marker, 1)[1])
+  try:
+    target = str(Path("/etc/localtime").resolve())
+  except OSError:
+    target = ""
+  for marker in ("/zoneinfo/", "/usr/share/zoneinfo/"):
+    if marker in target:
+      candidates.append(target.split(marker, 1)[1])
 
-    detected = valid_time_zone(candidates)
-    if detected is None:
-        fail("cannot detect the system IANA time zone; pass --tz", 2)
-    return detected
+  detected = valid_time_zone(candidates)
+  if detected is None:
+    fail("cannot detect the system IANA time zone; pass --tz", 2)
+  return detected
 
 
 def option_value(arguments: list[str], index: int, option: str) -> str:
-    if index + 1 >= len(arguments):
-        fail(f"{option} requires a value", 2)
-    return arguments[index + 1]
+  if index + 1 >= len(arguments):
+    fail(f"{option} requires a value", 2)
+  return arguments[index + 1]
 
 
 def parse_submission(
-    arguments: list[str],
+  arguments: list[str],
 ) -> tuple[dict[str, object], dict[str, object], str | None, str | None, bool]:
-    working_directory = os.getcwd()
-    timing: dict[str, object] = {}
-    concurrency_key: str | None = None
-    label: str | None = None
-    label_supplied = False
-    capture_stdin = False
-    json_output = False
-    index = 0
+  working_directory = os.getcwd()
+  timing: dict[str, object] = {}
+  concurrency_key: str | None = None
+  label: str | None = None
+  label_supplied = False
+  capture_stdin = False
+  json_output = False
+  index = 0
 
-    while index < len(arguments):
-        option = arguments[index]
-        if option == "--":
-            index += 1
-            break
-        if option == "--cwd":
-            working_directory = resolve_directory(
-                option_value(arguments, index, option)
-            )
-            index += 2
-            continue
-        if option == "--concurrency-key":
-            concurrency_key = option_value(arguments, index, option)
-            if not concurrency_key:
-                fail("--concurrency-key requires a non-empty value", 2)
-            index += 2
-            continue
-        if option == "--label":
-            if label_supplied:
-                fail("--label may be supplied only once", 2)
-            label = option_value(arguments, index, option)
-            label_supplied = True
-            index += 2
-            continue
-        if option == "--stdin":
-            capture_stdin = True
-            index += 1
-            continue
-        if option == "--json":
-            json_output = True
-            index += 1
-            continue
-        if option in ("--in", "--at", "--cron", "--tz", "--every"):
-            timing[option[2:]] = option_value(arguments, index, option)
-            index += 2
-            continue
-        if option == "--count":
-            value = option_value(arguments, index, option)
-            try:
-                timing["count"] = int(value)
-            except ValueError:
-                fail("--count requires an integer", 2)
-            index += 2
-            continue
-        if option.startswith("--"):
-            fail(f"unknown bq option: {option}; use -- before command options", 2)
-        break
+  while index < len(arguments):
+    option = arguments[index]
+    if option == "--":
+      index += 1
+      break
+    if option == "--cwd":
+      working_directory = resolve_directory(option_value(arguments, index, option))
+      index += 2
+      continue
+    if option == "--concurrency-key":
+      concurrency_key = option_value(arguments, index, option)
+      if not concurrency_key:
+        fail("--concurrency-key requires a non-empty value", 2)
+      index += 2
+      continue
+    if option == "--label":
+      if label_supplied:
+        fail("--label may be supplied only once", 2)
+      label = option_value(arguments, index, option)
+      label_supplied = True
+      index += 2
+      continue
+    if option == "--stdin":
+      capture_stdin = True
+      index += 1
+      continue
+    if option == "--json":
+      json_output = True
+      index += 1
+      continue
+    if option in ("--in", "--at", "--cron", "--tz", "--every"):
+      timing[option[2:]] = option_value(arguments, index, option)
+      index += 2
+      continue
+    if option == "--count":
+      value = option_value(arguments, index, option)
+      try:
+        timing["count"] = int(value)
+      except ValueError:
+        fail("--count requires an integer", 2)
+      index += 2
+      continue
+    if option.startswith("--"):
+      fail(f"unknown bq option: {option}; use -- before command options", 2)
+    break
 
-    if index >= len(arguments):
-        usage(sys.stderr)
-        fail("missing executable", 2)
+  if index >= len(arguments):
+    usage(sys.stderr)
+    fail("missing executable", 2)
 
-    modes = [name for name in ("in", "at", "cron") if name in timing]
-    if len(modes) > 1:
-        fail("use only one of --in, --at, or --cron", 2)
-    if "tz" in timing and "cron" not in timing:
-        fail("--tz is valid only with --cron", 2)
-    if "cron" in timing and ("every" in timing or "count" in timing):
-        fail("--cron cannot be combined with --every or --count", 2)
-    if ("every" in timing) != ("count" in timing):
-        fail("--every and --count must be used together", 2)
-    if "every" in timing and not any(name in timing for name in ("in", "at")):
-        fail("--every requires --in or --at", 2)
-    if "count" in timing:
-        count = timing["count"]
-        if not isinstance(count, int) or not 2 <= count <= MAX_FINITE_RUNS:
-            fail(f"--count must be from 2 through {MAX_FINITE_RUNS}", 2)
-    if json_output and timing:
-        fail("--json is supported only for immediate submissions", 2)
+  modes = [name for name in ("in", "at", "cron") if name in timing]
+  if len(modes) > 1:
+    fail("use only one of --in, --at, or --cron", 2)
+  if "tz" in timing and "cron" not in timing:
+    fail("--tz is valid only with --cron", 2)
+  if "cron" in timing and ("every" in timing or "count" in timing):
+    fail("--cron cannot be combined with --every or --count", 2)
+  if ("every" in timing) != ("count" in timing):
+    fail("--every and --count must be used together", 2)
+  if "every" in timing and not any(name in timing for name in ("in", "at")):
+    fail("--every requires --in or --at", 2)
+  if "count" in timing:
+    count = timing["count"]
+    if not isinstance(count, int) or not 2 <= count <= MAX_FINITE_RUNS:
+      fail(f"--count must be from 2 through {MAX_FINITE_RUNS}", 2)
+  if json_output and timing:
+    fail("--json is supported only for immediate submissions", 2)
 
-    executable = resolve_executable(arguments[index], working_directory)
-    trigger_input: dict[str, object] = {
-        "executable": executable,
-        "arguments": arguments[index + 1 :],
-        "workingDirectory": str(Path(working_directory).resolve()),
-        "ollamaEnvironment": {
-            name: value
-            for name in FORWARDED_OLLAMA_ENVIRONMENT
-            if (value := os.environ.get(name))
-        },
-    }
-    if capture_stdin:
-        if sys.stdin.isatty():
-            fail("--stdin requires piped or redirected UTF-8 input", 2)
-        try:
-            trigger_input["stdin"] = sys.stdin.buffer.read().decode("utf-8")
-        except UnicodeDecodeError:
-            fail("--stdin input is not valid UTF-8", 2)
-    return trigger_input, timing, concurrency_key, label, json_output
+  executable = resolve_executable(arguments[index], working_directory)
+  trigger_input: dict[str, object] = {
+    "executable": executable,
+    "arguments": arguments[index + 1 :],
+    "workingDirectory": str(Path(working_directory).resolve()),
+    "ollamaEnvironment": {
+      name: value
+      for name in FORWARDED_OLLAMA_ENVIRONMENT
+      if (value := os.environ.get(name))
+    },
+  }
+  if capture_stdin:
+    if sys.stdin.isatty():
+      fail("--stdin requires piped or redirected UTF-8 input", 2)
+    try:
+      trigger_input["stdin"] = sys.stdin.buffer.read().decode("utf-8")
+    except UnicodeDecodeError:
+      fail("--stdin input is not valid UTF-8", 2)
+  return trigger_input, timing, concurrency_key, label, json_output
 
 
 def submit_now(
-    trigger_input: dict[str, object],
-    definition_id: str,
-    label: str | None,
-    *,
-    json_output: bool = False,
+  trigger_input: dict[str, object],
+  definition_id: str,
+  label: str | None,
+  *,
+  json_output: bool = False,
 ) -> None:
-    document_path = write_json_document(trigger_input)
-    try:
-        arguments = [
-            "trigger",
-            definition_id,
-            document_path,
-            "--idempotency-key",
-            f"bq-{uuid.uuid4()}",
-        ]
-        if label is not None:
-            arguments.extend(["--label", label])
-        arguments.append("--json")
-        result = run_omqueue(arguments, capture=True)
-    finally:
-        os.unlink(document_path)
+  document_path = write_json_document(trigger_input)
+  try:
+    arguments = [
+      "trigger",
+      definition_id,
+      document_path,
+      "--idempotency-key",
+      f"bq-{uuid.uuid4()}",
+    ]
+    if label is not None:
+      arguments.extend(["--label", label])
+    arguments.append("--json")
+    result = run_omqueue(arguments, capture=True)
+  finally:
+    os.unlink(document_path)
 
-    if result.returncode != 0:
-        sys.stderr.write(result.stderr)
-        raise SystemExit(result.returncode)
-    try:
-        job = json.loads(result.stdout)["job"]
-        job_id = job["jobId"]
-        state = job["state"]
-    except (json.JSONDecodeError, KeyError, TypeError):
-        fail("OMQueue returned an invalid Trigger response")
-    if not isinstance(job_id, str) or not job_id or not isinstance(state, str):
-        fail("OMQueue returned an invalid Trigger response")
-    if json_output:
-        print(json.dumps({"jobId": job_id, "state": state}, separators=(",", ":")))
-    else:
-        print(f"bq: accepted Job {job_id} ({state})")
+  if result.returncode != 0:
+    sys.stderr.write(result.stderr)
+    raise SystemExit(result.returncode)
+  try:
+    job = json.loads(result.stdout)["job"]
+    job_id = job["jobId"]
+    state = job["state"]
+  except (json.JSONDecodeError, KeyError, TypeError):
+    fail("OMQueue returned an invalid Trigger response")
+  if not isinstance(job_id, str) or not job_id or not isinstance(state, str):
+    fail("OMQueue returned an invalid Trigger response")
+  if json_output:
+    print(json.dumps({"jobId": job_id, "state": state}, separators=(",", ":")))
+  else:
+    print(f"bq: accepted Job {job_id} ({state})")
 
 
 def create_schedule(document: dict[str, object]) -> str:
-    document_path = write_json_document(document)
-    try:
-        applied = run_omqueue(
-            ["schedule", "apply", document_path, "--json"], capture=True
-        )
-    finally:
-        os.unlink(document_path)
+  document_path = write_json_document(document)
+  try:
+    applied = run_omqueue(["schedule", "apply", document_path, "--json"], capture=True)
+  finally:
+    os.unlink(document_path)
 
-    if applied.returncode != 0:
-        sys.stderr.write(applied.stderr)
-        raise SystemExit(applied.returncode)
-    try:
-        schedule_id = json.loads(applied.stdout)["result"]["scheduleId"]
-    except (json.JSONDecodeError, KeyError, TypeError):
-        fail("OMQueue returned an invalid Schedule response")
-    if not isinstance(schedule_id, str) or not schedule_id:
-        fail("OMQueue returned an invalid Schedule identity")
+  if applied.returncode != 0:
+    sys.stderr.write(applied.stderr)
+    raise SystemExit(applied.returncode)
+  try:
+    schedule_id = json.loads(applied.stdout)["result"]["scheduleId"]
+  except (json.JSONDecodeError, KeyError, TypeError):
+    fail("OMQueue returned an invalid Schedule response")
+  if not isinstance(schedule_id, str) or not schedule_id:
+    fail("OMQueue returned an invalid Schedule identity")
 
-    enabled = run_omqueue(["schedule", "enable", schedule_id, "--json"], capture=True)
-    if enabled.returncode != 0:
-        print(
-            f"bq: Schedule {schedule_id} was created but could not be enabled",
-            file=sys.stderr,
-        )
-        sys.stderr.write(enabled.stderr)
-        raise SystemExit(enabled.returncode)
-    return schedule_id
+  enabled = run_omqueue(["schedule", "enable", schedule_id, "--json"], capture=True)
+  if enabled.returncode != 0:
+    print(
+      f"bq: Schedule {schedule_id} was created but could not be enabled",
+      file=sys.stderr,
+    )
+    sys.stderr.write(enabled.stderr)
+    raise SystemExit(enabled.returncode)
+  return schedule_id
 
 
 def schedule_submission(
-    trigger_input: dict[str, object],
-    timing: dict[str, object],
-    definition_id: str,
-    label: str | None,
+  trigger_input: dict[str, object],
+  timing: dict[str, object],
+  definition_id: str,
+  label: str | None,
 ) -> None:
-    if "cron" in timing:
-        cron = timing["cron"]
-        time_zone = timing.get("tz") or system_time_zone()
-        document: dict[str, object] = {
-            "definitionId": definition_id,
-            "triggerInput": trigger_input,
-            "timeZone": time_zone,
-            "cron": cron,
-            "latePolicy": "fire_once",
-        }
-        if label is not None:
-            document["label"] = label
-        schedule_id = create_schedule(document)
-        print(f"bq: scheduled {schedule_id} cron={cron!r} timeZone={time_zone}")
-        return
+  if "cron" in timing:
+    cron = timing["cron"]
+    time_zone = timing.get("tz") or system_time_zone()
+    document: dict[str, object] = {
+      "definitionId": definition_id,
+      "triggerInput": trigger_input,
+      "timeZone": time_zone,
+      "cron": cron,
+      "latePolicy": "fire_once",
+    }
+    if label is not None:
+      document["label"] = label
+    schedule_id = create_schedule(document)
+    print(f"bq: scheduled {schedule_id} cron={cron!r} timeZone={time_zone}")
+    return
 
-    if "in" in timing:
-        delay = parse_duration(str(timing["in"]), "--in")
-        try:
-            first = ceil_to_minute(datetime.now(timezone.utc) + delay)
-        except OverflowError:
-            fail("--in duration produces an out-of-range date", 2)
-    else:
-        first = parse_instant(str(timing["at"]))
+  if "in" in timing:
+    delay = parse_duration(str(timing["in"]), "--in")
+    try:
+      first = ceil_to_minute(datetime.now(timezone.utc) + delay)
+    except OverflowError:
+      fail("--in duration produces an out-of-range date", 2)
+  else:
+    first = parse_instant(str(timing["at"]))
 
-    interval = (
-        parse_duration(str(timing["every"]), "--every")
-        if "every" in timing
-        else timedelta(0)
-    )
-    count = timing.get("count", 1)
-    if not isinstance(count, int) or isinstance(count, bool):
-        fail("invalid internal repetition count")
-    instants: list[str] = []
-    for occurrence in range(count):
-        try:
-            instants.append(format_instant(first + interval * occurrence))
-        except (OverflowError, ValueError):
-            fail("repetition produces an out-of-range date", 2)
+  interval = (
+    parse_duration(str(timing["every"]), "--every")
+    if "every" in timing
+    else timedelta(0)
+  )
+  count = timing.get("count", 1)
+  if not isinstance(count, int) or isinstance(count, bool):
+    fail("invalid internal repetition count")
+  instants: list[str] = []
+  for occurrence in range(count):
+    try:
+      instants.append(format_instant(first + interval * occurrence))
+    except (OverflowError, ValueError):
+      fail("repetition produces an out-of-range date", 2)
 
-    scheduled: list[tuple[str, str]] = []
-    for occurrence, at in enumerate(instants):
-        document = {
-            "definitionId": definition_id,
-            "triggerInput": trigger_input,
-            "timeZone": "UTC",
-            "at": at,
-            "latePolicy": "fire_once",
-        }
-        if label is not None:
-            document["label"] = label
-        schedule_id = create_schedule(document)
-        scheduled.append((schedule_id, at))
-        if count > 1:
-            print(f"bq: scheduled {occurrence + 1}/{count} at={at} {schedule_id}")
+  scheduled: list[tuple[str, str]] = []
+  for occurrence, at in enumerate(instants):
+    document = {
+      "definitionId": definition_id,
+      "triggerInput": trigger_input,
+      "timeZone": "UTC",
+      "at": at,
+      "latePolicy": "fire_once",
+    }
+    if label is not None:
+      document["label"] = label
+    schedule_id = create_schedule(document)
+    scheduled.append((schedule_id, at))
+    if count > 1:
+      print(f"bq: scheduled {occurrence + 1}/{count} at={at} {schedule_id}")
 
-    if len(scheduled) == 1:
-        schedule_id, at = scheduled[0]
-        print(f"bq: scheduled {schedule_id} at={at}")
-    else:
-        print(f"bq: scheduled all {len(scheduled)} one-time runs")
+  if len(scheduled) == 1:
+    schedule_id, at = scheduled[0]
+    print(f"bq: scheduled {schedule_id} at={at}")
+  else:
+    print(f"bq: scheduled all {len(scheduled)} one-time runs")
 
 
 def local_due_instant(
-    timing: dict[str, object], *, now: datetime | None = None
+  timing: dict[str, object], *, now: datetime | None = None
 ) -> datetime:
-    unsupported = [name for name in ("cron", "every", "count", "tz") if name in timing]
-    if unsupported:
-        options = ", ".join(f"--{name}" for name in unsupported)
-        fail(
-            f"local background fallback does not support {options}; "
-            "run 'bq --setup' to use OMQueue scheduling",
-            2,
-        )
+  unsupported = [name for name in ("cron", "every", "count", "tz") if name in timing]
+  if unsupported:
+    options = ", ".join(f"--{name}" for name in unsupported)
+    fail(
+      f"local background fallback does not support {options}; "
+      "run 'bq --setup' to use OMQueue scheduling",
+      2,
+    )
 
-    current = now or datetime.now(timezone.utc)
-    if "in" in timing:
-        delay = parse_duration(str(timing["in"]), "--in")
-        try:
-            return ceil_to_minute(current + delay)
-        except OverflowError:
-            fail("--in duration produces an out-of-range date", 2)
-    if "at" in timing:
-        return parse_instant(str(timing["at"]))
-    return current
+  current = now or datetime.now(timezone.utc)
+  if "in" in timing:
+    delay = parse_duration(str(timing["in"]), "--in")
+    try:
+      return ceil_to_minute(current + delay)
+    except OverflowError:
+      fail("--in duration produces an out-of-range date", 2)
+  if "at" in timing:
+    return parse_instant(str(timing["at"]))
+  return current
 
 
 def local_background_environment(source: Mapping[str, str]) -> dict[str, str]:
-    return {
-        name: value
-        for name in LOCAL_BACKGROUND_ENVIRONMENT_KEYS
-        if (value := source.get(name)) is not None
-    }
+  return {
+    name: value
+    for name in LOCAL_BACKGROUND_ENVIRONMENT_KEYS
+    if (value := source.get(name)) is not None
+  }
 
 
 def submit_local_background(
-    trigger_input: dict[str, object],
-    timing: dict[str, object],
-    concurrency_key: str | None,
-    json_output: bool,
+  trigger_input: dict[str, object],
+  timing: dict[str, object],
+  concurrency_key: str | None,
+  json_output: bool,
 ) -> None:
-    due = local_due_instant(timing)
-    working_directory = str(trigger_input["workingDirectory"])
-    command = [
-        sys.executable,
-        str(Path(__file__).resolve()),
-        INTERNAL_LOCAL_RUN,
-        str(due.timestamp()),
-    ]
+  due = local_due_instant(timing)
+  working_directory = str(trigger_input["workingDirectory"])
+  command = [
+    sys.executable,
+    str(Path(__file__).resolve()),
+    INTERNAL_LOCAL_RUN,
+    str(due.timestamp()),
+  ]
 
-    with tempfile.TemporaryFile(mode="w+", encoding="utf-8") as trigger_file:
-        json.dump(
-            trigger_input, trigger_file, ensure_ascii=False, separators=(",", ":")
-        )
-        trigger_file.write("\n")
-        trigger_file.flush()
-        trigger_file.seek(0)
-        try:
-            process = subprocess.Popen(
-                command,
-                cwd=working_directory,
-                env=local_background_environment(os.environ),
-                stdin=trigger_file,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                start_new_session=True,
-                close_fds=True,
-            )
-        except OSError as error:
-            fail(f"cannot start local background process: {error}")
+  with tempfile.TemporaryFile(mode="w+", encoding="utf-8") as trigger_file:
+    json.dump(trigger_input, trigger_file, ensure_ascii=False, separators=(",", ":"))
+    trigger_file.write("\n")
+    trigger_file.flush()
+    trigger_file.seek(0)
+    try:
+      process = subprocess.Popen(
+        command,
+        cwd=working_directory,
+        env=local_background_environment(os.environ),
+        stdin=trigger_file,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+        close_fds=True,
+      )
+    except OSError as error:
+      fail(f"cannot start local background process: {error}")
 
-    if json_output:
-        print(
-            json.dumps(
-                {
-                    "mode": "local_background",
-                    "pid": process.pid,
-                    "nonDurable": True,
-                    "concurrencyKeyEnforced": False,
-                },
-                separators=(",", ":"),
-            )
-        )
-        return
-
-    timing_text = f" at={format_instant(due)}" if timing else ""
-    concurrency_text = (
-        "; concurrency key not enforced" if concurrency_key is not None else ""
-    )
+  if json_output:
     print(
-        f"bq: started local background process pid={process.pid}{timing_text} "
-        f"(non-durable{concurrency_text})"
+      json.dumps(
+        {
+          "mode": "local_background",
+          "pid": process.pid,
+          "nonDurable": True,
+          "concurrencyKeyEnforced": False,
+        },
+        separators=(",", ":"),
+      )
     )
+    return
+
+  timing_text = f" at={format_instant(due)}" if timing else ""
+  concurrency_text = (
+    "; concurrency key not enforced" if concurrency_key is not None else ""
+  )
+  print(
+    f"bq: started local background process pid={process.pid}{timing_text} "
+    f"(non-durable{concurrency_text})"
+  )
 
 
 def submit(arguments: list[str]) -> None:
-    trigger_input, timing, concurrency_key, label, json_output = parse_submission(
-        arguments
-    )
-    if not queue_configuration_present():
-        submit_local_background(trigger_input, timing, concurrency_key, json_output)
-        return
+  trigger_input, timing, concurrency_key, label, json_output = parse_submission(
+    arguments
+  )
+  if not queue_configuration_present():
+    submit_local_background(trigger_input, timing, concurrency_key, json_output)
+    return
 
-    definition_id = definition_for_concurrency_key(
-        concurrency_key, diagnostics_to_stderr=json_output
-    )
-    if timing:
-        schedule_submission(trigger_input, timing, definition_id, label)
-    else:
-        submit_now(trigger_input, definition_id, label, json_output=json_output)
+  definition_id = definition_for_concurrency_key(
+    concurrency_key, diagnostics_to_stderr=json_output
+  )
+  if timing:
+    schedule_submission(trigger_input, timing, definition_id, label)
+  else:
+    submit_now(trigger_input, definition_id, label, json_output=json_output)
 
 
 def internal_local_run(due_value: str) -> NoReturn:
-    try:
-        due = float(due_value)
-    except ValueError:
-        fail("invalid local background instant", 2)
-    if not math.isfinite(due):
-        fail("invalid local background instant", 2)
+  try:
+    due = float(due_value)
+  except ValueError:
+    fail("invalid local background instant", 2)
+  if not math.isfinite(due):
+    fail("invalid local background instant", 2)
 
-    while True:
-        remaining = due - time.time()
-        if remaining <= 0:
-            break
-        time.sleep(min(remaining, 60.0))
-    internal_run()
+  while True:
+    remaining = due - time.time()
+    if remaining <= 0:
+      break
+    time.sleep(min(remaining, 60.0))
+  internal_run()
 
 
 def load_internal_run_input() -> InternalRunInput:
-    try:
-        value: object = json.load(sys.stdin)
-    except (json.JSONDecodeError, TypeError) as error:
-        fail(f"invalid Trigger input: {error}")
+  try:
+    value: object = json.load(sys.stdin)
+  except (json.JSONDecodeError, TypeError) as error:
+    fail(f"invalid Trigger input: {error}")
 
-    if not is_object_dict(value):
-        fail("invalid Trigger input shape")
+  if not is_object_dict(value):
+    fail("invalid Trigger input shape")
 
-    try:
-        executable = value["executable"]
-        arguments = value["arguments"]
-        working_directory = value["workingDirectory"]
-    except KeyError as error:
-        fail(f"invalid Trigger input: {error}")
+  try:
+    executable = value["executable"]
+    arguments = value["arguments"]
+    working_directory = value["workingDirectory"]
+  except KeyError as error:
+    fail(f"invalid Trigger input: {error}")
 
-    ollama_environment = value.get("ollamaEnvironment", {})
-    has_stdin = "stdin" in value
-    command_stdin = value.get("stdin")
+  ollama_environment = value.get("ollamaEnvironment", {})
+  has_stdin = "stdin" in value
+  command_stdin = value.get("stdin")
+  if not (
+    isinstance(executable, str)
+    and executable.startswith("/")
+    and is_string_list(arguments)
+    and isinstance(working_directory, str)
+    and working_directory.startswith("/")
+    and is_object_dict(ollama_environment)
+    and (not has_stdin or isinstance(command_stdin, str))
+  ):
+    fail("invalid Trigger input shape")
+
+  validated_environment: dict[str, str] = {}
+  for name, environment_value in ollama_environment.items():
     if not (
-        isinstance(executable, str)
-        and executable.startswith("/")
-        and is_string_list(arguments)
-        and isinstance(working_directory, str)
-        and working_directory.startswith("/")
-        and is_object_dict(ollama_environment)
-        and (not has_stdin or isinstance(command_stdin, str))
+      isinstance(name, str)
+      and name in FORWARDED_OLLAMA_ENVIRONMENT
+      and isinstance(environment_value, str)
+      and environment_value
     ):
-        fail("invalid Trigger input shape")
+      fail("invalid Trigger input shape")
+    validated_environment[name] = environment_value
 
-    validated_environment: dict[str, str] = {}
-    for name, environment_value in ollama_environment.items():
-        if not (
-            isinstance(name, str)
-            and name in FORWARDED_OLLAMA_ENVIRONMENT
-            and isinstance(environment_value, str)
-            and environment_value
-        ):
-            fail("invalid Trigger input shape")
-        validated_environment[name] = environment_value
-
-    trigger_input: InternalRunInput = {
-        "executable": executable,
-        "arguments": arguments.copy(),
-        "workingDirectory": working_directory,
-        "ollamaEnvironment": validated_environment,
-    }
-    if has_stdin and isinstance(command_stdin, str):
-        trigger_input["stdin"] = command_stdin
-    return trigger_input
+  trigger_input: InternalRunInput = {
+    "executable": executable,
+    "arguments": arguments.copy(),
+    "workingDirectory": working_directory,
+    "ollamaEnvironment": validated_environment,
+  }
+  if has_stdin and isinstance(command_stdin, str):
+    trigger_input["stdin"] = command_stdin
+  return trigger_input
 
 
 def internal_run() -> NoReturn:
-    trigger_input = load_internal_run_input()
-    executable = trigger_input["executable"]
-    arguments = trigger_input["arguments"]
-    working_directory = trigger_input["workingDirectory"]
-    ollama_environment = trigger_input.get("ollamaEnvironment", {})
+  trigger_input = load_internal_run_input()
+  executable = trigger_input["executable"]
+  arguments = trigger_input["arguments"]
+  working_directory = trigger_input["workingDirectory"]
+  ollama_environment = trigger_input.get("ollamaEnvironment", {})
 
-    scripts_directory = str(Path(__file__).resolve().parent)
-    preferred_path = [
-        scripts_directory,
-        str(Path.home() / ".local" / "bin"),
-        "/opt/homebrew/bin",
-        "/opt/homebrew/sbin",
-        "/home/linuxbrew/.linuxbrew/bin",
-        "/home/linuxbrew/.linuxbrew/sbin",
-        "/usr/local/bin",
-        "/usr/local/sbin",
-        "/usr/bin",
-        "/bin",
-        "/usr/sbin",
-        "/sbin",
-    ]
-    os.environ["PATH"] = os.pathsep.join(
-        entry for entry in preferred_path if Path(entry).is_dir()
+  scripts_directory = str(Path(__file__).resolve().parent)
+  preferred_path = [
+    scripts_directory,
+    str(Path.home() / ".local" / "bin"),
+    "/opt/homebrew/bin",
+    "/opt/homebrew/sbin",
+    "/home/linuxbrew/.linuxbrew/bin",
+    "/home/linuxbrew/.linuxbrew/sbin",
+    "/usr/local/bin",
+    "/usr/local/sbin",
+    "/usr/bin",
+    "/bin",
+    "/usr/sbin",
+    "/sbin",
+  ]
+  os.environ["PATH"] = os.pathsep.join(
+    entry for entry in preferred_path if Path(entry).is_dir()
+  )
+  os.environ["PROJECTS_DIR"] = str(Path.home() / "Desktop" / "tutoriais_e_cursos")
+  if sys.platform.startswith("linux"):
+    user_id = os.getuid()
+    os.environ.update(
+      linux_session_environment(Path("/run/user") / str(user_id), user_id)
     )
-    os.environ["PROJECTS_DIR"] = str(Path.home() / "Desktop" / "tutoriais_e_cursos")
-    if sys.platform.startswith("linux"):
-        user_id = os.getuid()
-        os.environ.update(
-            linux_session_environment(Path("/run/user") / str(user_id), user_id)
-        )
-    os.environ.update(ollama_environment)
+  os.environ.update(ollama_environment)
 
-    try:
-        os.chdir(working_directory)
-        if "stdin" in trigger_input:
-            with tempfile.TemporaryFile() as stdin_file:
-                stdin_file.write(trigger_input["stdin"].encode("utf-8"))
-                stdin_file.seek(0)
-                os.dup2(stdin_file.fileno(), 0)
-        if sys.platform == "darwin":
-            taskpolicy = "/usr/sbin/taskpolicy"
-            os.execv(taskpolicy, [taskpolicy, "-a", executable, *arguments])
-        os.execv(executable, [executable, *arguments])
-    except OSError as error:
-        fail(f"cannot execute {executable}: {error}")
+  try:
+    os.chdir(working_directory)
+    if "stdin" in trigger_input:
+      with tempfile.TemporaryFile() as stdin_file:
+        stdin_file.write(trigger_input["stdin"].encode("utf-8"))
+        stdin_file.seek(0)
+        os.dup2(stdin_file.fileno(), 0)
+    if sys.platform == "darwin":
+      taskpolicy = "/usr/sbin/taskpolicy"
+      os.execv(taskpolicy, [taskpolicy, "-a", executable, *arguments])
+    os.execv(executable, [executable, *arguments])
+  except OSError as error:
+    fail(f"cannot execute {executable}: {error}")
 
 
 def main() -> None:
-    arguments = sys.argv[1:]
-    if arguments == [INTERNAL_RUN]:
-        internal_run()
-    if arguments[:1] == [INTERNAL_LOCAL_RUN]:
-        if len(arguments) != 2:
-            fail(f"{INTERNAL_LOCAL_RUN} requires one internal instant", 2)
-        internal_local_run(arguments[1])
-    if arguments and arguments[0] == "--setup":
-        if arguments != ["--setup"]:
-            fail("--setup cannot be combined with other options", 2)
-        setup()
-        return
-    if arguments in (["-h"], ["--help"]):
-        usage()
-        return
-    if not arguments:
-        usage(sys.stderr)
-        raise SystemExit(2)
-    submit(arguments)
+  arguments = sys.argv[1:]
+  if arguments == [INTERNAL_RUN]:
+    internal_run()
+  if arguments[:1] == [INTERNAL_LOCAL_RUN]:
+    if len(arguments) != 2:
+      fail(f"{INTERNAL_LOCAL_RUN} requires one internal instant", 2)
+    internal_local_run(arguments[1])
+  if arguments and arguments[0] == "--setup":
+    if arguments != ["--setup"]:
+      fail("--setup cannot be combined with other options", 2)
+    setup()
+    return
+  if arguments in (["-h"], ["--help"]):
+    usage()
+    return
+  if not arguments:
+    usage(sys.stderr)
+    raise SystemExit(2)
+  submit(arguments)
 
 
 if __name__ == "__main__":
-    main()
+  main()

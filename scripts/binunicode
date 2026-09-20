@@ -16,53 +16,53 @@ DataFormat = Literal["binary", "hex", "unicode"]
 
 
 class InputSource(Enum):
-    STDIN = "stdin"
+  STDIN = "stdin"
 
 
 InputValue = str | InputSource | None
 
 
 class Args(argparse.Namespace):
-    binary: InputValue
-    hexadecimal: InputValue
-    output: DataFormat
-    unicode: InputValue
+  binary: InputValue
+  hexadecimal: InputValue
+  output: DataFormat
+  unicode: InputValue
 
 
 def parse_format(value: str) -> DataFormat:
-    aliases: dict[str, DataFormat] = {
-        "b": "binary",
-        "bin": "binary",
-        "binary": "binary",
-        "x": "hex",
-        "hex": "hex",
-        "hexadecimal": "hex",
-        "u": "unicode",
-        "unicode": "unicode",
-    }
+  aliases: dict[str, DataFormat] = {
+    "b": "binary",
+    "bin": "binary",
+    "binary": "binary",
+    "x": "hex",
+    "hex": "hex",
+    "hexadecimal": "hex",
+    "u": "unicode",
+    "unicode": "unicode",
+  }
 
-    try:
-        return aliases[value.lower()]
-    except KeyError:
-        raise argparse.ArgumentTypeError(
-            "expected b/bin/binary, x/hex/hexadecimal, or u/unicode"
-        ) from None
+  try:
+    return aliases[value.lower()]
+  except KeyError:
+    raise argparse.ArgumentTypeError(
+      "expected b/bin/binary, x/hex/hexadecimal, or u/unicode"
+    ) from None
 
 
 def make_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="binunicode",
-        description=textwrap.dedent(
-            """
+  parser = argparse.ArgumentParser(
+    prog="binunicode",
+    description=textwrap.dedent(
+      """
             Convert data among Unicode text, binary byte notation, and
             hexadecimal byte notation.
 
             Choose exactly one input format with -b, -x, or -u, then choose the
             output format with -o. Input is never auto-detected.
             """
-        ).strip(),
-        epilog=textwrap.dedent(
-            """
+    ).strip(),
+    epilog=textwrap.dedent(
+      """
             FORMATS
               b, binary   Bytes written as whitespace-separated 8-bit groups.
                           Example: 01101100 01110101 01101001 01111010
@@ -128,137 +128,133 @@ def make_parser() -> argparse.ArgumentParser:
               -o and --output (also --to) accept either short or full names:
               b/bin/binary, x/hex/hexadecimal, or u/unicode.
             """
-        ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
+    ),
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+  )
 
-    input_group = parser.add_mutually_exclusive_group(required=True)
-    input_group.add_argument(
-        "-b",
-        "--bin",
-        "--binary",
-        dest="binary",
-        nargs="?",
-        const=InputSource.STDIN,
-        metavar="BYTES",
-        help="read binary byte groups from BYTES, or from stdin if omitted",
-        type=str,
-    )
-    input_group.add_argument(
-        "-x",
-        "--hex",
-        "--hexadecimal",
-        dest="hexadecimal",
-        nargs="?",
-        const=InputSource.STDIN,
-        metavar="BYTES",
-        help="read hexadecimal byte groups from BYTES, or stdin if omitted",
-        type=str,
-    )
-    input_group.add_argument(
-        "-u",
-        "--unicode",
-        dest="unicode",
-        nargs="?",
-        const=InputSource.STDIN,
-        metavar="TEXT",
-        help="read Unicode from TEXT, or from stdin if omitted",
-        type=str,
-    )
-    parser.add_argument(
-        "-o",
-        "--output",
-        "--to",
-        required=True,
-        type=parse_format,
-        metavar="FORMAT",
-        help=("output format: b/bin/binary, x/hex/hexadecimal, or u/unicode"),
-    )
+  input_group = parser.add_mutually_exclusive_group(required=True)
+  input_group.add_argument(
+    "-b",
+    "--bin",
+    "--binary",
+    dest="binary",
+    nargs="?",
+    const=InputSource.STDIN,
+    metavar="BYTES",
+    help="read binary byte groups from BYTES, or from stdin if omitted",
+    type=str,
+  )
+  input_group.add_argument(
+    "-x",
+    "--hex",
+    "--hexadecimal",
+    dest="hexadecimal",
+    nargs="?",
+    const=InputSource.STDIN,
+    metavar="BYTES",
+    help="read hexadecimal byte groups from BYTES, or stdin if omitted",
+    type=str,
+  )
+  input_group.add_argument(
+    "-u",
+    "--unicode",
+    dest="unicode",
+    nargs="?",
+    const=InputSource.STDIN,
+    metavar="TEXT",
+    help="read Unicode from TEXT, or from stdin if omitted",
+    type=str,
+  )
+  parser.add_argument(
+    "-o",
+    "--output",
+    "--to",
+    required=True,
+    type=parse_format,
+    metavar="FORMAT",
+    help=("output format: b/bin/binary, x/hex/hexadecimal, or u/unicode"),
+  )
 
-    return parser
+  return parser
 
 
 def read_stdin() -> str | None:
-    """Read stdin verbatim when data is piped or redirected."""
-    if sys.stdin.isatty():
-        return None
+  """Read stdin verbatim when data is piped or redirected."""
+  if sys.stdin.isatty():
+    return None
 
-    return sys.stdin.read()
+  return sys.stdin.read()
 
 
 def get_input(args: Args) -> tuple[DataFormat, str]:
-    selected_inputs: list[tuple[DataFormat, InputValue]] = [
-        ("binary", args.binary),
-        ("hex", args.hexadecimal),
-        ("unicode", args.unicode),
-    ]
-    selected_inputs = [
-        (data_format, value)
-        for data_format, value in selected_inputs
-        if value is not None
-    ]
+  selected_inputs: list[tuple[DataFormat, InputValue]] = [
+    ("binary", args.binary),
+    ("hex", args.hexadecimal),
+    ("unicode", args.unicode),
+  ]
+  selected_inputs = [
+    (data_format, value) for data_format, value in selected_inputs if value is not None
+  ]
 
-    if len(selected_inputs) != 1:
-        raise ValueError("choose exactly one input format: -b, -x, or -u")
+  if len(selected_inputs) != 1:
+    raise ValueError("choose exactly one input format: -b, -x, or -u")
 
-    data_format, value = selected_inputs[0]
-    if value is InputSource.STDIN:
-        stdin_value = read_stdin()
-        if stdin_value is None:
-            raise ValueError(
-                f"{data_format} input is missing; pass a value or pipe stdin"
-            )
-        return data_format, stdin_value
+  data_format, value = selected_inputs[0]
+  if value is InputSource.STDIN:
+    stdin_value = read_stdin()
+    if stdin_value is None:
+      raise ValueError(f"{data_format} input is missing; pass a value or pipe stdin")
+    return data_format, stdin_value
 
-    if not isinstance(value, str):
-        raise ValueError("the input value could not be read")
+  if not isinstance(value, str):
+    raise ValueError("the input value could not be read")
 
-    return data_format, value
+  return data_format, value
 
 
 def input_to_bytes(data_format: DataFormat, value: str) -> bytes:
-    if data_format == "unicode":
-        return value.encode("utf-8")
+  if data_format == "unicode":
+    return value.encode("utf-8")
 
-    if data_format == "binary":
-        if not BINARY_BYTE_RE.fullmatch(value.strip()):
-            raise ValueError("binary input must use whitespace-separated 8-bit groups")
-        return bytes(int(byte, 2) for byte in value.split())
+  if data_format == "binary":
+    if not BINARY_BYTE_RE.fullmatch(value.strip()):
+      raise ValueError("binary input must use whitespace-separated 8-bit groups")
+    return bytes(int(byte, 2) for byte in value.split())
 
-    if not HEX_BYTE_RE.fullmatch(value.strip()):
-        raise ValueError(
-            "hexadecimal input must use whitespace-separated two-digit byte groups"
-        )
-    return bytes(int(byte, 16) for byte in value.split())
+  if not HEX_BYTE_RE.fullmatch(value.strip()):
+    raise ValueError(
+      "hexadecimal input must use whitespace-separated two-digit byte groups"
+    )
+  return bytes(int(byte, 16) for byte in value.split())
 
 
 def bytes_to_output(data_format: DataFormat, value: bytes) -> str:
-    if data_format == "unicode":
-        return value.decode("utf-8")
+  if data_format == "unicode":
+    return value.decode("utf-8")
 
-    if data_format == "binary":
-        return " ".join(f"{byte:08b}" for byte in value)
+  if data_format == "binary":
+    return " ".join(f"{byte:08b}" for byte in value)
 
-    return " ".join(f"{byte:02x}" for byte in value)
+  return " ".join(f"{byte:02x}" for byte in value)
 
 
 def convert(input_format: DataFormat, output_format: DataFormat, value: str) -> str:
-    return bytes_to_output(output_format, input_to_bytes(input_format, value))
+  return bytes_to_output(output_format, input_to_bytes(input_format, value))
 
 
 def main() -> int:
-    parser = make_parser()
-    args = parser.parse_args(namespace=Args())
+  parser = make_parser()
+  args = parser.parse_args(namespace=Args())
 
-    try:
-        input_format, value = get_input(args)
-        result = convert(input_format, args.output, value)
-    except ValueError as error:
-        parser.error(f"the input could not be converted: {error}")
+  try:
+    input_format, value = get_input(args)
+    result = convert(input_format, args.output, value)
+  except ValueError as error:
+    parser.error(f"the input could not be converted: {error}")
 
-    print(result)
-    return 0
+  print(result)
+  return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+  raise SystemExit(main())
