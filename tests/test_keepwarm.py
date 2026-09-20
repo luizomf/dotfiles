@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Otávio Miranda
+
 import os
 import shutil
 import signal
@@ -49,7 +51,8 @@ class KeepwarmTests(unittest.TestCase):
         encoding="utf-8",
       )
       sannux.chmod(0o755)
-      previous = subprocess.Popen(
+      # Safe: fixed Bash command and a fixture-only process label.
+      previous = subprocess.Popen(  # noqa: S603
         ["/bin/bash", "-c", "read -r line", marker + "-previous"],
         stdin=subprocess.PIPE,
         stdout=subprocess.DEVNULL,
@@ -58,7 +61,8 @@ class KeepwarmTests(unittest.TestCase):
       )
       current = None
       try:
-        current = subprocess.Popen(
+        # Safe: execute only the copied repository script with fixture PATH/HOME.
+        current = subprocess.Popen(  # noqa: S603
           ["/bin/bash", str(launcher)],
           env={
             **os.environ,
