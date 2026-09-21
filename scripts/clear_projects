@@ -1,5 +1,23 @@
 #!/usr/bin/env bash
 
+# DESTRUCTIVE CLEANUP: permanently delete disposable scratch/build artifacts so
+# large leftovers do not consume disk space or get copied during host sync.
+# Scope: ONLY the contents of .scratch and release in immediate, non-hidden
+# projects under PROJECTS_DIR, plus $HOME/dotfiles. Preserve those directories
+# and everything outside them. Their names are an explicit disposal policy:
+# this script cannot tell whether work is finished or a release was published.
+#
+# There is no trash, confirmation, or undo. Inspect --dry-run before deletion.
+# Root validation, symlink checks, quoted arrays, and hidden/empty glob handling
+# are safety requirements, not optional cleanup. Do not broaden the targets or
+# replace the selection with loose rm globs. set -e and the ERR trap do NOT
+# protect against deleting a valid but unintended path.
+# Stop concurrent writers first; path checks do not prevent filesystem races
+# or protect mounted trees inside the targets. Never validate changes by running
+# cleanup against real projects: use tests/test_clear_projects.py and its
+# temporary fixtures. Keep the pre-commit regression gate intact.
+# See docs/clear_projects.md for the contract and remaining limitations.
+
 set -Eeuo pipefail
 
 trap 'printf "Error: line %s, status %s: %s\n" "$LINENO" "$?" "$BASH_COMMAND" >&2' ERR
