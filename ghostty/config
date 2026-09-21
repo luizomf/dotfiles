@@ -1,9 +1,9 @@
 # shellcheck disable=all
-theme = omtheme
+theme = omtheme-darkice
 
 # Font
-font-family = "FiraCode Nerd Font"
-font-size = 20
+font-family = "Operator Mono Lig"
+font-size = 24
 # Disable Ligatures completely
 font-feature = -calt
 font-feature = -dlig

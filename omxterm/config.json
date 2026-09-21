@@ -3,8 +3,8 @@
   "confirmClose": true,
   "logLevel": "info",
   "font": {
-    "family": "FiraCode Nerd Font",
-    "size": 20,
+    "family": "Operator Mono Lig",
+    "size": 28,
     "lineHeight": 1.0,
     "ligatures": false
   },
