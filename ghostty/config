@@ -2,7 +2,7 @@
 theme = omtheme-darkice
 
 # Font
-font-family = "Operator Mono Lig"
+font-family = "Operator Mono SSm Lig"
 font-size = 24
 # Disable Ligatures completely
 font-feature = -calt
