@@ -283,13 +283,16 @@ M.set_groups = function()
   -- ┌─────────────────────────────────────────────┐
   -- │  Telescope                                  │
   -- └─────────────────────────────────────────────┘
-  hl("TelescopeNormal", { fg = p.fg, bg = p.gray_01 })
+  hl("TelescopeNormal", { fg = p.fg, bg = p.gray_01, italic = false })
   hl("TelescopeBorder", { fg = p.gray_06, bg = p.gray_01 })
-  hl("TelescopePromptTitle", { fg = p.white, bg = p.gray_01 })
+  hl("TelescopePromptNormal", { fg = p.gray_20, bg = p.gray_01, italic = true })
+  hl("TelescopePromptTitle", { fg = p.blue, bg = p.gray_01, italic = true })
   hl("TelescopePromptBorder", { fg = p.gray_06, bg = p.gray_01 })
+  hl("TelescopeResultsTitle", { fg = p.blue, bg = p.gray_01, italic = true })
   hl("TelescopeResultsComment", { fg = p.white })
-  hl("TelescopeSelection", { fg = p.cyan, bg = p.gray_04 })
-  hl("TelescopeMatching", { fg = p.cyan, bg = p.gray_04 })
+  hl("TelescopeSelectionCaret", { fg = p.blue, bg = p.gray_04 })
+  hl("TelescopeSelection", { fg = p.blue, bg = p.gray_04, bold = false })
+  hl("TelescopeMatching", { fg = p.blue, bg = p.gray_04, bold = true })
 
   -- ┌─────────────────────────────────────────────┐
   -- │  Cmp (Completion)                           │
