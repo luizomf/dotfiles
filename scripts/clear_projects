@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+trap 'printf "Error: line %s, status %s: %s\n" "$LINENO" "$?" "$BASH_COMMAND" >&2' ERR
+
+is_dir() {
+  local dir_path="${1:?Directory path is required}"
+  [[ -d "$dir_path" && ! -L "$dir_path" ]]
+}
+
+require_dir() {
+  if ! is_dir "$1"; then
+    printf 'Not a directory, or is a symlink: %s\n' "$1" >&2
+    return 1
+  fi
+}
+
+clear_contents() {
+  local target="${1:?Target is required}"
+  local dry_run="$2"
+  local entry
+  local -a entries
+
+  is_dir "$target" || return 0
+  entries=("$target"/*)
+  # Bash 3.2 treats an empty array expansion as unset under nounset.
+  if [[ "${#entries[@]}" -eq 0 ]]; then
+    return 0
+  fi
+  for entry in "${entries[@]}"; do
+    if [[ "$dry_run" == true ]]; then
+      printf 'Would remove: %q\n' "$entry"
+    else
+      printf 'Removing: %q\n' "$entry"
+      command rm -rf -- "$entry"
+    fi
+  done
+}
+
+main() {
+  local dry_run=false
+  case "${1-}" in
+    --dry-run) dry_run=true ;;
+    -h|--help)
+      printf 'Usage: clear_projects [--dry-run]\n\nRemove all contents of .scratch and release in immediate projects\nand ~/dotfiles. Preserve the directories themselves.\n'
+      return 0
+      ;;
+    '') ;;
+    *) printf 'Unknown argument: %s\n' "$1" >&2; return 1 ;;
+  esac
+  if [[ "$#" -gt 1 ]]; then
+    printf 'Expected at most one argument\n' >&2
+    return 1
+  fi
+
+  local home="${HOME:?HOME is unset or empty}"
+  local projects_root="${PROJECTS_DIR:?PROJECTS_DIR is unset or empty}"
+  local project subdir candidate
+  local -a projects
+  local -a subdirs=(.scratch release)
+
+  # Strip trailing slashes so -L can detect a symlink at the root itself.
+  while [[ "$projects_root" != / && "$projects_root" == */ ]]; do
+    projects_root="${projects_root%/}"
+  done
+  require_dir "$projects_root"
+  require_dir "$home"
+  projects_root="$(cd -P -- "$projects_root" && pwd -P)"
+  home="$(cd -P -- "$home" && pwd -P)"
+  if [[ "$projects_root" == / || "$projects_root" == "$home" ]]; then
+    printf 'Refusing unsafe projects root: %s\n' "$projects_root" >&2
+    return 1
+  fi
+
+  # Match hidden contents too, but never . or ..; unmatched globs disappear.
+  # Keep hidden projects out of the project list.
+  unset GLOBIGNORE
+  shopt -s nullglob
+  shopt -u dotglob
+  projects=("$projects_root"/* "$home/dotfiles")
+  shopt -s dotglob
+
+  for project in "${projects[@]}"; do
+    is_dir "$project" || continue
+    for subdir in "${subdirs[@]}"; do
+      candidate="$project/$subdir"
+      clear_contents "$candidate" "$dry_run"
+    done
+  done
+}
+
+main "$@"

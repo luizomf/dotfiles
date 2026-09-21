@@ -95,11 +95,17 @@ git config --local core.hooksPath .githooks
 ```
 
 Once activated, normal `git commit`, including commits made by agents and
-`commit_dotfiles`, runs the shared checks. The hook itself does not call a model
-and does not need `MODEL`. `commit` checks on the host before and after message
-generation, and an enabled hook checks again when the host makes the commit. Its
-model container only writes the message in a temporary workspace; it never needs
-to run the repository's hooks. There is no skip flag passed between these steps.
+`commit_dotfiles`, runs the shared checks. After the shared checks, the dotfiles
+hook also runs `python3 -m unittest tests.test_clear_projects` when
+`scripts/clear_projects`, `tests/test_clear_projects.py`, or
+`.githooks/pre-commit` has staged changes. This focused deletion-safety suite
+uses temporary directories, not real projects, and requires `python3` on `PATH`.
+It is hook-specific: `commit --check` alone does not run this suite. The hook
+itself does not call a model and does not need `MODEL`. `commit` checks on the
+host before and after message generation, and an enabled hook checks again when
+the host makes the commit. Its model container only writes the message in a
+temporary workspace; it never needs to run the repository's hooks. There is no
+skip flag passed between these steps.
 
 To undo a newly added setting, use `git config --local --unset core.hooksPath`.
 If you replaced a previous local value, restore that value instead. This hook is
@@ -121,10 +127,11 @@ still update `.tsbuildinfo` for incremental/composite projects. Project tool
 configuration may execute code, so run checks only in trusted repositories.
 
 Missing configuration is reported for recognized Python/JS/TS/Prettier file
-families; it is not an error. Other files receive only the Git diff check. There
-is no Biome, StyLua, behavior-test runner, secret scanner, query/N+1 detector,
-or architectural review here. A passing gate only means the selected checks
-passed.
+families; it is not an error. Other files receive only the Git diff check. The
+shared checker has no Biome, StyLua, general behavior-test runner, secret
+scanner, query/N+1 detector, or architectural review. The dotfiles hook's
+focused cleanup regression suite is the exception described above. A passing
+gate only means the selected checks passed.
 
 Local hooks are bypassable (`--no-verify`, changed configuration, or edited hook
 code). They are workflow guardrails, not a security boundary. Required CI and

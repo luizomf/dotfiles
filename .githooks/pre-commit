@@ -3,4 +3,10 @@
 set -euo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
-exec "$repo_root/scripts/check_staged"
+"$repo_root/scripts/check_staged"
+cd "$repo_root"
+
+if ! git diff --cached --quiet -- scripts/clear_projects \
+  tests/test_clear_projects.py .githooks/pre-commit; then
+  python3 -m unittest tests.test_clear_projects
+fi
