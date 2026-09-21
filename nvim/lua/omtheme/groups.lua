@@ -156,7 +156,10 @@ M.set_groups = function()
   -- │  Syntax: General                            │
   -- └─────────────────────────────────────────────┘
   hl("Comment", { italic = false, fg = p.comment })
-  hl("String", { fg = p.green_light })
+  hl(
+    "String",
+    { fg = p.green_light, italic = false, bold = false, underline = false }
+  )
   hl("Character", { fg = p.green })
   hl("Constant", { fg = p.orange })
   hl("Identifier", { fg = p.magenta })
@@ -166,36 +169,36 @@ M.set_groups = function()
   hl("Operator", { fg = p.blue_light })
   hl("PreProc", { fg = p.cyan })
   hl("Type", { fg = p.blue })
-  hl("Special", { fg = p.blue })
+  hl("Special", { fg = p.red_rose })
   hl("Debug", { fg = p.orange })
   hl("Error", { fg = p.red, bold = true })
   hl("Todo", { fg = p.gray_01, bg = p.yellow })
   hl("Bold", { bold = true, fg = p.gray_22 })
   hl("Italic", { italic = true, fg = p.gray_22 })
   hl("Underlined", { underline = true })
-  hl("MatchParen", { fg = p.orange, bold = true })
+  hl("MatchParen", { fg = p.yellow, bold = true })
 
   -- ┌─────────────────────────────────────────────┐
   -- │  Treesitter: Syntax                         │
   -- └─────────────────────────────────────────────┘
-  hl("@variable", { fg = p.gray_22 })
+  hl("@variable", { fg = p.gray_20, italic = false })
   hl("@variable.builtin", { fg = p.red })
   hl("@variable.parameter", { fg = p.yellow })
   hl("@variable.parameter.builtin", { fg = p.yellow })
   hl("@variable.member", { fg = p.aqua })
   hl("@module.builtin", { fg = p.red })
   hl("@label", { fg = p.blue_light })
-  hl("@string.regexp", { fg = p.blue_sky })
-  hl("@string.escape", { fg = p.magenta })
-  hl("@string.documentation", { fg = p.yellow })
+  hl("@string.regexp", { fg = p.blue_sky, italic = true })
+  hl("@string.escape", { fg = p.magenta, italic = true })
+  hl("@string.documentation", { fg = p.yellow, italic = true })
   hl("@type.builtin", { fg = p.blue })
   hl("@property", { fg = p.aqua })
   hl("@constructor", { fg = p.magenta })
   hl("@operator", { fg = p.blue_light })
   hl("@keyword", { italic = true, fg = p.purple })
-  hl("@keyword.function", { fg = p.magenta })
-  hl("@punctuation.bracket", { fg = p.gray_19 })
-  hl("@punctuation.delimiter", { fg = p.blue_light })
+  hl("@keyword.function", { fg = p.magenta, italic = true })
+  hl("@punctuation.bracket", { fg = p.white })
+  hl("@punctuation.delimiter", { fg = p.white })
   hl("@punctuation.special", { fg = p.blue_light })
 
   -- ┌─────────────────────────────────────────────┐
