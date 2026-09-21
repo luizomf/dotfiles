@@ -16,7 +16,7 @@
       "left": 16
     }
   },
-  "scrollback": { "lines": 100000 },
+  "scrollback": { "lines": 30000 },
   "keyboard": { "optionAsAlt": "none" },
   "window": { "alwaysOnTop": false },
   "theme": {
