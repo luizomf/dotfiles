@@ -1,15 +1,14 @@
 local M = {}
-local palette = require("omtheme.palette")
 
 local group =
   vim.api.nvim_create_augroup("RedundantWhitespaceHL", { clear = true })
 
 local function set_hl()
-  vim.api.nvim_set_hl(
-    0,
-    "RedundantWhitespace",
-    { bg = palette.blue0, undercurl = true, sp = palette.blue0 }
-  )
+  -- Let the colorscheme choose the style; provide a fallback for other themes.
+  vim.api.nvim_set_hl(0, "RedundantWhitespace", {
+    default = true,
+    underline = true,
+  })
 end
 
 local function add()
