@@ -20,7 +20,7 @@
   "keyboard": { "optionAsAlt": "none" },
   "window": { "alwaysOnTop": false },
   "theme": {
-    "path": "./themes/omtheme-darkice.json"
+    "path": "./themes/nightfox-carbonfox.json"
   },
   "keybinds": {
     "quit": "CommandOrControl+Q",
