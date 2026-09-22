@@ -31,11 +31,17 @@ return {
         require("nvim-treesitter").install(tooling.treesitter_parsers)
       end
 
-      -- Enable treesitter highlighting and indentation for all filetypes
+      -- Keep native indentation when Tree-sitter cannot handle the buffer.
       vim.api.nvim_create_autocmd("FileType", {
         callback = function()
-          pcall(vim.treesitter.start)
-          vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+          if not pcall(vim.treesitter.start) then
+            return
+          end
+          local lang = vim.treesitter.language.get_lang(vim.bo.filetype)
+          local ok, query = pcall(vim.treesitter.query.get, lang, "indents")
+          if ok and query then
+            vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+          end
         end,
       })
     end,

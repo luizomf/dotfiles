@@ -136,6 +136,26 @@ and the manual mapping. It checks fallback and provider priority without
 launching language-server or formatter executables, and removes its fixtures on
 exit.
 
+## Neovim indentation checks
+
+Tree-sitter indentation is enabled only when its highlighting startup succeeds
+and a usable indentation query exists for the buffer's language. Otherwise the
+filetype's native indentation is left intact. This does not change spacing
+options: native EditorConfig support still applies project settings, and
+`settings/vim.lua` supplies the existing two-space, expand-tabs defaults.
+Formatter configuration discovery is separate and remains unchanged; editing
+indentation does not independently interpret Prettier or `pyproject.toml`.
+
+```sh
+nvim --clean --headless -i NONE -l tests/test_nvim_indentation.lua
+```
+
+Requires installed nvim-treesitter plus its Lua parser and indentation query.
+The test uses real filetype events, temporary native indent scripts, `=` and
+EditorConfig, checking missing-parser/query fallbacks and supported indentation
+with project spacing. It installs nothing and runs no formatter or language
+server.
+
 ## Neovim Telescope search checks
 
 See [Telescope file search](nvim-telescope.md) for the hidden-file/ignore policy
