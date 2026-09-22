@@ -101,9 +101,9 @@ at the edited file's directory, not just Neovim's current working directory.
   same configuration policy; its Prettier plugin must still be installed and
   configured in the project. No plugins are installed by this fallback logic.
 - Ruff retains its native configuration discovery for both fixes and formatting.
-  Taplo runs from the nearest `.taplo.toml` / `taplo.toml` directory, or the
-  edited file's directory when neither exists. No personal presets are imposed
-  on these tools.
+  The Taplo formatter runs from the nearest `.taplo.toml` / `taplo.toml`
+  directory, or the edited file's directory when neither exists. No personal
+  presets are imposed on these tools.
 - Lint/type-check servers retain their tool-specific project configuration
   mechanisms; this is not a universal configuration format or a replacement for
   server settings.
@@ -119,6 +119,15 @@ This requires an installed Conform plugin plus Prettier, StyLua, Ruff and Taplo
 buffers using temporary project configurations, checks personal fallbacks and
 invalid-config errors, and removes its fixtures on exit. It installs nothing and
 does not save changes to project files.
+
+## Neovim TOML language support
+
+Taplo is enabled for TOML through the shared LSP setup, including completion
+capabilities and buffer-local LSP mappings. It uses nvim-lspconfig's defaults
+(`taplo lsp stdio`, with `.taplo.toml`, `taplo.toml` and `.git` root markers).
+Schema-aware completion and validation depend on the schema available to Taplo;
+no custom schema associations are imposed here. Conform remains the primary
+formatter, with LSP formatting only as the fallback described below.
 
 ## Neovim LSP formatting fallback checks
 

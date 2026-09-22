@@ -91,6 +91,7 @@ return {
       })
       enable_server("ts_ls")
       enable_server("lua_ls")
+      enable_server("taplo")
 
       enable_server("tailwindcss", {
         settings = {
