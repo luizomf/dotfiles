@@ -67,24 +67,24 @@ function U.wrap_in_chars(left, right)
   local start_row, start_col = unpack(vim.api.nvim_buf_get_mark(bufnr, "<"))
   local end_row, end_col = unpack(vim.api.nvim_buf_get_mark(bufnr, ">"))
 
-  if start_row == end_row and start_col == end_col then
+  if start_row == 0 or end_row == 0 then
     U.notify("Seleção vazia ou inválida", vim.log.levels.WARN)
     return
   end
 
-  -- Corrige end_col se estiver fora da linha
+  -- Visual marks are inclusive; the text API expects an exclusive end column.
   local end_line =
     vim.api.nvim_buf_get_lines(bufnr, end_row - 1, end_row, false)[1]
-  if end_col > #end_line then
-    end_col = #end_line
-  end
+  -- Columns are byte offsets: include the whole final character, not one byte.
+  local last_char = vim.fn.matchstr(end_line:sub(end_col + 1), "^.")
+  end_col = math.min(end_col + #last_char, #end_line)
 
   local lines = vim.api.nvim_buf_get_text(
     bufnr,
     start_row - 1,
     start_col,
     end_row - 1,
-    end_col + 1, -- I want it to be precise with the selection
+    end_col,
     {}
   )
 
@@ -96,7 +96,7 @@ function U.wrap_in_chars(left, right)
     start_row - 1,
     start_col,
     end_row - 1,
-    end_col + 1, -- I want it to be precise with the selection
+    end_col,
     lines
   )
 

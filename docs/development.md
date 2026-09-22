@@ -83,3 +83,17 @@ Do not duplicate these settings or add a Node toolchain only for formatting.
 After changing Conform configuration, open a new Neovim session and use
 `:ConformInfo` to inspect the selected formatter. Format changed files only and
 keep large format-only migrations separate from functional work.
+
+## Neovim selection-wrapping checks
+
+Run from the repository root:
+
+```sh
+nvim --clean --headless -i NONE -l tests/test_nvim_wrap.lua
+```
+
+This uses scratch buffers and the real visual mappings and `:WrapIn` command; it
+does not load the plugin manager or write edited files. It covers single
+characters (including UTF-8), end-of-line and multiline selections, empty lines,
+custom delimiters, and a missing selection. The checks use Neovim's default
+inclusive selection mode, not blockwise or exclusive selections.
