@@ -6,6 +6,8 @@ vim.diagnostic.config({
   severity_sort = true,
   float = {
     border = "single",
+    -- The formatter includes the code, including the legacy LSP fallback.
+    suffix = "",
     format = function(diagnostic)
       local code = diagnostic.code
         or vim.tbl_get(diagnostic, "user_data", "lsp", "code")
