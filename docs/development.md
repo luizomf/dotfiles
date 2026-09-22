@@ -136,6 +136,24 @@ and the manual mapping. It checks fallback and provider priority without
 launching language-server or formatter executables, and removes its fixtures on
 exit.
 
+## Neovim notification command checks
+
+`:Notify [message] [level] [timeout]` accepts case-insensitive level names
+(`TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `OFF`) or their numeric values
+(`0`–`5`). Invalid levels report an error instead of displaying the requested
+message. Defaults remain `NO MESSAGE`, `INFO` and 2000 ms. Ex-escaped spaces
+still work: `:Notify hello\ world warn 3500`. Notification visibility remains up
+to the configured notification provider, especially for `TRACE` and `OFF`.
+
+```sh
+nvim --clean --headless -i NONE -l tests/test_nvim_notify.lua
+```
+
+This exercises the real command while capturing the public `vim.notify` output.
+It checks severity normalization, invalid input and unchanged defaults/message
+handling without loading plugins or writing files. Check notification appearance
+in a normal editor separately.
+
 ## Neovim rename checks
 
 `:Rename` saves the current contents under the requested name before deleting

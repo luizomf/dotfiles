@@ -9,10 +9,22 @@ function U.notify(msg, level, timeout)
   )
 end
 
--- Atalho pra contar Notificações
+-- Notify with an optional severity name/code and timeout.
 vim.api.nvim_create_user_command("Notify", function(opts)
   local msg = opts.fargs[1] or "NO MESSAGE"
-  local level = opts.fargs[2] or vim.log.levels.INFO
+  local level = vim.log.levels.INFO
+  if opts.fargs[2] then
+    level = vim.log.levels[opts.fargs[2]:upper()] or tonumber(opts.fargs[2])
+  end
+  if not vim.tbl_contains(vim.tbl_values(vim.log.levels), level) then
+    U.notify(
+      "Invalid notification level: "
+        .. opts.fargs[2]
+        .. ". Use TRACE/DEBUG/INFO/WARN/ERROR/OFF or 0–5.",
+      vim.log.levels.ERROR
+    )
+    return
+  end
   local timeout = tonumber(opts.fargs[3]) or 2000
 
   U.notify(msg, level, timeout)
