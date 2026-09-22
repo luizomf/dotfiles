@@ -18,7 +18,7 @@ cd "$workspace"
 export CURDIR="$workspace"
 
 prompt='Testing. Reply with exactly OK. Do not modify files or run tools.'
-cloud_models=(gpt-6-astra gpt-6-sol gpt-5.6-luna)
+cloud_models=(gpt-6-astra gpt-6-sol gpt-6-luna)
 results=()
 failures=0
 refresh_ok=false
