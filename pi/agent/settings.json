@@ -44,7 +44,7 @@
   "fullscreenExitOutput": "transcript",
   "modelThinkingLevels": {
     "openai-codex/gpt-6-astra": "medium",
-    "openai-codex/gpt-5.6-sol": "medium"
+    "openai-codex/gpt-6-sol": "medium"
   },
   "autocompleteMaxVisible": 5,
   "treeFilterMode": "all",
