@@ -14,4 +14,6 @@ end
 
 vim.opt.rtp:prepend(lazypath)
 
+-- Apply core settings before plugins are imported or configured.
+require("settings").setup()
 require("lazy").setup("plugins")
