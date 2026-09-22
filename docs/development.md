@@ -136,6 +136,23 @@ and the manual mapping. It checks fallback and provider priority without
 launching language-server or formatter executables, and removes its fixtures on
 exit.
 
+## Neovim Lazy bootstrap checks
+
+When the editor's initial Lazy clone fails, `nvim/init.lua` reports the target
+path, Git exit status and captured output instead of proceeding into plugin
+setup. Neovim may remain open without the rest of the custom initialization. No
+automatic retry or deletion is performed; inspect any partial clone before
+retrying. An existing installation is still reused.
+
+```sh
+nvim --clean --headless -i NONE -l tests/test_nvim_bootstrap.lua
+```
+
+This runs the real init file with isolated XDG directories and a failing Git
+fixture. A minimal Lazy fixture also checks continuation with an existing
+installation. It performs no downloads, loads no installed plugins, removes its
+temporary files on exit, and does not exercise or change `install.sh`.
+
 ## Neovim notification command checks
 
 `:Notify [message] [level] [timeout]` accepts case-insensitive level names
