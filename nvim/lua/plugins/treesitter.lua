@@ -114,7 +114,4 @@ return {
       end)
     end,
   },
-  {
-    "windwp/nvim-ts-autotag",
-  },
 }

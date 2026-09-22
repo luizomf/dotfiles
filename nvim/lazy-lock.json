@@ -59,10 +59,6 @@
     "branch": "main",
     "commit": "898ee307df58f854d11cd7edd06472574d48014e"
   },
-  "nvim-ts-autotag": {
-    "branch": "main",
-    "commit": "88c1453db4ba7dd24131086fe51fdf74e587d275"
-  },
   "plenary.nvim": {
     "branch": "master",
     "commit": "74b06c6c75e4eeb3108ec01852001636d85a932b"
