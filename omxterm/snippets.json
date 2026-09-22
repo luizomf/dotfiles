@@ -15,7 +15,7 @@
     },
     {
       "name": "Restart WireGuard All Hosts",
-      "body": " run_all_hosts '. ~/.zshrc ; sudo wg-quick down wg0 || true' && ssh kvm8reboot && echo; for i in {59..0}; do echo \"Starting wg0 in ${i}s\"; sleep 1; done && run_all_hosts '. ~/.zshrc ; sudo wg-quick up wg0 || true'; ping -n -c 3 192.168.0.109; echo '\\n'; ping -n -c 3 10.100.0.109; echo '\\n'; ping -n -c 3 8.8.8.8; echo '\\n' ; curl -fSsL ifconfig.me; echo '\\n' ",
+      "body": " run_all_hosts '. ~/.zshrc ; sudo wg-quick down wg0 || true' && ssh kvm8reboot && ssh kvm2 'sudo reboot' && ssh kvm4 'sudo reboot' && echo; for i in {59..0}; do echo \"Starting wg0 in ${i}s\"; sleep 1; done && run_all_hosts '. ~/.zshrc ; sudo wg-quick up wg0 || true'; ping -n -c 3 192.168.0.109; echo '\\n'; ping -n -c 3 10.100.0.109; echo '\\n'; ping -n -c 3 8.8.8.8; echo '\\n' ; curl -fSsL ifconfig.me; echo '\\n' ",
       "description": "Use ssh to restart WireGuard in all local hosts.",
       "execute": false
     },
