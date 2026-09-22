@@ -18,10 +18,30 @@ A matching `.sug` file is optional suggestion data, not the main dictionary. See
 restore them from an unchecked download. Any future replacement must have valid
 contents and, for suggestion data, match its dictionary.
 
-The valid Portuguese/English dictionaries, English suggestion data and existing
-personal additions were left unchanged. Personal-word storage still needs its
-own local-only path review; do not publish words or generated personal data as
-part of dictionary maintenance.
+The valid Portuguese/English dictionaries and English suggestion data were left
+unchanged.
+
+## Personal words
+
+With `spellfile` unset, Neovim creates personal word lists under
+`stdpath("data")/site/spell/`; see `:help 'spellfile'`. With the current
+Portuguese-first language selection, `zg` writes `pt.utf-8.add` there and builds
+its `.add.spl` companion. The native path respects Neovim's data/app-name
+configuration and does not need a custom setting here.
+
+The old tracked `pt.utf-8.add` was empty, and its compiled file matched a
+freshly compiled empty list. Both were removed; existing local personal lists
+were neither migrated nor overwritten. Repository-local `.add` and `.add.spl`
+files are now ignored as an extra safeguard, not a replacement for public-data
+review.
+
+If another checkout contains personal words in those old files, preserve them
+before removing the files. Merge them locally without replacing an existing
+personal list, rebuild its compiled companion with `:mkspell` (see its help),
+and verify the words before discarding the source. Never commit the vocabulary.
+
+An isolated symlink-layout probe verified that `zg` writes and compiles its word
+list outside the checkout and accepts the added synthetic word.
 
 ## Manual verification
 

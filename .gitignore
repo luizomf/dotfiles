@@ -16,6 +16,10 @@ nohup.out
 /package.json
 /package-lock.json
 
+# Personal Neovim word lists belong in local data, never in the public checkout.
+/nvim/spell/*.add
+/nvim/spell/*.add.spl
+
 # Environment files and local overrides
 .env
 .env.*
