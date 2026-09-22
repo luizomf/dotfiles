@@ -1,4 +1,17 @@
--- lua/plugins/formatter.lua
+local function config_fallback(formatter, flag, filename)
+  return function(self, ctx)
+    local builtin = require("conform.formatters." .. formatter)
+    local editorconfig = vim.fs.find(".editorconfig", {
+      path = ctx.dirname,
+      upward = true,
+    })[1]
+    if builtin.cwd(self, ctx) or editorconfig then
+      return {}
+    end
+    return { flag, vim.fn.stdpath("config") .. "/config_files/" .. filename }
+  end
+end
+
 local function ruff_command(self, ctx)
   -- Use the project's locked formatter when available, without changing PATH.
   return require("conform.util").find_executable({ ".venv/bin/ruff" }, "ruff")(
@@ -14,84 +27,50 @@ return {
     cmd = { "ConformInfo" },
     opts = {
       formatters = {
+        taplo = {
+          cwd = function(self, ctx)
+            return require("conform.util").root_file({
+              ".taplo.toml",
+              "taplo.toml",
+            })(self, ctx) or ctx.dirname
+          end,
+        },
         ruff_fix = { command = ruff_command },
         ruff_format = { command = ruff_command },
         ruff_organize_imports = { command = ruff_command },
-        custom_stylua = {
-          command = "stylua",
-          args = {
-            "--respect-ignores",
-            "--stdin-filepath",
-            "$FILENAME",
+        stylua = {
+          prepend_args = config_fallback(
+            "stylua",
             "--config-path",
-            os.getenv("HOME") .. "/dotfiles/nvim/config_files/stylua.toml",
-            "-",
-          },
+            "stylua.toml"
+          ),
         },
-        global_prettier = {
-          command = "prettier",
-          args = {
-            "--stdin-filepath",
-            "$FILENAME",
+        prettier = {
+          prepend_args = config_fallback(
+            "prettier",
             "--config",
-            os.getenv("HOME") .. "/dotfiles/nvim/config_files/prettierrc.json",
-            "--log-level",
-            "silent",
-          },
-        },
-        local_prettier = {
-          command = "prettier",
-          args = {
-            "--stdin-filepath",
-            "$FILENAME",
-            "--config",
-            ".prettierrc.json",
-            "--log-level",
-            "silent",
-          },
+            "prettierrc.json"
+          ),
+          append_args = { "--log-level", "silent" },
         },
       },
       formatters_by_ft = {
-        javascript = {
-          "global_prettier",
-        },
-        typescript = {
-          "global_prettier",
-        },
-        javascriptreact = {
-          "global_prettier",
-        },
-        typescriptreact = {
-          "global_prettier",
-        },
-        vue = { "global_prettier" },
-        css = { "global_prettier" },
-        scss = {
-          "global_prettier",
-        },
-        less = {
-          "global_prettier",
-        },
-        html = {
-          "global_prettier",
-        },
-        json = {
-          "global_prettier",
-        },
-        yaml = {
-          "global_prettier",
-        },
-        markdown = {
-          "global_prettier",
-        },
-        graphql = {
-          "global_prettier",
-        },
-        astro = { "local_prettier" },
+        javascript = { "prettier" },
+        typescript = { "prettier" },
+        javascriptreact = { "prettier" },
+        typescriptreact = { "prettier" },
+        vue = { "prettier" },
+        css = { "prettier" },
+        scss = { "prettier" },
+        less = { "prettier" },
+        html = { "prettier" },
+        json = { "prettier" },
+        yaml = { "prettier" },
+        markdown = { "prettier" },
+        graphql = { "prettier" },
+        astro = { "prettier" },
 
-        lua = {
-          "custom_stylua",
-        },
+        lua = { "stylua" },
         python = {
           -- To fix auto-fixable lint errors.
           "ruff_fix",

@@ -73,16 +73,52 @@ requirements, not from the development shell.
 
 ## Formatting
 
-- Python uses Ruff settings from `pyproject.toml`. Neovim prefers the nearest
-  `.venv/bin/ruff`, then falls back to Ruff on PATH.
-- Prettier-supported files use `.prettierrc.json`, linked to
+- In this repository, Python uses Ruff settings from `pyproject.toml`. Neovim
+  prefers the nearest `.venv/bin/ruff`, then falls back to Ruff on PATH.
+- This repository's `.prettierrc.json` links to
   `nvim/config_files/prettierrc.json`.
-- Lua uses `.stylua.toml`, linked to `nvim/config_files/stylua.toml`.
+- This repository's `.stylua.toml` links to `nvim/config_files/stylua.toml`.
 
 Do not duplicate these settings or add a Node toolchain only for formatting.
 After changing Conform configuration, open a new Neovim session and use
 `:ConformInfo` to inspect the selected formatter. Format changed files only and
 keep large format-only migrations separate from functional work.
+
+## Neovim project-first formatting
+
+Project configuration takes precedence over personal defaults. Discovery starts
+at the edited file's directory, not just Neovim's current working directory.
+
+- Prettier and StyLua use Conform's built-in configuration discovery, including
+  parent directories. Prettier also supports configuration in `package.json`. An
+  ancestor `.editorconfig` leaves configuration resolution to the formatter
+  rather than forcing the personal preset.
+- If neither a tool-specific project configuration nor `.editorconfig` is found,
+  Prettier and StyLua use their respective presets under Neovim's
+  `config_files/` directory. A discovered but invalid tool configuration is not
+  silently replaced by the personal preset.
+- Prettier prefers `node_modules/.bin/prettier` before PATH. Astro follows the
+  same configuration policy; its Prettier plugin must still be installed and
+  configured in the project. No plugins are installed by this fallback logic.
+- Ruff retains its native configuration discovery for both fixes and formatting.
+  Taplo runs from the nearest `.taplo.toml` / `taplo.toml` directory, or the
+  edited file's directory when neither exists. No personal presets are imposed
+  on these tools.
+- Lint/type-check servers retain their tool-specific project configuration
+  mechanisms; this is not a universal configuration format or a replacement for
+  server settings.
+
+Run the integration check from the repository root:
+
+```sh
+nvim --clean --headless -i NONE -l tests/test_nvim_formatting.lua
+```
+
+This requires an installed Conform plugin plus Prettier, StyLua, Ruff and Taplo
+(on PATH or, except Prettier, in Mason's bin directory). It formats in-memory
+buffers using temporary project configurations, checks personal fallbacks and
+invalid-config errors, and removes its fixtures on exit. It installs nothing and
+does not save changes to project files.
 
 ## Neovim selection-wrapping checks
 
