@@ -89,6 +89,9 @@ tmux-lazy start
 - **Prefix % / Prefix ":** splits side by side / top and bottom in the active
   pane's working directory.
 - **Prefix Ctrl-s:** saves the structure and confirms with a tmux message.
+- **Prefix x:** confirms sleeping the **entire current window**, replacing
+  tmux's default pane deletion. Ends its pane processes without deleting its
+  structure; see [Sleeping a window](#sleeping-a-window).
 - **Prefix Ctrl-l / the existing mouse picker:** opens the same fzf/MRU window
   picker. Pending windows show `Z` in the activity-marker position; this does
   not modify tmux's real `Z` (zoom) flag.
@@ -109,6 +112,33 @@ Successful automatic startup and activation are silent. Wait for the prompt
 before typing into a newly activated window: empty panes do not buffer keyboard
 input. If a working directory is missing, correct it or close and recreate that
 window; revisiting retries pending panes without replacing a running process.
+
+## Sleeping a window
+
+**Prefix x**, then **y**, ends the current window's pane processes and leaves
+the window pending (`Z` in the picker). **n** or Escape cancels. Unsaved
+application work is lost: this is termination, not process suspension. Detached
+services are not supervised or guaranteed to stop, just as with native tmux pane
+termination.
+
+Sleep preserves the window, pane IDs, titles, layout, active pane, zoom and each
+pane's current working directory. It moves to another window in the same session
+before stopping processes so queued visits do not immediately wake the window.
+If it is the session's only window, create another with **prefix c** first.
+Linked windows and grouped sessions are refused before any process is stopped.
+
+Revisiting starts fresh login shells, not the applications that were ended. Dead
+panes are temporarily retained with `remain-on-exit` so the structure survives
+without an idle shell in every pane; their previous per-pane `remain-on-exit`
+settings are restored on activation. Already-pending panes remain untouched.
+Sleeping does not overwrite the saved snapshot: use **prefix Ctrl-s** to persist
+updated directories/structure for a later server restart.
+
+For an already-running server after updating this checkout, run
+`tmux-lazy configure --quiet` to install the new binding and hooks without
+restarting processes. Until configured, **prefix x still has its old binding**;
+the new confirmation explicitly says **Sleep window**. Native **prefix &** still
+deletes the entire window and its structure after confirmation.
 
 ## State and quiet commands
 

@@ -441,7 +441,7 @@ class LazyTmux:
     target = ["-t", window] if window else ["-a"]
     fields = (
       "#{pane_id}",
-      "#{pane_pid}",
+      "#{?pane_dead,0,#{pane_pid}}",
       "#{pane_current_path}",
       "#{@lazy_cwd}",
       "#{pane_active}",
@@ -528,6 +528,20 @@ class LazyTmux:
     )
     self.tmux("set-option", "-g", "@lazy_generation", generation)
     self.tmux("bind-key", "C-s", "run-shell", "-b", self.command("save"))
+    sleep_command = (
+      self.command("sleep")
+      + " '#{window_id}' '#{session_id}' "
+      + shlex.quote(generation)
+      + " --yes"
+    )
+    self.tmux(
+      "bind-key",
+      "x",
+      "confirm-before",
+      "-p",
+      "Sleep window #W? End ALL pane processes; keep structure? (y/n)",
+      "run-shell -b " + shlex.quote(sleep_command),
+    )
     self.tmux(
       "bind-key",
       "C-r",
@@ -764,6 +778,13 @@ class LazyTmux:
       # Reset the empty screen before starting a TUI-capable shell: LF must not
       # unexpectedly return to column zero. Never reset an already-running pane.
       self.tmux("send-keys", "-R", "-t", row[0])
+      remain = self.tmux("show-option", "-pqv", "-t", row[0], "@lazy_remain_on_exit")
+      if remain:
+        if remain == "inherit":
+          self.tmux("set-option", "-pu", "-t", row[0], "remain-on-exit")
+        else:
+          self.tmux("set-option", "-p", "-t", row[0], "remain-on-exit", remain)
+        self.tmux("set-option", "-pu", "-t", row[0], "@lazy_remain_on_exit")
       self.tmux(
         "respawn-pane",
         "-t",
@@ -775,6 +796,60 @@ class LazyTmux:
       self.tmux("set-option", "-p", "-u", "-t", row[0], "@lazy_cwd")
     self.tmux("set-option", "-w", "-u", "-t", window, "@lazy_pending")
     # No success message here: display-message can freeze pane redraw.
+
+  def sleep(self, window: str, session: str, generation: str) -> None:
+    if (
+      not self.alive()
+      or self.tmux("show-option", "-gqv", "@lazy_generation") != generation
+    ):
+      message = "Stale sleep request; nothing was stopped"
+      raise RuntimeError(message)
+    if not re.fullmatch(r"@\d+", window) or not re.fullmatch(r"\$\d+", session):
+      message = "Sleep requires exact window and session IDs"
+      raise ValueError(message)
+    current = self.tmux(
+      "display-message", "-p", "-t", session, "#{window_id}\t#{session_grouped}"
+    )
+    if current != window + "\t0":
+      message = "Sleep target changed or session is grouped; nothing was stopped"
+      raise RuntimeError(message)
+    if self.tmux("display-message", "-p", "-t", window, "#{window_linked}") == "1":
+      message = "Sleeping linked windows is unsupported; nothing was stopped"
+      raise RuntimeError(message)
+    others = [
+      wid
+      for wid in self.tmux(
+        "list-windows", "-t", session, "-F", "#{window_id}"
+      ).splitlines()
+      if wid != window
+    ]
+    if not others:
+      message = "Create another window before sleeping this session's only window"
+      raise RuntimeError(message)
+    panes = self.panes(window)
+    if any(row[3] and row[1] not in ("", "0") for row in panes):
+      message = "Marked pane still has a process; inspect the incomplete activation"
+      raise RuntimeError(message)
+    rows = [row for row in panes if not row[3]]
+    # Read and validate every cwd/option before ending any process. Already
+    # pending panes retain their metadata and are not respawned even briefly.
+    directories = [validate_cwd(self.encode_cwd(row[2])) for row in rows]
+    remains = [
+      self.tmux("show-option", "-pqv", "-t", row[0], "remain-on-exit") or "inherit"
+      for row in rows
+    ]
+    # Moving away first makes queued visits to the old selection harmless.
+    # The destination's activation waits for this operation's state lock.
+    self.tmux("select-window", "-t", others[0])
+    self.tmux("set-option", "-w", "-t", window, "@lazy_pending", "1")
+    for row, cwd, remain in zip(rows, directories, remains):
+      self.tmux("set-option", "-p", "-t", row[0], "@lazy_remain_on_exit", remain)
+      self.tmux("set-option", "-p", "-t", row[0], "remain-on-exit", "on")
+      self.tmux("set-option", "-p", "-t", row[0], "@lazy_cwd", json.dumps(cwd))
+      # A dead retained pane consumes no shell process and preserves pane IDs,
+      # titles, geometry and zoom. respawn-pane cannot create an empty pane;
+      # use a minimal non-login process that exits instead of a sleeping shell.
+      self.tmux("respawn-pane", "-k", "-t", row[0], "/bin/sh", "-c", "exit 0")
 
   def uid(self, target: str, *, window: bool = False) -> str:
     args = ["-w"] if window else []
@@ -945,6 +1020,11 @@ def argument_parser() -> argparse.ArgumentParser:
   visit.add_argument("window")
   visit.add_argument("session")
   visit.add_argument("generation")
+  sleep = sub.add_parser("sleep", parents=[quiet_options])
+  sleep.add_argument("window", help="Exact window ID from the confirmation")
+  sleep.add_argument("session", help="Exact session ID from the confirmation")
+  sleep.add_argument("generation", help="Current server generation")
+  sleep.add_argument("--yes", action="store_true", required=True)
   sub.add_parser("stop", parents=[quiet_options]).add_argument(
     "--yes", action="store_true", required=True
   )
@@ -994,6 +1074,9 @@ def main() -> None:  # noqa: C901
       app.configure()
     elif args.action == "visit":
       app.visit(args.window, args.session, args.generation)
+    elif args.action == "sleep":
+      app.sleep(args.window, args.session, args.generation)
+      app.tmux("wait-for", "-S", "lazy-sleep-complete")
     elif args.action == "save":
       app.save(if_running=args.if_running)
     elif args.action == "export":

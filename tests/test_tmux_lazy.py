@@ -118,6 +118,159 @@ class LazyTmuxTests(unittest.TestCase):
           timeout=15,
         )
 
+  def test_sleep_preserves_window_structure_and_reopens_fresh_shells(self):  # noqa: PLR0915
+    with tempfile.TemporaryDirectory(prefix="lazy-sleep-test-") as temporary:
+      root = Path(temporary).resolve()
+      home = root / "home"
+      (home / "project").mkdir(parents=True)
+      (home / "dotfiles").symlink_to(REPO, target_is_directory=True)
+      socket = root / "socket"
+      cli = [
+        sys.executable,
+        str(SCRIPT),
+        "--socket",
+        str(socket),
+        "--state-dir",
+        str(root / "state"),
+        "--home",
+        str(home),
+        "--shell",
+        "/bin/sh",
+      ]
+
+      def run(*args: str, success: bool = True) -> str:
+        # Public lazy CLI with an isolated home/socket and no personal shell rc.
+        result = subprocess.run(  # noqa: S603
+          [*cli, *args], capture_output=True, text=True, check=False, timeout=30
+        )
+        self.assertEqual(result.returncode == 0, success, result.stderr)
+        return result.stdout
+
+      def tmux(*args: str) -> str:
+        # Fixed test-owned socket, never the default server.
+        return subprocess.run(  # noqa: S603
+          [self.tmux_binary, "-S", str(socket), "-N", *args],
+          capture_output=True,
+          text=True,
+          check=True,
+          timeout=15,
+        ).stdout.strip()
+
+      try:
+        run("boot")
+        sid = tmux("display-message", "-p", "#{session_id}")
+        wid = tmux("display-message", "-p", "#{window_id}")
+        generation = tmux("show-option", "-gqv", "@lazy_generation")
+        original = tmux("list-panes", "-t", wid, "-F", "#{pane_pid}")
+        # No implicit/destructive fallback when this is the session's only window.
+        run("sleep", wid, sid, generation, "--yes", success=False)
+        self.assertEqual(tmux("list-panes", "-t", wid, "-F", "#{pane_pid}"), original)
+        other = tmux(
+          "new-window", "-d", "-t", sid, "-n", "other", "-P", "-F", "#{window_id}"
+        )
+        other_pid = tmux("list-panes", "-t", other, "-F", "#{pane_pid}")
+        pane = tmux(
+          "split-window",
+          "-h",
+          "-t",
+          wid,
+          "-c",
+          str(home / "project"),
+          "-P",
+          "-F",
+          "#{pane_id}",
+        )
+        tmux("select-pane", "-t", pane, "-T", "project title")
+        tmux("set-option", "-p", "-t", pane, "remain-on-exit", "failed")
+        tmux("resize-pane", "-Z", "-t", pane)
+        master, slave = pty.openpty()
+        # Exercise the real prefix-x confirmation, not just its CLI payload.
+        client = subprocess.Popen(  # noqa: S603
+          [self.tmux_binary, "-S", str(socket), "attach-session", "-t", sid],
+          stdin=slave,
+          stdout=slave,
+          stderr=slave,
+          env={**os.environ, "TERM": "xterm-256color"},
+        )
+        os.close(slave)
+        self.addCleanup(os.close, master)
+        self.addCleanup(client.wait, timeout=5)
+        self.addCleanup(client.terminate)
+        tmux("wait-for", "lazy-visit-complete")
+
+        def confirm_prompt() -> None:
+          os.write(master, b"\x02x")
+          output = b""
+          deadline = time.monotonic() + 5
+          while b"End ALL pane processes" not in output:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 or not select.select([master], [], [], remaining)[0]:
+              break
+            output += os.read(master, 65536)
+          self.assertIn(b"End ALL pane processes", output)
+
+        geometry = tmux("display-message", "-p", "-t", wid, "#{window_layout}")
+        details = "#{pane_id}\t#{pane_title}\t#{pane_active}"
+        before = tmux("list-panes", "-t", wid, "-F", details)
+        pids = tmux("list-panes", "-t", wid, "-F", "#{pane_pid}")
+        cwds = tmux("list-panes", "-t", wid, "-F", "#{pane_current_path}")
+        # Confirmation and a current generation are required before destruction.
+        run("sleep", wid, sid, generation, success=False)
+        run("sleep", wid, sid, "stale", "--yes", success=False)
+        self.assertEqual(tmux("list-panes", "-t", wid, "-F", "#{pane_pid}"), pids)
+        confirm_prompt()
+        os.write(master, b"n")
+        confirm_prompt()
+        self.assertEqual(tmux("list-panes", "-t", wid, "-F", "#{pane_pid}"), pids)
+        os.write(master, b"y")
+        try:
+          tmux("wait-for", "lazy-sleep-complete")
+        except subprocess.TimeoutExpired as exc:
+          raise AssertionError(tmux("show-messages")) from exc
+        tmux("wait-for", "lazy-visit-complete")
+        self.assertEqual(tmux("list-panes", "-t", wid, "-F", details), before)
+        self.assertEqual(
+          tmux("display-message", "-p", "-t", wid, "#{window_layout}"), geometry
+        )
+        self.assertEqual(
+          tmux("display-message", "-p", "-t", wid, "#{window_zoomed_flag}"), "1"
+        )
+        self.assertEqual(
+          tmux("display-message", "-p", "-t", sid, "#{window_id}"), other
+        )
+        self.assertEqual(json.loads(run("status"))["pending_panes"], 2)
+        self.assertEqual(json.loads(run("status"))["process_free_panes"], 2)
+        self.assertEqual(
+          tmux("list-panes", "-t", other, "-F", "#{pane_pid}"), other_pid
+        )
+        # A delayed visit from before sleeping must not immediately wake it.
+        run("visit", wid, sid, generation)
+        self.assertEqual(json.loads(run("status"))["pending_panes"], 2)
+        run("save", "--quiet")
+        saved = json.loads((root / "state/state.json").read_text())
+        sleeping = saved["sessions"][0]["windows"][0]
+        self.assertEqual(sleeping["panes"][1]["cwd"], {"home": "project"})
+        tmux("select-window", "-t", wid)
+        tmux("wait-for", "lazy-visit-complete")
+        self.assertEqual(json.loads(run("status"))["pending_panes"], 0)
+        self.assertEqual(
+          tmux("list-panes", "-t", wid, "-F", "#{pane_current_path}"), cwds
+        )
+        self.assertNotEqual(tmux("list-panes", "-t", wid, "-F", "#{pane_pid}"), pids)
+        self.assertEqual(
+          tmux("show-option", "-pqv", "-t", pane, "remain-on-exit"), "failed"
+        )
+        self.assertEqual(
+          tmux("list-panes", "-t", other, "-F", "#{pane_pid}"), other_pid
+        )
+      finally:
+        subprocess.run(  # noqa: S603
+          [self.tmux_binary, "-S", str(socket), "-N", "kill-server"],
+          capture_output=True,
+          check=False,
+          timeout=15,
+        )
+
   # One continuous lifecycle proves that running panes survive activation/restart
   # and that quiet saves do not hide output from the same attached client.
   def test_import_visit_save_and_restart_preserve_pending_and_running_windows(  # noqa: PLR0915
