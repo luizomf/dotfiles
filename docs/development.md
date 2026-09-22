@@ -120,6 +120,16 @@ buffers using temporary project configurations, checks personal fallbacks and
 invalid-config errors, and removes its fixtures on exit. It installs nothing and
 does not save changes to project files.
 
+## Neovim session preferences
+
+`plugins/session.lua` explicitly keeps eager loading, branch-based session
+names, the suppressed directories and the Telescope picker. Other options
+inherit AutoSession's defaults, including save/restore behavior, picker mappings
+and storage paths. The cleanup compared the complete effective options against
+the locked plugin without initializing the session manager or reading/writing
+saved sessions. Review defaults when updating that plugin's lockfile pin; this
+is not an independent pin of every upstream option.
+
 ## Neovim TOML language support
 
 Taplo is enabled for TOML through the shared LSP setup, including completion
