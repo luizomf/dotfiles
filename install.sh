@@ -240,10 +240,13 @@ if [[ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ]]; then
     "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
 fi
 
-LAZY_PATH="$HOME/.local/share/nvim/lazy/lazy.nvim"
+# Ask Neovim rather than duplicate its XDG data/app-name resolution.
+LAZY_PATH="$(nvim --clean --headless -i NONE \
+  -c 'lua io.write(vim.fn.stdpath("data"))' -c 'qa')/lazy/lazy.nvim"
 loginfo "Instalando Lazy.nvim..."
 if [[ ! -d "$LAZY_PATH" ]]; then
-  git clone https://github.com/folke/lazy.nvim.git --filter=blob:none "$LAZY_PATH"
+  git clone https://github.com/folke/lazy.nvim.git \
+    --filter=blob:none --branch=stable "$LAZY_PATH"
 fi
 
 if ! command -v nvm > /dev/null 2>&1 && [[ ! -s "$HOME/.nvm/nvm.sh" ]]; then

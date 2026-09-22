@@ -236,6 +236,20 @@ installed Telescope, Plenary and ripgrep, and uses only synthetic files.
 
 ## Neovim Lazy bootstrap checks
 
+The installer and editor bootstrap a missing Lazy checkout using the Git
+reference `stable` at `stdpath("data")/lazy/lazy.nvim`. The installer asks a
+clean, headless Neovim for that data directory instead of duplicating its path
+rules; Neovim is installed before this step. The query does not load user
+configuration, user plugins or ShaDa. Existing Lazy directories are reused, not
+migrated or updated.
+
+This data-path lookup respects `XDG_DATA_HOME` and `NVIM_APPNAME`, but does not
+make the rest of the installer support arbitrary configuration layouts: its
+Neovim configuration link still targets `~/.config/nvim`. Bootstrap reference
+selection is separate from the subsequent `Lazy! restore`, which uses locked
+commits. The lockfile's `main` branch metadata is not an instruction for the
+initial clone, and no plugin pins were changed by this alignment.
+
 When the editor's initial Lazy clone fails, `nvim/init.lua` reports the target
 path, Git exit status and captured output instead of proceeding into plugin
 setup. Neovim may remain open without the rest of the custom initialization. No
