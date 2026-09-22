@@ -21,7 +21,7 @@ return {
       pickers = {
         buffers = {
           show_all_buffers = true,
-          short_mru = true,
+          sort_mru = true,
         },
       },
     })
