@@ -83,7 +83,7 @@ return {
       },
       format_on_save = {
         timeout_ms = 500,
-        lsp_fallback = "fallback",
+        lsp_format = "fallback",
       },
       log_level = vim.log.levels.ERROR,
       notify_on_error = true,

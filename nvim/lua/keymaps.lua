@@ -36,7 +36,7 @@ end)
 -- Conform format
 map({ "n", "v" }, "<leader>f", function()
   utils.notify("Manually formatting with <leader>f...", vim.log.levels.INFO)
-  require("conform").format({ async = false, lsp_fallback = true })
+  require("conform").format({ async = false, lsp_format = "fallback" })
 end, { desc = "Format file or range (conform)" })
 
 -- Defer Telescope loading so a clean install can evaluate keymaps before the

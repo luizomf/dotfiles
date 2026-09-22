@@ -120,6 +120,22 @@ buffers using temporary project configurations, checks personal fallbacks and
 invalid-config errors, and removes its fixtures on exit. It installs nothing and
 does not save changes to project files.
 
+## Neovim LSP formatting fallback checks
+
+Saving and `<leader>f` use Conform formatters first, falling back to a capable
+LSP formatter only when no Conform formatter is available. This does not start
+or install a server, and does not retry formatter errors through LSP.
+
+```sh
+nvim --clean --headless -i NONE -l tests/test_nvim_lsp_formatting.lua
+```
+
+Run from the repository root with Conform installed. The test uses an in-process
+LSP fixture, a Lua Conform formatter, and temporary files to exercise real saves
+and the manual mapping. It checks fallback and provider priority without
+launching language-server or formatter executables, and removes its fixtures on
+exit.
+
 ## Neovim selection-wrapping checks
 
 Run from the repository root:
