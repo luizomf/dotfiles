@@ -146,15 +146,24 @@ options: native EditorConfig support still applies project settings, and
 Formatter configuration discovery is separate and remains unchanged; editing
 indentation does not independently interpret Prettier or `pyproject.toml`.
 
+Keep syntax activation in Neovim's normal startup sequence. An early `syntax on`
+in core settings can load a command-line Lua buffer before Lazy has registered
+Tree-sitter and the native EditorConfig handler, bypassing both for that initial
+file. No extra syntax-enabling command is needed here.
+
 ```sh
 nvim --clean --headless -i NONE -l tests/test_nvim_indentation.lua
+nvim --clean --headless -i NONE -l tests/test_nvim_startup_indentation.lua
 ```
 
 Requires installed nvim-treesitter plus its Lua parser and indentation query.
 The test uses real filetype events, temporary native indent scripts, `=` and
 EditorConfig, checking missing-parser/query fallbacks and supported indentation
-with project spacing. It installs nothing and runs no formatter or language
-server.
+with project spacing. The startup check additionally requires Lazy and opens a
+Lua file from the command line in a child Neovim process. It runs the real init
+sequence but restricts Lazy to the installed Tree-sitter plugin to avoid
+unrelated session/server effects. Neither test installs anything or runs a
+formatter or language server.
 
 ## Neovim Telescope search checks
 

@@ -55,8 +55,6 @@ vim.opt.sidescrolloff = math.floor(vim.o.columns * 0.08)
 vim.opt.sessionoptions =
   "blank,buffers,curdir,folds,help,tabpages,winsize,winpos,terminal,localoptions"
 
-vim.cmd("syntax on")
-
 -- Render tabs and white spaces
 vim.opt.list = true
 -- vim.opt.listchars = "tab:>-,trail:-,lead:·,eol:¬"
