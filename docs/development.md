@@ -97,3 +97,22 @@ does not load the plugin manager or write edited files. It covers single
 characters (including UTF-8), end-of-line and multiline selections, empty lines,
 custom delimiters, and a missing selection. The checks use Neovim's default
 inclusive selection mode, not blockwise or exclusive selections.
+
+## Neovim editing-highlight checks
+
+Spelling and redundant-whitespace markers apply to normal, modifiable, writable
+buffers outside preview windows. Special buffers (including editable `nofile`
+scratch buffers), diagnostic popups and plugin UI are excluded. The same
+eligibility rule is shared by both features. Suppressing spelling preserves the
+window's previous setting so visiting a read-only buffer does not undo a manual
+`nospell` choice.
+
+Run from the repository root:
+
+```sh
+nvim --clean --headless -i NONE -l tests/test_nvim_editing_highlights.lua
+```
+
+The test uses a real diagnostic popup, buffer/window option changes and splits.
+It does not load external plugins or write files. Check Telescope visually in a
+normal editor session after changing this behaviour.

@@ -1,4 +1,5 @@
 local M = {}
+local is_editable = require("settings.editable-window")
 
 local group =
   vim.api.nvim_create_augroup("RedundantWhitespaceHL", { clear = true })
@@ -26,12 +27,34 @@ local function remove()
   end
 end
 
+local function update()
+  if is_editable() then
+    add()
+  else
+    remove()
+  end
+end
+
 function M.setup()
   set_hl()
+  update()
 
-  vim.api.nvim_create_autocmd({ "BufWinEnter", "WinEnter" }, {
+  vim.api.nvim_create_autocmd(
+    { "BufWinEnter", "WinEnter", "FileType", "VimEnter" },
+    {
+      group = group,
+      callback = update,
+    }
+  )
+
+  vim.api.nvim_create_autocmd("OptionSet", {
     group = group,
-    callback = add,
+    pattern = { "buftype", "modifiable", "readonly", "previewwindow" },
+    callback = function()
+      for _, win in ipairs(vim.api.nvim_list_wins()) do
+        vim.api.nvim_win_call(win, update)
+      end
+    end,
   })
 
   vim.api.nvim_create_autocmd({ "BufWinLeave", "WinLeave" }, {
