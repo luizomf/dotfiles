@@ -25,6 +25,40 @@ Names and working directories containing tabs or newlines are rejected. A
 missing working directory prevents activation instead of silently falling back
 to the home directory.
 
+## Terminal capabilities
+
+The inner terminal remains `tmux-256color`; its terminfo entry must also exist
+on remote hosts where applications run. The outer terminal is negotiated
+separately. `.tmux.conf` adds `RGB` (true colour) and `usstyle` (underline
+styles and colours) for Ghostty, Kitty, foot, Alacritty, WezTerm, and the
+generic `xterm-256color` identity used by some modern emulators. Other terminal
+types keep tmux's built-in detection; this is not a blanket override for every
+client.
+
+`xterm-256color` does not identify an emulator or guarantee these features. Its
+entry assumes a modern terminal; remove or narrow that entry if an older client
+using the same name renders incorrectly. These settings advertise capabilities;
+they cannot implement features missing from a terminal. `allow-passthrough` is
+not a replacement for capability negotiation.
+
+Feature entries use fixed array indices starting at 3, preserving tmux's
+built-in entries at 0-2 and avoiding duplicate appends on reload. Extended-key
+behaviour is unchanged. No new graphics or clipboard passthrough policy is
+introduced.
+
+After changing capabilities, use **prefix r**, then detach and reattach the
+client and reopen Neovim so both layers can renegotiate. Do not kill the server
+or its running panes. Inspect the attached client's features with:
+
+```sh
+tmux list-clients -F 'term=#{client_termname} features=#{client_termfeatures}'
+```
+
+Matching clients should include `RGB` and `usstyle`. Visual verification of
+coloured/styled underlines is still required in the actual terminal, including
+any nested tmux or SSH layers. Neovim's spelling highlight keeps a plain
+underline as a fallback; this change does not switch it back to an undercurl.
+
 ## Everyday use
 
 In a new Zsh terminal outside tmux, `tmux`, `tmux a`, `tmux attach`, and
