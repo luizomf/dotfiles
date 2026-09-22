@@ -50,6 +50,74 @@ class LazyTmuxTests(unittest.TestCase):
     cleanup.start()
     self.addCleanup(cleanup.stop)
 
+  def test_activated_pane_linefeeds_preserve_cursor_column(self):
+    with tempfile.TemporaryDirectory(prefix="lazy-linefeed-test-") as temporary:
+      root = Path(temporary).resolve()
+      home = root / "home"
+      home.mkdir()
+      (home / "dotfiles").symlink_to(REPO, target_is_directory=True)
+      socket = root / "socket"
+      shell = root / "shell"
+      shell.write_text(
+        "#!/bin/sh\n"
+        'if [ "$1" != -l ]; then exec /bin/sh "$@"; fi\n'
+        # Like a TUI, disable the tty driver's output transformations. A plain
+        # LF moves down one row, keeping the column after the preceding text.
+        "stty -opost\n"
+        "printf '\\033[2J\\033[H\\033[3;9Hfirst\\nsecond'\n"
+        '"$TEST_TMUX" -S "$TEST_SOCKET" wait-for -S rendered\n'
+        "exec /bin/sh\n"
+      )
+      shell.chmod(0o700)
+      fixture = root / "snapshot.txt"
+      fixture.write_text(
+        "pane\ttrial\t1\t1\t:*\t1\tcode\t:~\t1\tzsh\t:\n"
+        "window\ttrial\t1\t:code\t1\t:*\t\t:\n"
+        "state\ttrial\ttrial\n"
+      )
+      env = dict(os.environ, TEST_TMUX=self.tmux_binary, TEST_SOCKET=str(socket))
+      cli = [
+        sys.executable,
+        str(SCRIPT),
+        "--socket",
+        str(socket),
+        "--state-dir",
+        str(root / "state"),
+        "--home",
+        str(home),
+        "--shell",
+        str(shell),
+      ]
+
+      def tmux(*args: str) -> str:
+        # Only the test-owned socket, with literal tmux arguments.
+        return subprocess.run(  # noqa: S603
+          [self.tmux_binary, "-S", str(socket), "-N", *args],
+          env=env,
+          capture_output=True,
+          text=True,
+          check=True,
+          timeout=15,
+        ).stdout
+
+      try:
+        for args in (("import", "--snapshot", str(fixture)), ("boot",)):
+          # Public lazy CLI and its supported shell/socket/home overrides.
+          subprocess.run(  # noqa: S603
+            [*cli, *args], env=env, capture_output=True, check=True, timeout=30
+          )
+        tmux("wait-for", "rendered")
+        lines = tmux("capture-pane", "-p", "-t", "trial:1").splitlines()
+        self.assertEqual(lines[2], "        first")
+        self.assertTrue(lines[3].startswith("             second"), lines[3])
+      finally:
+        subprocess.run(  # noqa: S603
+          [self.tmux_binary, "-S", str(socket), "-N", "kill-server"],
+          capture_output=True,
+          check=False,
+          timeout=15,
+        )
+
   # One continuous lifecycle proves that running panes survive activation/restart
   # and that quiet saves do not hide output from the same attached client.
   def test_import_visit_save_and_restart_preserve_pending_and_running_windows(  # noqa: PLR0915

@@ -760,6 +760,10 @@ class LazyTmux:
       if row[1] not in ("", "0"):
         message = "Marked pane already has a process; refusing to replace it"
         raise RuntimeError(message)
+      # Process-free panes start with tmux's MODE_CRLF, which respawn preserves.
+      # Reset the empty screen before starting a TUI-capable shell: LF must not
+      # unexpectedly return to column zero. Never reset an already-running pane.
+      self.tmux("send-keys", "-R", "-t", row[0])
       self.tmux(
         "respawn-pane",
         "-t",

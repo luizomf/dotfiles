@@ -98,6 +98,13 @@ tmux-lazy start
   never restores, kills, or respawns panes and is not a migration of the running
   server.
 
+Before starting a restored shell, activation resets only its process-free pane's
+terminal state. tmux gives empty panes a newline mode that `respawn-pane`
+preserves; without this reset, TUI linefeeds can return to column zero and
+overwrite line numbers or other content. Running panes are never reset by lazy
+activation. This fix applies on the next activation, not retroactively to shells
+that were already started.
+
 Successful automatic startup and activation are silent. Wait for the prompt
 before typing into a newly activated window: empty panes do not buffer keyboard
 input. If a working directory is missing, correct it or close and recreate that
