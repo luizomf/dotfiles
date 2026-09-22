@@ -71,10 +71,10 @@ ping_agents() {
 
   # Preserve the maintenance model unless the owner overrides it.
   run_ping codex sannux run \
-    codex exec --yolo - --ephemeral --model "${KEEPWARM_CODEX_MODEL:-gpt-6-luna}" -c model_reasoning_effort=low --color never
+    codex exec --yolo - --ephemeral --model "${KEEPWARM_CODEX_MODEL:-gpt-5.6-luna}" -c model_reasoning_effort=low --color never
 
   run_ping pi sannux run \
-    pi -p --no-session --model openai-codex/gpt-6-luna:low
+    pi -p --no-session --model openai-codex/gpt-5.6-luna:low
 }
 
 reload_loop() {
