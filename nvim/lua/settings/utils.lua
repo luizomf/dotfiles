@@ -127,8 +127,14 @@ vim.api.nvim_create_user_command("Rename", function(opts)
   vim.cmd("saveas " .. vim.fn.fnameescape(new))
   -- fecha o buffer antigo (usando o caminho salvo)
   vim.cmd("bd " .. vim.fn.fnameescape(old))
-  -- apaga o arquivo antigo (usando o caminho salvo)
-  vim.cmd("silent !rm " .. vim.fn.shellescape(old))
+  -- Delete the literal path, without Ex or shell expansion.
+  local removed, err = vim.uv.fs_unlink(old)
+  if not removed then
+    U.notify(
+      ("Saved as %s, but could not delete %s: %s"):format(new, old, err),
+      vim.log.levels.ERROR
+    )
+  end
 end, { nargs = 1, complete = "file" })
 
 return U

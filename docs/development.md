@@ -136,6 +136,25 @@ and the manual mapping. It checks fallback and provider priority without
 launching language-server or formatter executables, and removes its fixtures on
 exit.
 
+## Neovim rename checks
+
+`:Rename` saves the current contents under the requested name before deleting
+only the original file, without a shell. Existing destinations remain protected
+by `:saveas`. If deletion fails, the saved destination is retained and an error
+identifies it, the original path and the filesystem error; no automatic retry or
+rollback is attempted. Existing Ex filename argument handling is unchanged.
+
+```sh
+nvim --clean --headless -i NONE -l tests/test_nvim_rename.lua
+```
+
+Run from the repository root. This uses the real command and temporary files,
+without plugins. It checks original filenames containing spaces, quotes, UTF-8,
+`%`, `#` and `!`, preservation of unsaved edits, overwrite protection and denied
+deletion. The permission-denial case is explicitly skipped if directory
+permissions cannot restrict the running user (for example, root). Fixtures and
+permissions are cleaned up on success and failure.
+
 ## Neovim selection-wrapping checks
 
 Run from the repository root:
