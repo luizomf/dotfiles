@@ -35,33 +35,23 @@ return {
         map("n", "<leader>ca", vim.lsp.buf.code_action, opts)
       end
 
-      vim.lsp.config("eslint", {
-        on_attach = on_attach,
-        capabilities = capabilities,
-      })
-      vim.lsp.enable("eslint")
+      local function enable_server(name, options)
+        vim.lsp.config(
+          name,
+          vim.tbl_extend("force", {
+            on_attach = on_attach,
+            capabilities = capabilities,
+          }, options or {})
+        )
+        vim.lsp.enable(name)
+      end
 
-      vim.lsp.config("astro", {
-        on_attach = on_attach,
-        capabilities = capabilities,
-      })
-      vim.lsp.enable("astro")
+      enable_server("eslint")
+      enable_server("astro")
+      enable_server("html")
+      enable_server("cssls")
 
-      vim.lsp.config("html", {
-        on_attach = on_attach,
-        capabilities = capabilities,
-      })
-      vim.lsp.enable("html")
-
-      vim.lsp.config("cssls", {
-        on_attach = on_attach,
-        capabilities = capabilities,
-      })
-      vim.lsp.enable("cssls")
-
-      vim.lsp.config("emmet_ls", {
-        on_attach = on_attach,
-        capabilities = capabilities,
+      enable_server("emmet_ls", {
         filetypes = {
           "html",
           "css",
@@ -70,47 +60,15 @@ return {
           "typescriptreact",
         },
       })
-      vim.lsp.enable("emmet_ls")
 
-      vim.lsp.config("bashls", {
-        on_attach = on_attach,
-        capabilities = capabilities,
-      })
-      vim.lsp.enable("bashls")
+      enable_server("bashls")
+      enable_server("rust_analyzer")
+      enable_server("pyright")
+      enable_server("ruff")
+      enable_server("ts_ls")
+      enable_server("lua_ls")
 
-      vim.lsp.config("rust_analyzer", {
-        on_attach = on_attach,
-        capabilities = capabilities,
-      })
-      vim.lsp.enable("rust_analyzer")
-
-      vim.lsp.config("pyright", {
-        on_attach = on_attach,
-        capabilities = capabilities,
-      })
-      vim.lsp.enable("pyright")
-
-      vim.lsp.config("ruff", {
-        on_attach = on_attach,
-        capabilities = capabilities,
-      })
-      vim.lsp.enable("ruff")
-
-      vim.lsp.config("ts_ls", {
-        on_attach = on_attach,
-        capabilities = capabilities,
-      })
-      vim.lsp.enable("ts_ls")
-
-      vim.lsp.config("lua_ls", {
-        on_attach = on_attach,
-        capabilities = capabilities,
-      })
-      vim.lsp.enable("lua_ls")
-
-      vim.lsp.config("tailwindcss", {
-        on_attach = on_attach,
-        capabilities = capabilities,
+      enable_server("tailwindcss", {
         settings = {
           tailwindCSS = {
             experimental = {
@@ -124,7 +82,6 @@ return {
           },
         },
       })
-      vim.lsp.enable("tailwindcss")
     end,
   },
 }
