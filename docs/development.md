@@ -130,6 +130,34 @@ the locked plugin without initializing the session manager or reading/writing
 saved sessions. Review defaults when updating that plugin's lockfile pin; this
 is not an independent pin of every upstream option.
 
+## Neovim TypeScript server selection
+
+TypeScript workspaces use exactly one server: project TypeScript 7+ selects the
+native `tsc --lsp --stdio`; older versions or no local TypeScript retain
+`ts_ls`. Both use nvim-lspconfig's `ts_ls` workspace discovery and Deno
+exclusions. The nearest `node_modules/typescript/package.json` from that
+workspace root or its ancestors determines the choice. Native startup uses that
+installation's `node_modules/.bin/tsc`, not a global compiler. A broken native
+installation is not silently replaced by the legacy server; malformed version
+metadata is reported. Install project dependencies normally rather than
+downgrading them.
+
+Mason still supplies the legacy server; native TypeScript comes from the
+project. Keep one TypeScript version per workspace; nested files without their
+own workspace boundary share the selected server. Reopen Neovim after changing
+the configuration or project TypeScript version; existing clients are not
+restarted automatically. This requires the nvim-lspconfig revision in
+`nvim/lazy-lock.json`, which includes the native `tsc` definition.
+
+```sh
+nvim --clean --headless -i NONE -l tests/test_nvim_typescript.lua
+```
+
+Requires installed nvim-lspconfig. The test uses real configuration/root
+discovery with temporary projects and an intercepted process launcher. It checks
+exclusive routing, command selection, ancestor dependencies and Deno exclusion
+without running compilers, servers or downloads.
+
 ## Neovim TOML language support
 
 Taplo is enabled for TOML through the shared LSP setup, including completion

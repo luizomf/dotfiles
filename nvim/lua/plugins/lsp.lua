@@ -89,7 +89,9 @@ return {
           })
         end,
       })
-      enable_server("ts_ls")
+      local typescript = require("settings.typescript").servers()
+      enable_server("ts_ls", typescript.ts_ls)
+      enable_server("tsc", typescript.tsc)
       enable_server("lua_ls")
       enable_server("taplo")
 
