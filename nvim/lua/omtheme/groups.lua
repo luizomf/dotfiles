@@ -128,7 +128,8 @@ M.set_groups = function()
   -- ┌─────────────────────────────────────────────┐
   -- │  Spell                                      │
   -- └─────────────────────────────────────────────┘
-  hl("SpellBad", { underdashed = true, sp = p.gray_10 })
+  -- Use a plain underline: styled underlines are not visible in every terminal.
+  hl("SpellBad", { underline = true, sp = p.red })
   hl("SpellCap", { undercurl = true, sp = p.yellow })
   hl("SpellRare", { undercurl = true, sp = p.blue_light })
   hl("SpellLocal", { undercurl = true, sp = p.blue_sky })
