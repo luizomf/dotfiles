@@ -3,6 +3,9 @@
 The existing `<leader>ff` (files) and `<leader>fg` (live grep) mappings search
 from the current working directory; check it with `:pwd`. File search uses
 ripgrep, which is already required for live grep and included in the setup.
+Telescope uses its default sorters; the unused heading and native fzf extensions
+are not configured. Ripgrep is independent of those extensions and remains in
+use.
 
 Both pickers include hidden files without opting out of ripgrep's normal ignore
 rules. They explicitly exclude these names at any directory depth:

@@ -14,13 +14,6 @@ return {
   tag = "v0.2.1",
   dependencies = {
     "nvim-lua/plenary.nvim",
-    "crispgm/telescope-heading.nvim",
-    { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
-  },
-  extensions = {
-    heading = {
-      treesitter = true,
-    },
   },
   config = function()
     require("telescope").setup({
