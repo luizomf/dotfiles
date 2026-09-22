@@ -136,6 +136,12 @@ and the manual mapping. It checks fallback and provider priority without
 launching language-server or formatter executables, and removes its fixtures on
 exit.
 
+## Neovim Telescope search checks
+
+See [Telescope file search](nvim-telescope.md) for the hidden-file/ignore policy
+and the isolated `tests/test_nvim_telescope_search.lua` check. It requires
+installed Telescope, Plenary and ripgrep, and uses only synthetic files.
+
 ## Neovim Lazy bootstrap checks
 
 When the editor's initial Lazy clone fails, `nvim/init.lua` reports the target

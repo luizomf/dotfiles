@@ -55,7 +55,7 @@ map("n", "<leader>fg", function()
     grep_open_files = false,
     search_dirs = { "." },
   })
-end, { desc = "Live grep (arquivos abertos)" })
+end, { desc = "Search file contents" })
 map("n", "<leader>fb", builtin.buffers, { desc = "List open buffers" })
 map("n", "<leader>fh", builtin.help_tags, { desc = "Search help tags" })
 map("n", "<leader>fo", builtin.oldfiles, { desc = "Recently opened files" })
