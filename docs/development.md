@@ -136,6 +136,24 @@ and the manual mapping. It checks fallback and provider priority without
 launching language-server or formatter executables, and removes its fixtures on
 exit.
 
+## Neovim snippet navigation checks
+
+The completion menu keeps priority for Tab/Shift-Tab. Otherwise, LuaSnip's
+local-jump predicates avoid returning to a departed snippet, while Tab can still
+expand a new snippet at the cursor. The installed LuaSnip checks whether the
+cursor is on a line occupied by the snippet; this is not a column-exact
+boundary. Other completion mappings and Enter selection are unchanged.
+
+```sh
+nvim --clean --headless -i NONE -l tests/test_nvim_snippet_navigation.lua
+```
+
+Requires installed nvim-cmp and LuaSnip. The test invokes the configured mapping
+callbacks with real LuaSnip state, covering LSP-style placeholder navigation,
+fallback outside the snippet's lines and expansion of a new snippet. It uses no
+LSP or external completion sources and writes no files. Interactive key handling
+and completion-menu appearance should be checked in a normal editor separately.
+
 ## Neovim indentation checks
 
 Tree-sitter indentation is enabled only when its highlighting startup succeeds
