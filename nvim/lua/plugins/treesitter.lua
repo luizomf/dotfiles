@@ -5,7 +5,10 @@ return {
     "nvim-treesitter/nvim-treesitter",
     branch = "main",
     lazy = false,
-    build = ":TSUpdate",
+    build = function(plugin)
+      require("lazy").load({ plugins = { plugin.name } })
+      tooling.sync_treesitter()
+    end,
     config = function()
       -- tmux is no longer bundled on the main branch, but remains maintained.
       vim.api.nvim_create_autocmd("User", {
@@ -25,8 +28,8 @@ return {
 
       require("nvim-treesitter").setup()
 
-      -- Interactive sessions install missing parsers asynchronously. The
-      -- installer uses settings.tooling.bootstrap() and waits for completion.
+      -- Interactive sessions only install missing parsers asynchronously.
+      -- Explicit builds and the installer synchronize and wait via tooling.
       if #vim.api.nvim_list_uis() > 0 then
         require("nvim-treesitter").install(tooling.treesitter_parsers)
       end

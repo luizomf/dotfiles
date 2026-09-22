@@ -227,6 +227,12 @@ fallback outside the snippet's lines and expansion of a new snippet. It uses no
 LSP or external completion sources and writes no files. Interactive key handling
 and completion-menu appearance should be checked in a normal editor separately.
 
+## Neovim parser update checks
+
+See [Neovim updates and targeted recovery](nvim-updates.md) for the separate
+Lazy, Tree-sitter and Mason workflows, synchronous build/bootstrap checks and
+safe recovery without deleting personal Neovim data.
+
 ## Neovim indentation checks
 
 Tree-sitter indentation is enabled only when its highlighting startup succeeds

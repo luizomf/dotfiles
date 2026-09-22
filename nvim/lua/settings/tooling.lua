@@ -124,11 +124,19 @@ local function install_mason_packages()
   end
 end
 
-local function install_treesitter_parsers()
+function M.sync_treesitter()
   local task = require("nvim-treesitter").install(M.treesitter_parsers, {
     summary = true,
   })
   local completed = task:wait(600000)
+  if not completed then
+    error("Treesitter parser installation failed; inspect :TSLog")
+  end
+  local updated =
+    require("nvim-treesitter").update(nil, { summary = true }):wait(600000)
+  if not updated then
+    error("Treesitter parser update failed; inspect :TSLog")
+  end
 
   local missing = {}
   for _, parser in ipairs(M.treesitter_parsers) do
@@ -137,16 +145,19 @@ local function install_treesitter_parsers()
     end
   end
   if #missing > 0 then
-    abort("Missing Treesitter parsers: " .. table.concat(missing, ", "))
-  end
-  if not completed then
-    abort("Treesitter parser installation did not complete successfully.")
+    error(
+      "Missing or unloadable Treesitter parsers: "
+        .. table.concat(missing, ", ")
+    )
   end
 end
 
 function M.bootstrap()
   install_mason_packages()
-  install_treesitter_parsers()
+  local ok, err = pcall(M.sync_treesitter)
+  if not ok then
+    abort(tostring(err))
+  end
 end
 
 return M
