@@ -136,6 +136,32 @@ and the manual mapping. It checks fallback and provider priority without
 launching language-server or formatter executables, and removes its fixtures on
 exit.
 
+## Neovim Ruff executable selection checks
+
+When starting the Ruff LSP, search the workspace root and its ancestors for the
+nearest executable `.venv/bin/ruff`. If none exists, or no workspace root is
+available, use `ruff` from the existing PATH (normally supplied by Mason). The
+process still receives the configured working directory, environment and
+detachment options. No global PATH or other language-server policy is changed.
+
+Conform already uses this upward-search policy from the buffer's directory; the
+LSP starts from its workspace root. Nested environments below that root can
+therefore differ. Selection happens when a client starts: an already running
+client is not automatically restarted after changing the environment. A selected
+project Ruff must support `ruff server`; startup failures do not silently select
+a different version.
+
+```sh
+nvim --clean --headless -i NONE -l tests/test_nvim_ruff_command.lua
+```
+
+Requires installed nvim-lspconfig and Conform. The test uses temporary
+executable fixtures, compares both configured command selectors, and intercepts
+the LSP process-launch boundary. It covers ancestor selection, non-executable
+candidates, PATH fallback, separate roots and preserved launch options. Mason
+setup and LSP enabling are disabled in the fixture; no Ruff process or download
+is started.
+
 ## Neovim snippet navigation checks
 
 The completion menu keeps priority for Tab/Shift-Tab. Otherwise, LuaSnip's

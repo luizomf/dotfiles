@@ -64,7 +64,31 @@ return {
       enable_server("bashls")
       enable_server("rust_analyzer")
       enable_server("pyright")
-      enable_server("ruff")
+      enable_server("ruff", {
+        cmd = function(dispatchers, config)
+          local command = "ruff"
+          if config.root_dir then
+            for _, venv in
+              ipairs(vim.fs.find(".venv", {
+                path = config.root_dir,
+                upward = true,
+                limit = math.huge,
+              }))
+            do
+              local candidate = venv .. "/bin/ruff"
+              if vim.fn.executable(candidate) == 1 then
+                command = candidate
+                break
+              end
+            end
+          end
+          return vim.lsp.rpc.start({ command, "server" }, dispatchers, {
+            cwd = config.cmd_cwd,
+            env = config.cmd_env,
+            detached = config.detached,
+          })
+        end,
+      })
       enable_server("ts_ls")
       enable_server("lua_ls")
 
