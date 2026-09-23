@@ -135,6 +135,11 @@ Before stopping any processes, sleep chooses an already-awake destination:
 3. If none exists, refuse without stopping processes or changing focus. Open a
    window with **prefix c** or visit a sleeping one first.
 
+When no awake destination is available, **prefix x** only shows a status-line
+message to the invoking client; it does not open tmux's output mode or alter the
+pane contents. Direct `sleep` CLI calls without `--client` still report the
+refusal on stderr with a nonzero exit status. Unexpected failures remain errors.
+
 A sleeping window is never awakened merely to provide a destination. Sleeping
 linked windows or windows in grouped sessions remains unsupported; these are
 also excluded as destinations. A session's only window can sleep if another

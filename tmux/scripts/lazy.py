@@ -29,6 +29,10 @@ if TYPE_CHECKING:
 REPO = Path(__file__).resolve().parents[2]
 
 
+class SleepRefusedError(RuntimeError):
+  """No awake destination is available; no source process was stopped."""
+
+
 class HomeCwd(TypedDict):
   home: str
 
@@ -532,7 +536,7 @@ class LazyTmux:
       self.command("sleep")
       + " '#{window_id}' '#{session_id}' "
       + shlex.quote(generation)
-      + " --yes"
+      + " --yes --client '#{client_name}'"
     )
     self.tmux(
       "bind-key",
@@ -842,7 +846,7 @@ class LazyTmux:
       if wid in awake:
         return sid, wid
     message = "No other supported awake window; create or wake another before sleeping"
-    raise RuntimeError(message)
+    raise SleepRefusedError(message)
 
   def move_for_sleep(self, session: str, target_session: str, window: str) -> None:
     target = f"{target_session}:{window}"
@@ -866,7 +870,7 @@ class LazyTmux:
     )
     if selected != window:
       message = "Destination is no longer awake; nothing was stopped"
-      raise RuntimeError(message)
+      raise SleepRefusedError(message)
 
   def sleep(self, window: str, session: str, generation: str) -> None:
     if (
@@ -1103,6 +1107,9 @@ def argument_parser() -> argparse.ArgumentParser:
   sleep.add_argument("session", help="Exact session ID from the confirmation")
   sleep.add_argument("generation", help="Current server generation")
   sleep.add_argument("--yes", action="store_true", required=True)
+  sleep.add_argument(
+    "--client", help="Report no-destination refusals only in this client's status line"
+  )
   sub.add_parser("stop", parents=[quiet_options]).add_argument(
     "--yes", action="store_true", required=True
   )
@@ -1121,6 +1128,20 @@ def attach(app: LazyTmux) -> None:
     command += ["-t", target]
   # Replace the launcher with the resolved tmux binary and explicit argv, no shell.
   os.execvpe(app.binary, command, app.env)  # noqa: S606
+
+
+def sleep_with_feedback(
+  app: LazyTmux, window: str, session: str, generation: str, client: str | None
+) -> None:
+  try:
+    app.sleep(window, session, generation)
+  except SleepRefusedError as exc:
+    if not client:
+      raise
+    # A handled refusal is not a failed run-shell job: stderr or exit 1
+    # would open tmux's output mode on top of the user's pane.
+    app.tmux("display-message", "-c", client, "-l", f"tmux-lazy: {exc}")
+  app.tmux("wait-for", "-S", "lazy-sleep-complete")
 
 
 # Keep command dispatch explicit under one lock; attach must happen outside it.
@@ -1153,8 +1174,7 @@ def main() -> None:  # noqa: C901
     elif args.action == "visit":
       app.visit(args.window, args.session, args.generation, args.token)
     elif args.action == "sleep":
-      app.sleep(args.window, args.session, args.generation)
-      app.tmux("wait-for", "-S", "lazy-sleep-complete")
+      sleep_with_feedback(app, args.window, args.session, args.generation, args.client)
     elif args.action == "save":
       app.save(if_running=args.if_running)
     elif args.action == "export":

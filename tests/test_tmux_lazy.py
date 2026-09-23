@@ -1107,6 +1107,37 @@ class SleepNavigationTests(TmuxTestCase):
     self.assertEqual(json.loads(self.lazy("status").stdout)["pending_panes"], 7)
     self.assertEqual(self.tmux("list-panes", "-t", source, "-F", "#{pane_dead}"), "0")
 
+  def test_prefix_sleep_refusal_only_displays_status_without_opening_output_mode(self):
+    master, client = self.attach_client("alpha:2")
+    self.attach_client("alpha:2")
+    source = self.tmux("display-message", "-p", "-t", "alpha:2", "#{window_id}")
+    before = self.tmux("capture-pane", "-p", "-t", source)
+    pid = self.tmux("list-panes", "-t", source, "-F", "#{pane_pid}")
+    self.confirm_sleep(master)
+    output = b""
+    deadline = time.monotonic() + 5
+    while b"No other supported awake window" not in output:
+      remaining = deadline - time.monotonic()
+      if remaining <= 0 or not select.select([master], [], [], remaining)[0]:
+        break
+      output += os.read(master, 65536)
+    self.assertIn(b"No other supported awake window", output)
+    self.assertEqual(
+      self.tmux("display-message", "-p", "-t", source, "#{pane_in_mode}"), "0"
+    )
+    self.assertEqual(self.tmux("capture-pane", "-p", "-t", source), before)
+    self.assertEqual(self.tmux("list-panes", "-t", source, "-F", "#{pane_pid}"), pid)
+    # The binding's notification mode must also emit no stdout/stderr and exit
+    # successfully, or run-shell opens output mode after the status message.
+    result = self.lazy(
+      "sleep", source, self.session, self.generation, "--yes", "--client", client
+    )
+    self.assertEqual((result.stdout, result.stderr), ("", ""))
+    failed = self.lazy(
+      "sleep", source, self.session, "stale", "--yes", "--client", client, success=False
+    )
+    self.assertIn("Stale sleep request", failed.stderr)
+
   def test_sleep_refuses_last_awake_window_without_changing_processes_or_focus(self):
     # Retained dead panes can have nonzero PIDs. They are not valid destinations,
     # any more than the process-free restored windows elsewhere in the server.
