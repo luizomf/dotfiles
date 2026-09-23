@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-}" != dumb ]]; then
+  printf '\033[34m[INFO]\033[0m %s\n' "$*"
+else
+  printf '[INFO] %s\n' "$*"
+fi

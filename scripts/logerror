@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if [[ -t 2 && -z "${NO_COLOR:-}" && "${TERM:-}" != dumb ]]; then
+  printf '\033[31m[ERROR]\033[0m %s\n' "$*" >&2
+else
+  printf '[ERROR] %s\n' "$*" >&2
+fi
