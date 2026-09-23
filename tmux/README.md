@@ -122,10 +122,31 @@ services are not supervised or guaranteed to stop, just as with native tmux pane
 termination.
 
 Sleep preserves the window, pane IDs, titles, layout, active pane, zoom and each
-pane's current working directory. It moves to another window in the same session
-before stopping processes so queued visits do not immediately wake the window.
-If it is the session's only window, create another with **prefix c** first.
-Linked windows and grouped sessions are refused before any process is stopped.
+pane's current working directory. A window is **awake** when at least one pane
+has a live process, including an idle shell. Empty restored panes and retained
+dead panes do not count, even when a dead pane still reports its old PID.
+
+Before stopping any processes, sleep chooses an already-awake destination:
+
+1. The next awake window by numeric index in the same session, wrapping to the
+   beginning and skipping sleeping windows.
+2. Otherwise, an awake window in another session on the same server, ordered by
+   session name and then numeric window index.
+3. If none exists, refuse without stopping processes or changing focus. Open a
+   window with **prefix c** or visit a sleeping one first.
+
+A sleeping window is never awakened merely to provide a destination. Sleeping
+linked windows or windows in grouped sessions remains unsupported; these are
+also excluded as destinations. A session's only window can sleep if another
+session has a supported awake window.
+
+Focus moves before processes stop. When crossing sessions, all clients attached
+to the source session follow to the destination window; clients in other
+sessions are not switched. Window selection is still shared within each session,
+as in native tmux. If navigation fails, no source process is stopped. Visit
+hooks carry a window-local token so a visit queued before sleep cannot
+immediately wake the source again, even if its now-detached session still
+selects it.
 
 Revisiting starts fresh login shells, not the applications that were ended. Dead
 panes are temporarily retained with `remain-on-exit` so the structure survives
@@ -135,10 +156,12 @@ Sleeping does not overwrite the saved snapshot: use **prefix Ctrl-s** to persist
 updated directories/structure for a later server restart.
 
 For an already-running server after updating this checkout, run
-`tmux-lazy configure --quiet` to install the new binding and hooks without
-restarting processes. Until configured, **prefix x still has its old binding**;
-the new confirmation explicitly says **Sleep window**. Native **prefix &** still
-deletes the entire window and its structure after confirmation.
+`tmux-lazy configure --quiet` once **before using prefix x** to install the
+current binding and visit-token hooks without restarting processes. Existing
+bindings remain installed until configured; older lazy sleep bindings refuse to
+stop processes until the hooks are updated. The confirmation explicitly says
+**Sleep window**. Native **prefix &** still deletes the entire window and its
+structure after confirmation.
 
 ## State and quiet commands
 

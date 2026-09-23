@@ -558,10 +558,12 @@ class LazyTmux:
         self.command("visit")
         + " '#{window_id}' '#{session_id}' "
         + shlex.quote(generation)
+        + " --token '#{@lazy_visit_token}'"
       )
       self.tmux(
         "set-hook", "-g", hook + "[200]", "run-shell -b " + shlex.quote(command)
       )
+    self.tmux("set-option", "-g", "@lazy_visit_tokens", "1")
 
   def boot(self) -> None:
     if self.alive():
@@ -797,6 +799,75 @@ class LazyTmux:
     self.tmux("set-option", "-w", "-u", "-t", window, "@lazy_pending")
     # No success message here: display-message can freeze pane redraw.
 
+  def sleep_destination(self, window: str, session: str) -> tuple[str, str]:
+    # A retained dead pane can still have a PID; a process-free restored pane
+    # has PID zero. Only an actually running pane makes a window awake.
+    awake = {
+      wid
+      for wid, pid in (
+        line.split("\t")
+        for line in self.tmux(
+          "list-panes", "-a", "-F", "#{window_id}\t#{?pane_dead,0,#{pane_pid}}"
+        ).splitlines()
+      )
+      if pid not in ("", "0")
+    }
+    fields = (
+      "#{session_name}",
+      "#{window_index}",
+      "#{session_id}",
+      "#{window_id}",
+      "#{session_grouped}",
+      "#{window_linked}",
+    )
+    rows = [
+      line.split("\t")
+      for line in self.tmux("list-windows", "-a", "-F", "\t".join(fields)).splitlines()
+    ]
+    if any(len(row) != len(fields) for row in rows):
+      message = "Window data contains unsupported tabs/newlines"
+      raise ValueError(message)
+    windows = [
+      (sid, wid)
+      for _, _, sid, wid, grouped, linked in sorted(
+        rows, key=lambda row: (row[0], int(row[1]))
+      )
+      if grouped == "0" and linked == "0"
+    ]
+    local = [target for target in windows if target[0] == session]
+    position = local.index((session, window))
+    ordered = local[position + 1 :] + local[:position]
+    ordered += [target for target in windows if target[0] != session]
+    for sid, wid in ordered:
+      if wid in awake:
+        return sid, wid
+    message = "No other supported awake window; create or wake another before sleeping"
+    raise RuntimeError(message)
+
+  def move_for_sleep(self, session: str, target_session: str, window: str) -> None:
+    target = f"{target_session}:{window}"
+    commands = [["select-window", "-t", target]]
+    if target_session != session:
+      # Same-session window selection moves all its clients. Preserve that
+      # behaviour across sessions without hijacking clients in unrelated sessions.
+      commands.extend(
+        ["switch-client", "-Z", "-c", client, "-t", target]
+        for client in self.tmux(
+          "list-clients", "-t", session, "-F", "#{client_name}"
+        ).splitlines()
+      )
+    commands.append(["display-message", "-p", "-t", target, "#{window_id}"])
+    # Evaluate liveness inside tmux, immediately before the navigation commands:
+    # a destination that exited during preflight must not steal focus on refusal.
+    # The pane loop includes non-active panes; empty/dead panes each contribute 0.
+    awake = "#{m:*1*,#{P:#{?pane_dead,0,#{?pane_pid,1,0}}}}"
+    selected = self.tmux(
+      "if-shell", "-F", "-t", target, awake, " ; ".join(map(shlex.join, commands))
+    )
+    if selected != window:
+      message = "Destination is no longer awake; nothing was stopped"
+      raise RuntimeError(message)
+
   def sleep(self, window: str, session: str, generation: str) -> None:
     if (
       not self.alive()
@@ -816,16 +887,10 @@ class LazyTmux:
     if self.tmux("display-message", "-p", "-t", window, "#{window_linked}") == "1":
       message = "Sleeping linked windows is unsupported; nothing was stopped"
       raise RuntimeError(message)
-    others = [
-      wid
-      for wid in self.tmux(
-        "list-windows", "-t", session, "-F", "#{window_id}"
-      ).splitlines()
-      if wid != window
-    ]
-    if not others:
-      message = "Create another window before sleeping this session's only window"
+    if self.tmux("show-option", "-gqv", "@lazy_visit_tokens") != "1":
+      message = "Run tmux-lazy configure --quiet before sleeping; hooks need updating"
       raise RuntimeError(message)
+    destination_session, destination = self.sleep_destination(window, session)
     panes = self.panes(window)
     if any(row[3] and row[1] not in ("", "0") for row in panes):
       message = "Marked pane still has a process; inspect the incomplete activation"
@@ -838,9 +903,11 @@ class LazyTmux:
       self.tmux("show-option", "-pqv", "-t", row[0], "remain-on-exit") or "inherit"
       for row in rows
     ]
-    # Moving away first makes queued visits to the old selection harmless.
-    # The destination's activation waits for this operation's state lock.
-    self.tmux("select-window", "-t", others[0])
+    # Invalidate queued visits even when leaving the session keeps its sleeping
+    # window selected. Fresh navigation captures this token and can wake it again.
+    self.tmux("set-option", "-w", "-t", window, "@lazy_visit_token", str(uuid.uuid4()))
+    self.move_for_sleep(session, destination_session, destination)
+    # Destination activation waits for this operation's state lock.
     self.tmux("set-option", "-w", "-t", window, "@lazy_pending", "1")
     for row, cwd, remain in zip(rows, directories, remains):
       self.tmux("set-option", "-p", "-t", row[0], "@lazy_remain_on_exit", remain)
@@ -850,6 +917,9 @@ class LazyTmux:
       # titles, geometry and zoom. respawn-pane cannot create an empty pane;
       # use a minimal non-login process that exits instead of a sleeping shell.
       self.tmux("respawn-pane", "-k", "-t", row[0], "/bin/sh", "-c", "exit 0")
+    # With no attached clients and an already-selected destination, navigation
+    # emits no visit hook. Still make the next attach/restore return there.
+    self.record_focus(destination, destination_session)
 
   def uid(self, target: str, *, window: bool = False) -> str:
     args = ["-w"] if window else []
@@ -859,7 +929,14 @@ class LazyTmux:
       self.tmux("set-option", *args, "-t", target, "@lazy_uid", uid)
     return uid
 
-  def visit(self, window: str, session: str, generation: str) -> None:
+  def record_focus(self, window: str, session: str) -> None:
+    atomic_json(
+      self.root / "focus.json",
+      {"session": self.uid(session), "window": self.uid(window, window=True)},
+    )
+    self.tmux("set-option", "-g", "@lazy_attach", session)
+
+  def visit(self, window: str, session: str, generation: str, token: str = "") -> None:
     if (
       not self.alive()
       or self.tmux("show-option", "-gqv", "@lazy_generation") != generation
@@ -874,12 +951,10 @@ class LazyTmux:
         return
       if self.tmux("display-message", "-p", "-t", session, "#{window_id}") != window:
         return
+      if self.tmux("show-option", "-wqv", "-t", window, "@lazy_visit_token") != token:
+        return
       self.activate(window)
-      atomic_json(
-        self.root / "focus.json",
-        {"session": self.uid(session), "window": self.uid(window, window=True)},
-      )
-      self.tmux("set-option", "-g", "@lazy_attach", session)
+      self.record_focus(window, session)
     finally:
       if self.alive():
         self.tmux("wait-for", "-S", "lazy-visit-complete")
@@ -1020,6 +1095,9 @@ def argument_parser() -> argparse.ArgumentParser:
   visit.add_argument("window")
   visit.add_argument("session")
   visit.add_argument("generation")
+  visit.add_argument(
+    "--token", default="", help="Window visit token captured by the hook"
+  )
   sleep = sub.add_parser("sleep", parents=[quiet_options])
   sleep.add_argument("window", help="Exact window ID from the confirmation")
   sleep.add_argument("session", help="Exact session ID from the confirmation")
@@ -1073,7 +1151,7 @@ def main() -> None:  # noqa: C901
     elif args.action == "configure":
       app.configure()
     elif args.action == "visit":
-      app.visit(args.window, args.session, args.generation)
+      app.visit(args.window, args.session, args.generation, args.token)
     elif args.action == "sleep":
       app.sleep(args.window, args.session, args.generation)
       app.tmux("wait-for", "-S", "lazy-sleep-complete")

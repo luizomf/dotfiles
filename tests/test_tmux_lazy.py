@@ -30,7 +30,7 @@ def is_object_mapping(value: object) -> TypeGuard[dict[object, object]]:
   return isinstance(value, dict)
 
 
-class LazyTmuxTests(unittest.TestCase):
+class TmuxTestCase(unittest.TestCase):
   tmux_binary: str
 
   @classmethod
@@ -50,6 +50,8 @@ class LazyTmuxTests(unittest.TestCase):
     cleanup.start()
     self.addCleanup(cleanup.stop)
 
+
+class LazyTmuxTests(TmuxTestCase):
   def test_activated_pane_linefeeds_preserve_cursor_column(self):
     with tempfile.TemporaryDirectory(prefix="lazy-linefeed-test-") as temporary:
       root = Path(temporary).resolve()
@@ -926,6 +928,280 @@ class LazyTmuxTests(unittest.TestCase):
             timeout=15,
             check=False,
           )
+
+
+class SleepNavigationTests(TmuxTestCase):
+  def setUp(self) -> None:
+    super().setUp()
+    temporary = tempfile.TemporaryDirectory(prefix="lazy-navigation-")
+    self.addCleanup(temporary.cleanup)
+    self.root = Path(temporary.name).resolve()
+    home = self.root / "home"
+    home.mkdir()
+    (home / "dotfiles").symlink_to(REPO, target_is_directory=True)
+    self.socket = self.root / "socket"
+    self.cli = [
+      sys.executable,
+      str(SCRIPT),
+      "--socket",
+      str(self.socket),
+      "--state-dir",
+      str(self.root / "state"),
+      "--home",
+      str(home),
+      "--shell",
+      "/bin/sh",
+    ]
+    self.addCleanup(self.stop_server)
+    fixture = self.root / "snapshot.txt"
+    records: list[str] = []
+    for session in ("alpha", "beta"):
+      for index in range(1, 5):
+        active = int(index == (2 if session == "alpha" else 1))
+        records.extend(
+          [
+            f"pane\t{session}\t{index}\t{active}\t:\t1\tshell\t:~\t1\tsh\t:",
+            f"window\t{session}\t{index}\t:window-{index}\t{active}\t:\t\t:",
+          ]
+        )
+    fixture.write_text("\n".join([*records, "state\talpha\talpha", ""]))
+    self.lazy("import", "--snapshot", str(fixture))
+    self.lazy("boot")
+    self.generation = self.tmux("show-option", "-gqv", "@lazy_generation")
+    self.session = self.tmux("display-message", "-p", "-t", "alpha:", "#{session_id}")
+
+  def stop_server(self) -> None:
+    # Cleanup is restricted to this fixture's private socket, including failures.
+    subprocess.run(  # noqa: S603
+      [self.tmux_binary, "-S", str(self.socket), "-N", "kill-server"],
+      capture_output=True,
+      check=False,
+      timeout=15,
+    )
+
+  def lazy(self, *args: str, success: bool = True) -> subprocess.CompletedProcess[str]:
+    # Exercise the same CLI as the binding, with an isolated home and socket.
+    result = subprocess.run(  # noqa: S603
+      [*self.cli, *args], capture_output=True, text=True, check=False, timeout=30
+    )
+    self.assertEqual(result.returncode == 0, success, result.stderr)
+    return result
+
+  def tmux(self, *args: str) -> str:
+    # Literal arguments and an explicit private socket, never the user's server.
+    return subprocess.run(  # noqa: S603
+      [self.tmux_binary, "-S", str(self.socket), "-N", *args],
+      capture_output=True,
+      text=True,
+      check=True,
+      timeout=15,
+    ).stdout.strip()
+
+  def select_window(self, target: str) -> None:
+    self.tmux("select-window", "-t", target)
+    self.tmux("wait-for", "lazy-visit-complete")
+
+  def attach_client(self, target: str) -> tuple[int, str]:
+    master, slave = pty.openpty()
+    tty = os.ttyname(slave)
+    # A real client on a fixture PTY exercises the production binding and hooks.
+    client = subprocess.Popen(  # noqa: S603
+      [self.tmux_binary, "-S", str(self.socket), "attach-session", "-t", target],
+      stdin=slave,
+      stdout=slave,
+      stderr=slave,
+      env={**os.environ, "TERM": "xterm-256color"},
+    )
+    os.close(slave)
+    self.addCleanup(os.close, master)
+    self.addCleanup(client.wait, timeout=5)
+    self.addCleanup(client.terminate)
+    self.tmux("wait-for", "lazy-visit-complete")
+    return master, tty
+
+  def confirm_sleep(self, master: int) -> None:
+    os.write(master, b"\x02x")
+    output = b""
+    deadline = time.monotonic() + 5
+    while b"End ALL pane processes" not in output:
+      remaining = deadline - time.monotonic()
+      if remaining <= 0 or not select.select([master], [], [], remaining)[0]:
+        break
+      output += os.read(master, 65536)
+    self.assertIn(b"End ALL pane processes", output)
+    os.write(master, b"y")
+    try:
+      self.tmux("wait-for", "lazy-sleep-complete")
+    except subprocess.TimeoutExpired as exc:
+      messages = "\n".join(self.tmux("show-messages").splitlines()[:15])
+      raise AssertionError(messages) from exc
+
+  def test_sleep_selects_next_awake_window_and_wraps_without_waking_others(self):
+    # Local awake windows win even over an alphabetically earlier live session.
+    self.tmux("new-session", "-d", "-s", "aardvark", "/bin/sh")
+    self.select_window("alpha:4")
+    self.select_window("alpha:3")
+    self.select_window("alpha:2")
+    destination_pid = self.tmux("list-panes", "-t", "alpha:3", "-F", "#{pane_pid}")
+    for source, destination in (("alpha:2", "3"), ("alpha:3", "4")):
+      wid = self.tmux("display-message", "-p", "-t", source, "#{window_id}")
+      self.lazy("sleep", wid, self.session, self.generation, "--yes")
+      self.tmux("wait-for", "lazy-visit-complete")
+      self.assertEqual(
+        self.tmux("display-message", "-p", "-t", "alpha:", "#{window_index}"),
+        destination,
+      )
+      if destination == "3":
+        self.assertEqual(
+          self.tmux("list-panes", "-t", "alpha:3", "-F", "#{pane_pid}"),
+          destination_pid,
+        )
+        self.assertEqual(json.loads(self.lazy("status").stdout)["pending_panes"], 6)
+    self.select_window("alpha:1")
+    self.select_window("alpha:4")
+    wid = self.tmux("display-message", "-p", "-t", "alpha:4", "#{window_id}")
+    self.lazy("sleep", wid, self.session, self.generation, "--yes")
+    self.tmux("wait-for", "lazy-visit-complete")
+    self.assertEqual(
+      self.tmux("display-message", "-p", "-t", "alpha:", "#{window_index}"), "1"
+    )
+    self.assertEqual(json.loads(self.lazy("status").stdout)["pending_panes"], 7)
+
+  def test_sleep_switches_source_clients_to_an_awake_window_in_another_session(self):
+    # beta's selected window remains pending. Entering beta without targeting
+    # its awake window would start a shell the user never asked to wake.
+    destination = self.tmux(
+      "new-window", "-d", "-t", "beta:5", "-P", "-F", "#{window_id}"
+    )
+    destination_pid = self.tmux("list-panes", "-t", destination, "-F", "#{pane_pid}")
+    # An empty active pane does not make the whole window asleep: its other pane
+    # still has a shell. The destination must be decided from all its panes.
+    self.tmux("split-window", "-h", "-t", destination, "")
+    self.tmux("new-session", "-d", "-s", "gamma", "/bin/sh")
+    _, unrelated = self.attach_client("gamma:")
+    master, first = self.attach_client("alpha:2")
+    _, second = self.attach_client("alpha:2")
+    source = self.tmux("display-message", "-p", "-t", "alpha:2", "#{window_id}")
+    self.confirm_sleep(master)
+    self.tmux("wait-for", "lazy-visit-complete")
+    locations = dict(
+      row.split("\t")
+      for row in self.tmux(
+        "list-clients", "-F", "#{client_tty}\t#{session_name}:#{window_index}"
+      ).splitlines()
+    )
+    self.assertEqual(
+      locations, {first: "beta:5", second: "beta:5", unrelated: "gamma:1"}
+    )
+    self.assertEqual(
+      self.tmux("list-panes", "-t", destination, "-F", "#{pane_pid}"),
+      destination_pid + "\n0",
+    )
+    # Replaying a visit queued before sleep must not revive the source, even
+    # though its detached session still selects that same (now sleeping) window.
+    self.lazy("visit", source, self.session, self.generation)
+    self.assertEqual(json.loads(self.lazy("status").stdout)["pending_panes"], 8)
+    self.assertEqual(self.tmux("list-panes", "-t", source, "-F", "#{pane_dead}"), "1")
+    self.tmux("switch-client", "-c", first, "-t", "alpha:2")
+    self.tmux("wait-for", "lazy-visit-complete")
+    self.assertEqual(json.loads(self.lazy("status").stdout)["pending_panes"], 7)
+    self.assertEqual(self.tmux("list-panes", "-t", source, "-F", "#{pane_dead}"), "0")
+
+  def test_sleep_refuses_last_awake_window_without_changing_processes_or_focus(self):
+    # Retained dead panes can have nonzero PIDs. They are not valid destinations,
+    # any more than the process-free restored windows elsewhere in the server.
+    self.tmux("set-option", "-g", "remain-on-exit", "on")
+    self.tmux("set-hook", "-g", "pane-died[300]", "wait-for -S dead-ready")
+    dead = self.tmux(
+      "new-window", "-d", "-t", "beta:5", "-P", "-F", "#{window_id}", "exit 0"
+    )
+    self.tmux("wait-for", "dead-ready")
+    self.assertNotEqual(self.tmux("list-panes", "-t", dead, "-F", "#{pane_pid}"), "0")
+    wid = self.tmux("display-message", "-p", "-t", "alpha:2", "#{window_id}")
+    details = "#{pane_id}\t#{pane_pid}\t#{pane_dead}\t#{@lazy_cwd}\t#{remain-on-exit}"
+    before = self.tmux("list-panes", "-a", "-F", details)
+    status = self.lazy("status").stdout
+    result = self.lazy(
+      "sleep", wid, self.session, self.generation, "--yes", success=False
+    )
+    self.assertIn("awake window", result.stderr)
+    self.assertEqual(self.tmux("list-panes", "-a", "-F", details), before)
+    self.assertEqual(self.lazy("status").stdout, status)
+    self.assertEqual(
+      self.tmux("display-message", "-p", "-t", "alpha:", "#{window_id}"), wid
+    )
+
+  def test_destination_exiting_before_navigation_leaves_source_clients_and_processes(
+    self,
+  ):
+    destination = self.tmux(
+      "new-window", "-d", "-t", "beta:5", "-P", "-F", "#{session_id}:#{window_id}"
+    )
+    self.tmux("set-option", "-p", "-t", destination, "remain-on-exit", "on")
+    self.tmux("set-hook", "-g", "pane-died[300]", "wait-for -S destination-exited")
+    self.attach_client("alpha:2")
+    source = self.tmux("display-message", "-p", "-t", "alpha:2", "#{window_id}")
+    details = "#{pane_pid}\t#{pane_dead}\t#{@lazy_cwd}\t#{remain-on-exit}"
+    panes = self.tmux("list-panes", "-t", source, "-F", details)
+    clients = self.tmux(
+      "list-clients", "-F", "#{client_name}\t#{session_id}:#{window_id}"
+    )
+    windows = self.tmux("list-windows", "-a", "-F", "#{window_id}\t#{window_active}")
+    binary_dir = self.root / "bin"
+    binary_dir.mkdir()
+    wrapper = binary_dir / "tmux"
+    # Let the destination exit at the actual external navigation boundary, after
+    # discovery/preflight but before tmux evaluates the focus-changing command.
+    wrapper.write_text(
+      f"#!{sys.executable}\n"
+      "import os, pathlib, subprocess, sys\n"
+      f"real={self.tmux_binary!r}; socket={str(self.socket)!r}\n"
+      f"target={destination!r}; marker=pathlib.Path({str(self.root / 'exited')!r})\n"
+      "if target in sys.argv and not marker.exists() and any(\n"
+      " action in sys.argv for action in ('select-window', 'if-shell')):\n"
+      " marker.touch()\n"
+      " subprocess.run([real,'-S',socket,'send-keys','-t',target,'exit','Enter'],\n"
+      "  check=True,timeout=5)\n"
+      " subprocess.run([real,'-S',socket,'wait-for','destination-exited'],\n"
+      "  check=True,timeout=5)\n"
+      "os.execv(real,[real,*sys.argv[1:]])\n"
+    )
+    wrapper.chmod(0o700)
+    with patch.dict(
+      os.environ, {"PATH": str(binary_dir) + os.pathsep + os.environ["PATH"]}
+    ):
+      result = self.lazy(
+        "sleep", source, self.session, self.generation, "--yes", success=False
+      )
+    self.assertIn("Destination is no longer awake", result.stderr)
+    self.assertEqual(
+      self.tmux("list-clients", "-F", "#{client_name}\t#{session_id}:#{window_id}"),
+      clients,
+    )
+    self.assertEqual(
+      self.tmux("list-windows", "-a", "-F", "#{window_id}\t#{window_active}"), windows
+    )
+    self.assertEqual(self.tmux("list-panes", "-t", source, "-F", details), panes)
+
+  def test_sleep_only_window_preserves_cross_session_focus_without_attached_clients(
+    self,
+  ):
+    source = self.tmux("display-message", "-p", "-t", "alpha:2", "#{window_id}")
+    for target in ("alpha:4", "alpha:3", "alpha:1"):
+      self.tmux("kill-window", "-t", target)
+    self.select_window("beta:3")
+    self.lazy("visit", source, self.session, self.generation)
+    self.lazy("sleep", source, self.session, self.generation, "--yes")
+    # beta:3 was already selected and there are no clients to switch, so no
+    # navigation hook will record this focus on sleep's behalf.
+    self.lazy("save", "--quiet")
+    self.lazy("stop", "--yes", "--quiet")
+    self.lazy("boot")
+    self.assertEqual(self.tmux("list-panes", "-t", "alpha:1", "-F", "#{pane_pid}"), "0")
+    self.assertNotEqual(
+      self.tmux("list-panes", "-t", "beta:3", "-F", "#{pane_pid}"), "0"
+    )
+    self.assertEqual(json.loads(self.lazy("status").stdout)["pending_panes"], 4)
 
 
 if __name__ == "__main__":
