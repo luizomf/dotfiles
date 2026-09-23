@@ -1,5 +1,5 @@
 # shellcheck disable=all
-theme = omtheme-darkice
+theme = omtheme
 
 # Font
 font-family = "FiraCode Nerd Font"
