@@ -4,7 +4,7 @@
   "logLevel": "info",
   "font": {
     "family": "Operator Mono SSm Lig",
-    "size": 26,
+    "size": 36,
     "lineHeight": 1.0,
     "ligatures": false
   },
