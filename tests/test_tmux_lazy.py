@@ -470,9 +470,15 @@ class LazyTmuxTests(TmuxTestCase):
           # waiting for a success message's five-second display timer.
           # send-keys would itself dismiss the message and hide the
           # regression. Unblock output without any terminal key event.
-          descriptor = os.open(ready_fifo, os.O_WRONLY | os.O_NONBLOCK)
-          os.write(descriptor, b"ready\n")
-          os.close(descriptor)
+          # respawn-pane/visit completion does not mean the shell has opened
+          # the FIFO yet. A blocking writer waits for that reader, with a bounded
+          # subprocess timeout rather than racing O_NONBLOCK or hanging the test.
+          subprocess.run(  # noqa: S603
+            ["/bin/sh", "-c", 'printf "ready\\n" > "$1"', "test", str(ready_fifo)],
+            capture_output=True,
+            check=True,
+            timeout=5,
+          )
           output = b""
           deadline = time.monotonic() + 1.5
           while b"LAZY-RENDER-READY" not in output:
