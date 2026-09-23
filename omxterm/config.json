@@ -3,7 +3,6 @@
   "confirmClose": true,
   "logLevel": "info",
   "font": {
-    "family": "Operator Mono SSm Lig",
     "size": 34,
     "lineHeight": 1.0,
     "ligatures": false
