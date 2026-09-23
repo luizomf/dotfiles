@@ -46,8 +46,6 @@ main() {
   setopt nounset pipefail
 
   # shellcheck disable=SC1091
-  . "${HOME}/dotfiles/zsh/config/functions"
-  # shellcheck disable=SC1091
   . "${HOME}/dotfiles/zsh/config/aliases"
 
   local model="${MODEL:?'Variable $MODEL not found'}"
