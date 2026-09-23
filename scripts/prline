@@ -2,4 +2,53 @@
 
 set -euo pipefail
 
-printf "\e[38;5;6m%.0s-\e[0m" {1..80} ; echo
+ESC=$'\e['
+WIDTH=80
+FG_IDX=6
+CHAR="–"
+CRESET="${ESC}0m"
+
+usage() {
+  printf '%s\n' \
+    'Usage: prline [OPTIONS]' \
+    '' \
+    'Print a bold, colored line.' \
+    '' \
+    '  -w, --width NUMBER      Number of repetitions (default: 80)' \
+    '  -f, --foreground INDEX  Foreground palette index, 0-255 (default: 6)' \
+    '  -c, --character TEXT    Use the first character (default: –)' \
+    '  -h, --help              Show this help' \
+    '' \
+    "Example: prline -w 40 -f 6 -c '─'"
+}
+
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    -w|--width)
+      WIDTH="${2:?'Invalid width'}"
+      shift 2
+    ;;
+    -f|--foreground)
+      FG_IDX="${2:?'Invalid foreground index'}"
+      shift 2
+    ;;
+    -c|--character)
+      CHAR="${2:?'Invalid character'}"
+      shift 2
+    ;;
+    -h|--help)
+      usage
+      exit 0
+    ;;
+    *)
+      printf "Invalid option: %s\n\n" "$1" >&2
+      usage >&2
+      exit 1
+    ;;
+  esac
+done
+
+CLR="${ESC}1;38;5;${FG_IDX}m"
+
+printf -v STR '%*s' "$WIDTH" ''
+printf "%s%s%s\n" "${CLR}" "${STR// /"${CHAR:0:1}"}" "${CRESET}"
