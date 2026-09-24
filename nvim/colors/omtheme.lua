@@ -167,8 +167,9 @@ do
   -- └─────────────────────────────────────────────┘
   hl("Search", { fg = p.gray_22, bg = p.blue_deep })
   hl("IncSearch", { fg = p.gray_01, bg = p.orange })
-  hl("Visual", { bg = p.selection })
-  hl("VisualNOS", { bg = p.selection })
+  -- Override syntax foregrounds so dim comments remain readable when selected.
+  hl("Visual", { fg = p.fg, bg = p.selection })
+  hl("VisualNOS", { fg = p.fg, bg = p.selection })
   hl("Substitute", { fg = p.gray_01, bg = p.red })
 
   -- ┌─────────────────────────────────────────────┐
