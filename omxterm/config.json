@@ -26,7 +26,7 @@
     "alwaysOnTop": false
   },
   "theme": {
-    "path": "./themes/omtheme-daymare.json"
+    "path": "./themes/omtheme.json"
   },
   "keybinds": {
     "quit": "CommandOrControl+Q",
