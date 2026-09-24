@@ -53,13 +53,13 @@ p.comment = p.gray_08
 
 -- Accent source: omxterm/themes/omtheme.json.
 -- Keep a static copy so this colorscheme also works without OMXTerm installed.
--- Extra syntax roles reuse ANSI colors rather than introducing unrelated hues.
+-- Syntax roles reuse ANSI colors, with a separate peach-orange accent.
 p.red = "#ff80aa"
 p.red_rose = "#ff99bb"
 p.red_vivid = p.red
 
 p.yellow = "#ffd480"
-p.orange = p.yellow
+p.orange = "#ffbb99"
 p.peach = "#fee59a" -- ANSI bright yellow
 
 p.green = "#00ffbf"
