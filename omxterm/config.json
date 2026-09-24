@@ -4,15 +4,15 @@
   "logLevel": "info",
   "font": {
     "family": "FiraCode Nerd Font",
-    "size": 34,
+    "size": 28,
     "lineHeight": 1,
     "ligatures": false
   },
   "terminal": {
     "padding": {
       "top": 4,
-      "right": 4,
-      "bottom": 8,
+      "right": 16,
+      "bottom": 4,
       "left": 16
     }
   },
