@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "omtheme-daymare",
+  "colors": {
+    "background": "#eeeeff",
+    "foreground": "#303045",
+    "cursor": "#303045",
+    "selectionBackground": "#303045",
+    "selectionForeground": "#f0f0ff",
+    "black": "#303045",
+    "red": "#eb4773",
+    "green": "#45a191",
+    "yellow": "#d7ae75",
+    "blue": "#6666cc",
+    "magenta": "#aa66cc",
+    "cyan": "#85b9e0",
+    "white": "#dcdcf5",
+    "brightBlack": "#9090aa",
+    "brightRed": "#cc335c",
+    "brightGreen": "#3d8f81",
+    "brightYellow": "#ca994e",
+    "brightBlue": "#4d4db3",
+    "brightMagenta": "#924db3",
+    "brightCyan": "#348acb",
+    "brightWhite": "#f0f0ff"
+  }
+}
