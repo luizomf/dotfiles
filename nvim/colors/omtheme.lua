@@ -6,15 +6,16 @@ local p = {}
 
 -- ┌──────────────────────────────────────────────────┐
 -- │  Background / Foreground                         │
--- │  Deep indigo terrain + lavender text             │
+-- │  OMXTerm base + lavender text                    │
 -- └──────────────────────────────────────────────────┘
-p.bg = "#000000" -- old #0f0f14
-p.fg = "#f0f0ff" -- old #eae8ff
+p.bg = "#000000"
+p.fg = "#f0f0ff"
+p.selection = "#505064" -- OMXTerm selection background
 
 -- ┌──────────────────────────────────────────────────┐
 -- │  Grays (blue-purple tinted, darkest → lightest)  │
 -- └──────────────────────────────────────────────────┘
-p.black = "#000000" -- old #06060c
+p.black = "#000000"
 
 p.gray_00 = "#08080f"
 p.gray_01 = "#141418"
@@ -24,7 +25,7 @@ p.gray_04 = "#242428"
 p.gray_05 = "#2c2c2f"
 p.gray_06 = "#36363f"
 p.gray_07 = "#40404f"
-p.gray_08 = "#4c4c5c"
+p.gray_08 = "#505068" -- OMXTerm bright black
 p.gray_09 = "#56565f"
 p.gray_10 = "#606076"
 p.gray_11 = "#6a6a80"
@@ -50,70 +51,42 @@ p.white = "#f0f0ff"
 -- Semantic alias
 p.comment = p.gray_08
 
--- ┌─────────────────────────────────────────────┐
--- │  Reds / Pinks                               │
--- │  From the hot pink sky gradient             │
--- └─────────────────────────────────────────────┘
-p.red = "#f7718d" -- ANSI red (hot pink-red)
-p.red_vivid = "#ffafc0" -- intense (critical errors)
-p.red_rose = "#ffc1cf" -- ANSI bright red (soft rose)
+-- Accent source: omxterm/themes/omtheme.json.
+-- Keep a static copy so this colorscheme also works without OMXTerm installed.
+-- Extra syntax roles reuse ANSI colors rather than introducing unrelated hues.
+p.red = "#ff80aa"
+p.red_rose = "#ff99bb"
+p.red_vivid = p.red
 
--- ┌─────────────────────────────────────────────┐
--- │  Oranges                                    │
--- └─────────────────────────────────────────────┘
-p.orange = "#ffab87" -- coral
-p.peach = "#ffc0ad" -- soft peach
+p.yellow = "#ffd480"
+p.orange = p.yellow
+p.peach = "#fee59a" -- ANSI bright yellow
 
--- ┌─────────────────────────────────────────────┐
--- │  Yellow                                     │
--- └─────────────────────────────────────────────┘
-p.yellow = "#ffdc95" -- ANSI yellow (warm gold)
+p.green = "#00ffbf"
+p.green_light = "#66ffd9"
+p.green_mint = p.green_light
 
--- ┌─────────────────────────────────────────────┐
--- │  Greens                                     │
--- │  Cyan-shifted greens from the alien flora   │
--- └─────────────────────────────────────────────┘
-p.green = "#18ffc8" -- ANSI green (emerald cyan-green)
-p.green_light = "#6fffdd" -- ANSI bright green
-p.green_mint = "#96ffe6" -- mint
+p.cyan = "#80d4ff"
+p.teal = p.cyan
+p.teal_bright = "#99ddff"
+p.aqua = p.cyan
 
--- ┌──────────────────────────────────────────────────┐
--- │  Cyans / Teals (Accent)                          │
--- │  The glowing river, crystals and mushrooms       │
--- └──────────────────────────────────────────────────┘
--- p.cyan = "#30f4f2" -- (old accent) ANSI cyan (neon teal)
+p.blue = "#8095ff"
+p.blue_light = "#99aaff"
+p.blue_sky = p.teal_bright
+p.blue_soft = p.blue_light
+p.blue_vivid = p.blue
 
--- MAIN ACCENT COLOR
-p.cyan = "#59d9ff" -- ANSI cyan (neon teal)
--- p.teal = "#20d8d6" -- teal (borders, links)
-p.teal = "#81e2ff" -- teal (borders, links)
-p.teal_bright = "#abecff" -- ANSI bright cyan
-p.teal_dark = "#7fcee6" -- dark teal (diff backgrounds)
+p.magenta = "#e38fff"
+p.magenta_vivid = "#f1a8ff"
+p.purple = p.magenta
+p.lavender = p.blue_light
+p.purple_light = p.magenta_vivid
 
--- ┌─────────────────────────────────────────────┐
--- │  Blues                                      │
--- │  Periwinkle/indigo from the planet          │
--- └─────────────────────────────────────────────┘
-p.blue = "#8fb1ff" -- ANSI blue (periwinkle)
-p.blue_light = "#8fc3ff" -- ANSI bright blue
-p.blue_sky = "#9eb7ff" -- soft sky blue
-p.blue_soft = "#afd3ff" -- soft purple-blue
-p.blue_vivid = "#5194ff" -- vivid indigo
-p.blue_deep = "#5173ff" -- deep indigo
-p.aqua = "#4fbdff" -- bright aqua glow
-
--- ┌─────────────────────────────────────────────┐
--- │  Purples                                    │
--- └─────────────────────────────────────────────┘
-p.purple = "#c88bff" -- purple
-p.lavender = "#b1a6ff" -- lavender/periwinkle
-p.purple_light = "#d6b6ff" -- light purple/lilac
-
--- ┌─────────────────────────────────────────────┐
--- │  Magentas                                   │
--- └─────────────────────────────────────────────┘
-p.magenta = "#ff98f0" -- ANSI magenta (pink)
-p.magenta_vivid = "#ffaff3" -- ANSI bright magenta (hot)
+-- Dark shades of the ANSI accents keep highlighted text readable.
+p.blue_deep = "#404b80"
+p.teal_dark = "#003326"
+p.diff_delete = "#331a22"
 
 do
   local hl = function(name, opts)
@@ -194,8 +167,8 @@ do
   -- └─────────────────────────────────────────────┘
   hl("Search", { fg = p.gray_22, bg = p.blue_deep })
   hl("IncSearch", { fg = p.gray_01, bg = p.orange })
-  hl("Visual", { bg = p.gray_04 })
-  hl("VisualNOS", { bg = p.gray_04 })
+  hl("Visual", { bg = p.selection })
+  hl("VisualNOS", { bg = p.selection })
   hl("Substitute", { fg = p.gray_01, bg = p.red })
 
   -- ┌─────────────────────────────────────────────┐
@@ -260,12 +233,12 @@ do
   hl("Removed", { fg = p.red })
   hl("Changed", { fg = p.cyan })
   hl("diffAdded", { fg = p.teal_bright, bg = p.teal_dark })
-  hl("diffRemoved", { fg = p.red_rose, bg = p.peach })
+  hl("diffRemoved", { fg = p.red_rose, bg = p.diff_delete })
   hl("diffChanged", { fg = p.blue_soft, bg = p.gray_03 })
   hl("diffFile", { fg = p.blue_light })
   hl("diffLine", { fg = p.gray_08 })
   hl("diffIndexLine", { fg = p.magenta })
-  hl("diffOldFile", { fg = p.blue, bg = p.peach })
+  hl("diffOldFile", { fg = p.blue, bg = p.diff_delete })
   hl("diffNewFile", { fg = p.blue, bg = p.teal_dark })
 
   -- ┌─────────────────────────────────────────────┐
