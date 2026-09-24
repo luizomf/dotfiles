@@ -53,7 +53,7 @@ p.comment = p.gray_08
 
 -- Accent source: omxterm/themes/omtheme.json.
 -- Keep a static copy so this colorscheme also works without OMXTerm installed.
--- Syntax roles reuse ANSI colors, with a separate peach-orange accent.
+-- Syntax roles reuse ANSI colors, with peach-orange and violet accents.
 p.red = "#ff80aa"
 p.red_rose = "#ff99bb"
 p.red_vivid = p.red
@@ -82,6 +82,7 @@ p.magenta_vivid = "#ebb4fd"
 p.purple = p.magenta
 p.lavender = p.blue_light
 p.purple_light = p.magenta_vivid
+p.violet = "#bd9efa"
 
 -- Dark shades of the ANSI accents keep highlighted text readable.
 p.blue_deep = "#405580"
@@ -275,14 +276,14 @@ do
   hl("@variable.builtin", { fg = p.orange })
   hl("@variable.parameter", { fg = p.yellow })
   hl("@variable.parameter.builtin", { fg = p.yellow })
-  hl("@variable.member", { fg = p.aqua })
+  hl("@variable.member", { fg = p.violet })
   hl("@module.builtin", { fg = p.red })
   hl("@label", { fg = p.blue_light })
   hl("@string.regexp", { fg = p.blue_sky, italic = true })
   hl("@string.escape", { fg = p.magenta, italic = true })
   hl("@string.documentation", { fg = p.yellow, italic = true })
   hl("@type.builtin", { fg = p.blue })
-  hl("@property", { fg = p.aqua })
+  hl("@property", { fg = p.violet })
   hl("@constructor", { fg = p.magenta })
   hl("@operator", { fg = p.blue_light })
   hl("@keyword", { italic = true, fg = p.purple })
