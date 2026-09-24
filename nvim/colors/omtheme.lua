@@ -77,8 +77,8 @@ p.blue_sky = p.teal_bright
 p.blue_soft = p.blue_light
 p.blue_vivid = p.blue
 
-p.magenta = "#e38fff"
-p.magenta_vivid = "#f1a8ff"
+p.magenta = "#e2a1f7"
+p.magenta_vivid = "#ebb4fd"
 p.purple = p.magenta
 p.lavender = p.blue_light
 p.purple_light = p.magenta_vivid
