@@ -2,8 +2,4 @@
 
 set -euo pipefail
 
-if [[ -t 2 && -z "${NO_COLOR:-}" && "${TERM:-}" != dumb ]]; then
-  printf '\033[33m[WARN]\033[0m %s\n' "$*" >&2
-else
-  printf '[WARN] %s\n' "$*" >&2
-fi
+exec "${BASH_SOURCE[0]%/*}/logbase" -t WARN -f 3 -- "$@" >&2

@@ -2,8 +2,4 @@
 
 set -euo pipefail
 
-if [[ -t 2 && -z "${NO_COLOR:-}" && "${TERM:-}" != dumb ]]; then
-  printf '\033[36m[DEBUG]\033[0m %s\n' "$*" >&2
-else
-  printf '[DEBUG] %s\n' "$*" >&2
-fi
+exec "${BASH_SOURCE[0]%/*}/logbase" -t DEBUG -f 6 -- "$@" >&2

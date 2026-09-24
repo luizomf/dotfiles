@@ -29,8 +29,35 @@ nonempty `NO_COLOR` or `TERM=dumb` disables color. Redirected output has no ANSI
 color escapes added by these commands. Message contents are not sanitized.
 
 All levels return success when printing succeeds: `logerror` reports an error
-but does not exit the caller. Exit or return explicitly when needed. Each
-invocation starts a Bash process, but the command itself uses only builtins.
+but does not exit the caller. Exit or return explicitly when needed. Each level
+command starts Bash and replaces itself with the adjacent `logbase` script using
+`exec`; neither script requires external utilities. Keep these commands and
+`logbase` together when copying them. Bash 3.2 and newer are supported.
+
+## Custom labels with `logbase`
+
+```bash
+logbase -t BUILD -f 6 -- 'Compiling files'
+logbase -t NOTICE -f 0 -b 11 --open-tag '<' --close-tag '>' -- 'Check output'
+logbase -- '--help is literal message text here'
+```
+
+`logbase` writes to stdout; use `>&2` for stderr. The terminal/color check
+follows that redirection. Only a nonempty tag (including its delimiters) is
+colored; without a tag, the command prints plain message text. Tag case is
+preserved. With a tag, one space separates the label and message, including an
+empty message. Without arguments, `logbase` prints a newline.
+
+Options must precede the message; parsing stops at `--` or the first non-option
+argument. Unknown options and missing values fail with usage on stderr. Palette
+indices must be 1–3 decimal digits with a value from 0 to 255; leading zeros are
+accepted. Foreground defaults to 7; background is unset. Configuration comes
+from arguments, not ambient `TAG`, `TEXT`, or color variables. `NO_COLOR` and
+`TERM` retain their meaning above. Use `logbase --help` for all options.
+
+Run the focused regression checks with `bash tests/test_logging.sh`. Set
+`BASH_BIN` to select the interpreter for direct test invocations; the
+executables still resolve Bash through their `#!/usr/bin/env bash` shebang.
 
 ## Migration from Zsh functions
 

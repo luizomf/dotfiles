@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+  printf '%s\n' \
+    'Usage: logbase [OPTIONS] [--] [TEXT ...]' \
+    '' \
+    'Print a line to stdout, optionally with a colored tag.' \
+    '' \
+    '  -t, --tag TEXT          Tag text (default: no tag)' \
+    '  -f, --foreground INDEX  Foreground palette index, 0-255 (default: 7)' \
+    '  -b, --background INDEX  Background palette index, 0-255 (default: none)' \
+    '      --open-tag TEXT     Text before tag (default: [)' \
+    '      --close-tag TEXT    Text after tag (default: ])' \
+    '  -h, --help              Show this help' \
+    '' \
+    'Options precede the message. Use -- for a message starting with a dash.' \
+    "Example: logbase -f 6 -t INFO -- 'Text to log.'"
+}
+
+die() {
+  printf '%s\n\n' "$1" >&2
+  usage >&2
+  exit 1
+}
+
+color_index() {
+  # Bound the length before arithmetic; force decimal instead of octal.
+  [[ "$1" =~ ^[0-9]{1,3}$ ]] || die 'Color index must be an integer from 0 to 255 (1-3 digits)'
+  local value=$((10#$1))
+  [[ $value -le 255 ]] || die 'Color index must be an integer from 0 to 255 (1-3 digits)'
+  printf '%s' "$value"
+}
+
+TAG=''
+OTAG='['
+CTAG=']'
+FG_IDX=7
+BG_IDX=''
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -t|--tag|-f|--foreground|-b|--background|--open-tag|--close-tag)
+      [[ $# -ge 2 ]] || die "Missing value for $1"
+      case "$1" in
+        -t|--tag) TAG=$2 ;;
+        -f|--foreground) FG_IDX=$(color_index "$2") ;;
+        -b|--background) BG_IDX=$(color_index "$2") ;;
+        --open-tag) OTAG=$2 ;;
+        --close-tag) CTAG=$2 ;;
+      esac
+      shift 2
+      ;;
+    -h|--help) usage; exit 0 ;;
+    --) shift; break ;;
+    -*) die "Unknown option: $1" ;;
+    *) break ;;
+  esac
+done
+
+text="$*"
+if [[ -z "$TAG" ]]; then
+  printf '%s\n' "$text"
+elif [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-}" != dumb ]]; then
+  colors=$'\033[38;5;'"${FG_IDX}m"
+  if [[ -n "$BG_IDX" ]]; then
+    colors+=$'\033[48;5;'"${BG_IDX}m"
+  fi
+  printf '%s%s%s%s\033[0m %s\n' "$colors" "$OTAG" "$TAG" "$CTAG" "$text"
+else
+  printf '%s%s%s %s\n' "$OTAG" "$TAG" "$CTAG" "$text"
+fi
