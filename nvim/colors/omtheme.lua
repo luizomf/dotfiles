@@ -71,8 +71,8 @@ p.teal = p.cyan
 p.teal_bright = "#99ddff"
 p.aqua = p.cyan
 
-p.blue = "#8095ff"
-p.blue_light = "#99aaff"
+p.blue = "#80aaff"
+p.blue_light = "#99bbff"
 p.blue_sky = p.teal_bright
 p.blue_soft = p.blue_light
 p.blue_vivid = p.blue
@@ -84,7 +84,7 @@ p.lavender = p.blue_light
 p.purple_light = p.magenta_vivid
 
 -- Dark shades of the ANSI accents keep highlighted text readable.
-p.blue_deep = "#404b80"
+p.blue_deep = "#405580"
 p.teal_dark = "#003326"
 p.diff_delete = "#331a22"
 
