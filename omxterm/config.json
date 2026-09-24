@@ -5,7 +5,7 @@
   "font": {
     "family": "FiraCode Nerd Font",
     "size": 34,
-    "lineHeight": 1.0,
+    "lineHeight": 1,
     "ligatures": false
   },
   "terminal": {
@@ -16,9 +16,15 @@
       "left": 16
     }
   },
-  "scrollback": { "lines": 30000 },
-  "keyboard": { "optionAsAlt": "none" },
-  "window": { "alwaysOnTop": false },
+  "scrollback": {
+    "lines": 30000
+  },
+  "keyboard": {
+    "optionAsAlt": "none"
+  },
+  "window": {
+    "alwaysOnTop": false
+  },
   "theme": {
     "path": "./themes/omtheme.json"
   },
