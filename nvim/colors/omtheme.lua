@@ -53,7 +53,7 @@ p.comment = p.gray_08
 
 -- Accent source: omxterm/themes/omtheme.json.
 -- Keep a static copy so this colorscheme also works without OMXTerm installed.
--- Most syntax roles reuse ANSI colors; recurring built-ins use a muted rose.
+-- Extra syntax roles reuse ANSI colors rather than introducing unrelated hues.
 p.red = "#ff80aa"
 p.red_rose = "#ff99bb"
 p.red_vivid = p.red
@@ -272,8 +272,7 @@ do
   -- │  Treesitter: Syntax                         │
   -- └─────────────────────────────────────────────┘
   hl("@variable", { fg = p.gray_20, italic = false })
-  -- Muted rose for recurring built-ins (self, this, etc., depending on the parser).
-  hl("@variable.builtin", { fg = "#cc8fa8" })
+  hl("@variable.builtin", { fg = p.orange })
   hl("@variable.parameter", { fg = p.yellow })
   hl("@variable.parameter.builtin", { fg = p.yellow })
   hl("@variable.member", { fg = p.aqua })
