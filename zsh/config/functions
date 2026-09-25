@@ -220,6 +220,11 @@ backup_ssh() {
 }
 
 killgui() {
+  if [[ "$(uname -s)" != "Linux" ]]; then
+    echo "killgui: Linux only; skipped."
+    return 0
+  fi
+
   echo ">> Stopping graphical interface (sddm + wayland)..."
   sudo systemctl stop sddm
   sudo systemctl stop graphical.target
@@ -227,6 +232,11 @@ killgui() {
 }
 
 startgui() {
+  if [[ "$(uname -s)" != "Linux" ]]; then
+    echo "startgui: Linux only; skipped."
+    return 0
+  fi
+
   echo ">> Starting graphical interface..."
   sudo systemctl start graphical.target
   sudo systemctl start sddm
