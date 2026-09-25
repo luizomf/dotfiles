@@ -9,20 +9,12 @@ and suggest simpler or safer alternatives when appropriate.
 Use English for code, documentation, comments, commits, and similar artifacts
 unless the project specifies otherwise.
 
-Ask for clarification only when ambiguity materially affects the outcome,
-safety, scope, or authorization. Otherwise, make reasonable assumptions and
-proceed.
+Keep going when the next step is clear and within scope. Ask only when missing
+information blocks progress, or before destructive or hard-to-reverse actions,
+such as deleting user data, force-pushing, or changing the live environment.
 
-Create new Git worktrees under `~/sannux-data/worktrees/<repo>/<worktree_name>`,
-not inside or alongside project checkouts. This host-local root is excluded from
-`synchosts`; transfer work explicitly when needed. Do not relocate existing
-worktrees just to apply this convention.
+Create new Git worktrees under `~/sannux-data/worktrees/<repo>/<worktree_name>`.
 
-Prefix supported commands with `rtk` (e.g. `rtk ls -lah`). Use
-`rtk proxy <command>` when bypassing RTK is necessary.
+Prefix supported commands with `rtk` when available (e.g. `rtk ls -lah`).
 
 RTK docs: `@~/.pi/agent/RTK.md`
-
-For Chrome running on an authorized SSH host, use `browser-harness-ssh` rather
-than exposing CDP to the network. Read `browser-harness-ssh --help` before use;
-its `tunnel` subcommand documents the required managed-process lifecycle.
