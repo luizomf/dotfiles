@@ -1,251 +1,58 @@
-# Dotfiles Guidelines
+# Dotfiles
 
-## Required checklist for every change
+Personal dotfiles, bootstrap automation, and standalone utilities for macOS,
+Ubuntu, and traditional Fedora/Asahi—not a unified application or framework.
+Preserve personal preferences and keep changes focused on the requested task.
 
-Before editing and again before handing off, review this checklist—even when
-arriving from another project. These dotfiles are shared infrastructure:
-deployed symlinks can make edits affect the live environment immediately,
-without running the installer. Do not assume a change is isolated to this
-repository.
+## Working style
 
-- [ ] **Scope and consumers:** identify affected configs, scripts, symlink
-      targets, and downstream commands or projects. Check callers before
-      changing paths, arguments, defaults, output formats, or
-      environment-variable contracts.
-- [ ] **Public-data safety:** review changed and newly added files for secrets,
-      `.env` files, credentials, private host details, logs, and local state.
-      Keep machine-specific values local; document variable names and safe
-      placeholders only. Never print secret values as part of verification.
-- [ ] **Dependencies and startup:** when changing packages, runtimes, images,
-      assets, or external tools, check their references and consumers. Preserve
-      applicable macOS/Ubuntu/Fedora behavior, executable permissions, quoting,
-      and shared path overrides. For unattended commands, check explicit PATH,
-      environment, working directory, and non-interactive execution assumptions.
-- [ ] **Safe validation:** choose focused syntax and regression checks for the
-      affected behavior (see Engineering and verification below). Do not run the
-      installer, reload live configuration, or trigger remote, publishing, sync,
-      or queue operations just to validate a change. Obtain explicit
-      authorization for checks with those side effects; use isolated
-      environments where practical.
-- [ ] **Next-use readiness:** consider a fresh login shell, a new
-      terminal/editor session, and the next unattended run, as applicable—not
-      just the current shell. Identify any required restart, reload, local
-      migration, or downstream update; document it rather than applying it
-      silently.
-- [ ] **Documentation consistency:** after every change, check that affected
-      README sections, agent instructions, examples, and comments still match
-      the implementation and tests. Correct verified discrepancies in the same
-      change; prefer links to a source of truth over duplicated facts. If intent
-      or evidence is unclear, report the conflict rather than inventing behavior
-      or test results.
-- [ ] **Cleanup:** before final handoff, follow [Task cleanup](#task-cleanup)
-      for task-owned temporary artifacts, worktrees, and local or remote
-      branches.
-- [ ] **Handoff:** review the final diff, update affected documentation, and
-      report checks run, checks skipped or not applicable, and remaining risks.
-      If a relevant consumer cannot be verified, say so; do not claim the next
-      run is guaranteed.
+- Keep going while the next step is clear and within scope. Ask when missing
+  information blocks progress or an action has destructive consequences the user
+  has not already authorized. No mandatory planning or orchestration flow.
+- Prefer code that is easy to understand and maintain. Add abstractions,
+  dependencies, or shared helpers only when they solve a concrete current need.
+- Do not grow this file with task history, obvious advice, or speculative rules.
+  Put lasting technical details in `docs/`, preferably beside existing guidance.
 
-## Purpose and scope
+## Real safety boundaries
 
-This public repository contains Otávio Miranda's personal dotfiles and bootstrap
-automation for macOS, Ubuntu, and traditional Fedora/Asahi. Other people also
-use it, so preserve personal preferences while keeping shared setup behavior
-safe and understandable.
+- Tracked files and commits are public. Keep secrets, private host details,
+  credentials, sessions, logs, and machine-local state out of Git. `pi/agent/`
+  contains static configuration only.
+- Deployed configs are often symlinks into this checkout: edits can affect the
+  live environment immediately. Check affected consumers before changing paths,
+  arguments, defaults, or environment-variable contracts.
+- Never run `install.sh` as a check. Do not trigger sync, upload, SSH, queue,
+  remote changes, or live reloads merely to validate code; those effects need
+  task authorization. Prefer isolated checks.
+- Preserve unrelated work. Clean up only task-owned temporary artifacts,
+  processes, branches, and worktrees; preserve their useful work first.
 
-Treat this as a personal collection of dotfiles, setup automation, and
-standalone utilities—not as a unified application, product, or framework. Work
-on the specific config or script requested, following its existing conventions.
-Do not impose repository-wide architecture, uniform layouts, or a shared
-toolchain just to make the collection look like a software project. Shared
-helpers are justified by concrete needs in existing consumers, not by a desire
-to standardize everything. The safety requirements here protect the real
-environments these files affect; they are not a mandate to turn personal
-dotfiles into a supported product.
+## Repository conventions
 
-- These instructions apply repository-wide. `pi/agent/AGENTS.md` adds stricter
-  rules for `pi/agent/`; follow the closest applicable `AGENTS.md`.
-- `README.md` is the user-facing source for supported installation and safety
-  warnings. Keep it limited to installation; put technical and maintenance notes
-  under `docs/`, using one page per script when applicable. Do not claim broader
-  platform support than the README documents.
-- `config/paths.sh` is the documented source of truth for shared host paths.
-  Preserve `OM_PATHS_FILE` overrides at callers that support them.
-- When documentation, tests, comments, and implementation disagree, trace the
-  intended behavior, correct verified discrepancies, and report unresolved
-  conflicts instead of silently choosing one.
+- `README.md` covers installation and safety; `docs/` holds maintenance details.
+  Correct affected documentation when changing behavior.
+- `config/paths.sh` owns shared host paths. Preserve supported `OM_PATHS_FILE`
+  overrides, platform compatibility, interpreter contracts, executable bits, and
+  unattended execution requirements. Prefer `$HOME` and existing path variables
+  over machine-specific absolute paths.
+- Keep persistent scratch notes in `./.scratch/`, never in commits.
+- Create worktrees under `~/sannux-data/worktrees/<repo>/<worktree_name>`.
 
-## Repository map and boundaries
+## Checks and delivery
 
-- `install.sh` installs dependencies and replaces user configuration with links
-  into this checkout. `homebrew/Brewfile` is the macOS package manifest.
-- `zsh/`, `tmux/`, `nvim/`, `vim/`, `ghostty/`, `fastfetch/`, and `git/` contain
-  deployed application and shell configuration.
-- `scripts/` contains user commands, including utilities that contact remote
-  machines, cloud services, and queues. Inspect dependencies and side effects
-  before changing or running one.
-- `pi/agent/` contains only static Pi configuration. Credentials, sessions,
-  trust decisions, generated model state, and machine-specific model settings
-  must remain local, as described in `README.md`.
-- `prompts/` contains reusable prompt text. `tests/` covers selected high-risk
-  or complex scripts; it is not intended to cover every command or
-  configuration.
-
-## Safety and public data
-
-Treat every tracked file and Git commit as public.
-
-- Never add secrets, credentials, tokens, private keys, `.env` files, session
-  data, personal logs, or other sensitive information. Do not rely on
-  `.gitignore` as the only protection.
-- Do not add caches, generated output, runtime artifacts, or machine-local state
-  unless explicitly requested and safe for publication.
-- Never run `install.sh` as a check: it is interactive and intentionally
-  destructive. Do not run synchronization, upload, SSH, queue, or remote-host
-  helpers without explicit authorization for their side effects.
-- Installation and setup changes require extra care because they can overwrite
-  files, install software, and affect users beyond the repository owner.
-- Preserve unrelated personal configuration. Do not generalize, reformat, or
-  "clean up" preferences outside the requested scope.
-
-## Maintainable code and change boundaries
-
-These guidelines apply within the dotfiles constraints above and do not expand
-scope, authorize side effects, or change the test policy below.
-
-- Prefer simplicity where it improves the solution, not as an absolute rule.
-  Evaluate each case by correctness, clarity, safety, and ease of maintenance.
-  Choose the simplest design that serves those needs well; fewer lines or fewer
-  abstractions do not necessarily mean less complexity. Judge the whole solution
-  by what a maintainer must understand, not by how sophisticated or compact it
-  looks. Preserve required behavior, safety checks, and platform support.
-- Make the smallest coherent change. Avoid parallel implementations, speculative
-  extension points, unrelated cleanup, and new dependencies or tooling without a
-  concrete need in the task.
-- Use interfaces, types, modules, and other abstractions when their concrete
-  benefits outweigh the complexity they introduce. A little more structure can
-  make the whole solution simpler by centralizing validation, protecting
-  invariants, reducing coupling, or making changes easier to reason about.
-  Prefer direct code when it already serves those needs; avoid layers that
-  merely forward calls, rename concepts, or anticipate hypothetical needs.
-  Neither reject a useful abstraction for being an abstraction nor add one just
-  to satisfy a tool or imitate an application architecture.
-- Where scripts mix substantial decision logic with command execution, remote
-  access, or storage, separate those responsibilities at a useful boundary. Keep
-  external formats and execution mechanics there rather than spreading them
-  through internal decisions. Use small explicit inputs and results; do not
-  introduce a wrapper for every command.
-- Reuse the existing configuration source for values already intended to vary by
-  host or operator, preserving supported overrides and validation. Do not
-  scatter duplicate defaults through callers or make every literal configurable.
-  Shared host paths remain governed by `config/paths.sh` as described above.
-- When a small feature requires edits across unrelated parts of the repository,
-  check for unnecessary coupling. Simplify the narrow boundary when it is within
-  the task; report larger cleanup separately instead of turning the change into
-  a rewrite.
-
-## Engineering and verification
-
-- Prefer simple, explicit changes in the existing language and style. Preserve
-  Bash, Zsh, POSIX shell, Python, and Lua boundaries, including whether a shell
-  file is executed or sourced.
-- Quote paths and arguments, validate untrusted input at boundaries, preserve
-  useful error context, and explain non-obvious intent rather than narrating
-  syntax.
-- Do not add tests by default. Add them only for observable behavior with
-  complex logic or meaningful risk that review and a syntax check would not
-  cover.
-- Do not test one-liners, simple wrappers, static values, command lists, exact
-  source text, implementation details, or scripts whose purpose is already to
-  perform a manual test or smoke check.
-- When substantial behavior genuinely needs automated tests, use TDD. Do not
-  invent low-value tests merely to claim that TDD was used.
-- Keep tests focused on outcomes and plausible regressions. Prefer a few durable
-  cases over exhaustive mocks of incidental internals.
-- Development feedback is configured in `pyproject.toml`: Ruff for Python lint
-  and formatting, Pyright for type diagnostics. See
-  [Development tools](docs/development.md) for setup and commands. This does not
-  make the dotfiles an application/package or add a repository-wide build or CI
-  gate. Keep using the focused tests below.
-- Tools are guardrails for clearer, safer code, not a score to optimize. Use
-  diagnostics to catch questionable calls, types, imports and common mistakes.
-  Do not add abstractions, casts, blanket suppressions or configuration
-  exclusions merely to make a report green. Investigate a warning; fix a
-  relevant defect or explain a narrow, justified exception. Do not enable every
-  rule just for rigor.
-- For Python changes, run Ruff lint, Ruff format checks and Pyright on the
-  affected files using `uv run --locked`. Compare pre-existing diagnostics when
-  working on legacy code; report remaining issues rather than hiding them or
-  claiming the whole repository passes. New code should follow the configured
-  conventions. A real unrelated defect can be reported for a separate change;
-  this is not permission to ignore new issues introduced by the current task.
-- Use the editor's formatting policy, not a personal default: `pyproject.toml`
-  for Python, `nvim/config_files/prettierrc.json` for Prettier-supported files,
-  and `nvim/config_files/stylua.toml` for Lua. Root `.prettierrc.json` and
-  `.stylua.toml` are links to those existing sources of truth. Format
-  new/changed files only; do not run repository-wide auto-fixes or reformat
-  unrelated files. If a legacy file would produce substantial unrelated
-  formatting churn, separate that normalization from the functional change
-  rather than weakening the formatter.
-- `.venv` and `uv.lock` serve development tools only. Never add the virtualenv
-  to the global PATH or make deployed scripts, installers, hooks or unattended
-  jobs depend on it. Preserve each script's runtime interpreter contract; the
-  dev environment's Python version is not permission to raise runtime
-  requirements. When adding extensionless Python commands, update both tools'
-  discovery lists in `pyproject.toml`; update version overrides only with
-  supporting evidence.
-- For changes to `scripts/bq`, run from the repository root:
-  `python3 -m unittest tests/test_bq.py`.
-- For other changes, use focused interpreter-specific syntax or behavior checks
-  that do not alter the host. Review the final diff and report exactly what ran,
-  what was skipped, and any remaining risk.
-
-## Commit and push delivery
-
-For requested repository changes, complete delivery by committing and pushing
-that work to the intended branch after review and applicable checks, unless the
-user asks to leave it uncommitted or not to push. Do not ask for approval again
-merely to perform this default delivery. If a check or push fails, or the target
-branch is genuinely unclear, report the blocker and preserve the work rather
-than claiming completion.
-
-Stage only the task's reviewed changes, including pre-existing changes the user
-explicitly asks to finish. Preserve unrelated edits and never publish private
-wiki files, scratch notes, credentials, or local state.
-
-## Git worktrees
-
-Create new Git worktrees under `~/sannux-data/worktrees/<repo>/<worktree_name>`,
-never inside the project checkout or in sibling directories under
-`$PROJECTS_DIR`. This host-local root is excluded from `synchosts`; transfer
-work explicitly when needed. Do not relocate existing worktrees as part of
-applying this convention.
-
-## Task cleanup
-
-When finishing a task, remove temporary artifacts, worktrees, and branches that
-this agent created for that task and no longer needs. Apply this to the local
-machine, authorized remote checkouts, and branches on Git remotes.
-
-- Establish ownership from this task's recorded actions; a matching name, age,
-  clean worktree, or merged status alone does not prove ownership.
-- Before removing a worktree or branch, verify its work is preserved in the
-  intended target branch or another agreed durable location. Check for untracked
-  files, uncommitted changes, and commits that have not been preserved. Never
-  force deletion to bypass these checks.
-- Never remove another agent's or the user's worktrees, branches, changes, or
-  local state. If ownership, preservation, or remote authorization is uncertain,
-  leave the item intact and report it rather than guessing.
-- Use explicit task-owned paths and branch names, not broad deletion or pruning
-  commands. Do not delete the user's primary checkout or shared target branches.
-- Stop task-owned temporary processes when no longer needed. Preserve useful
-  investigation notes under the [Scratch](#scratch) policy, and report any
-  deliberately retained artifacts or cleanup that could not safely complete.
-
-## Scratch
-
-Use `./.scratch/*` for internal notes, working documents, and memory that need
-to persist across sessions for days while work is ongoing. Unlike `/tmp` or
-ephemeral handoffs, these files should remain available while useful. They are
-local-only, not repository deliverables: never commit them, and remove them only
-when no longer needed.
+- Use focused syntax and behavior checks. For complex or risky behavior, use
+  test-first development and test observable outcomes. Simple wrappers and
+  static configuration do not need tests just for coverage.
+- Format changed files with existing settings: `pyproject.toml` for Python,
+  `.prettierrc.json` for Prettier, `.stylua.toml` for Lua. No unrelated cleanup.
+- For Python, run Ruff lint/format checks and Pyright on affected files with
+  `uv run --locked`; see [development tools](docs/development.md). Report
+  pre-existing diagnostics instead of hiding them. `.venv` is for development,
+  never a deployed runtime dependency. Register new extensionless Python
+  commands in both discovery lists in `pyproject.toml`.
+- For `scripts/bq` changes, run `python3 -m unittest tests/test_bq.py`.
+- Review the diff for correctness and public-data safety. Commit and push the
+  task's changes to the intended branch unless asked otherwise. Report checks
+  run, blockers, and any required restart or migration; do not silently apply
+  it.
