@@ -1,18 +1,25 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -Eeuo pipefail
+
+report_error() {
+  local status="$1" command="$2"
+  printf 'tmuxns: ERROR: command failed (exit %s): %s\n' "$status" "$command" >&2
+  exit "$status"
+}
+trap 'report_error "$?" "$BASH_COMMAND"' ERR
 
 tmuxns() {
   if [[ -z "${1:-}" ]]; then
-    echo "Please, inform the name for the session."
+    echo "tmuxns: ERROR: please provide a session name." >&2
     return 1
   fi
 
   session_name="$1"
   shift
 
-  if [[ -z "${PROJECTS_DIR}" ]]; then
-    echo "Could not find PROJECTS_DIR env variable"
+  if [[ -z "${PROJECTS_DIR:-}" ]]; then
+    echo "tmuxns: ERROR: PROJECTS_DIR is unset or empty." >&2
     return 1
   fi
 

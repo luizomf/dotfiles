@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -Eeuo pipefail
+
+report_error() {
+  local status="$1" command="$2"
+  printf 'tmuxnw: ERROR: command failed (exit %s): %s\n' "$status" "$command" >&2
+  exit "$status"
+}
+trap 'report_error "$?" "$BASH_COMMAND"' ERR
 
 WINDOW_NAME="tmp"
 
