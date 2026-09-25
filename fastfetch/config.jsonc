@@ -12,23 +12,23 @@
       "6": "",
       "7": "",
       "8": "",
-      "9": ""
+      "9": "",
     },
     "width": null,
     "height": null,
     "padding": {
       "top": 0,
       "left": 0,
-      "right": 4
+      "right": 4,
     },
     "printRemaining": true,
     "preserveAspectRatio": false,
-    "recache": false,
+    "cache": false,
     "position": "left",
     "chafa": {
       "fgOnly": false,
-      "symbols": "block+border+space-wide-inverted"
-    }
+      "symbols": "block+border+space-wide-inverted",
+    },
   },
   "display": {
     "stat": false,
@@ -41,18 +41,18 @@
       "keys": "",
       "title": "",
       "output": "",
-      "separator": ""
+      "separator": "",
     },
     "brightColor": true,
     "duration": {
       "abbreviation": false,
-      "spaceBeforeUnit": "default"
+      "spaceBeforeUnit": "default",
     },
     "size": {
       "maxPrefix": "YB",
       "binaryPrefix": "iec",
       "ndigits": 2,
-      "spaceBeforeUnit": "default"
+      "spaceBeforeUnit": "default",
     },
     "temp": {
       "unit": "D",
@@ -60,61 +60,58 @@
       "color": {
         "green": "32",
         "yellow": "93",
-        "red": "91"
+        "red": "91",
       },
-      "spaceBeforeUnit": "default"
+      "spaceBeforeUnit": "default",
     },
     "percent": {
-      "type": [
-        "num",
-        "num-color"
-      ],
+      "type": ["num", "num-color"],
       "ndigits": 0,
       "color": {
         "green": "32",
         "yellow": "93",
-        "red": "91"
+        "red": "91",
       },
       "spaceBeforeUnit": "default",
-      "width": 0
+      "width": 0,
     },
     "bar": {
       "char": {
         "elapsed": "■",
-        "total": "-"
+        "total": "-",
       },
       "border": {
         "left": "[ ",
         "right": " ]",
         "leftElapsed": "",
-        "rightElapsed": ""
+        "rightElapsed": "",
       },
       "color": {
         "elapsed": "auto",
         "total": "97",
-        "border": "97"
+        "border": "97",
       },
-      "width": 10
+      "width": 10,
     },
     "fraction": {
-      "ndigits": null
+      "ndigits": null,
     },
     "noBuffer": false,
     "key": {
       "width": 0,
       "type": "string",
-      "paddingLeft": 0
+      "paddingLeft": 0,
     },
     "freq": {
       "ndigits": 2,
-      "spaceBeforeUnit": "default"
+      "spaceBeforeUnit": "default",
     },
-    "constants": []
+    "constants": [],
   },
   "general": {
     "thread": true,
     "processingTimeout": 5000,
-    "detectVersion": true
+    "detectVersion": true,
   },
   "modules": [
     // {
@@ -136,82 +133,80 @@
     // },
     {
       "type": "os",
-      "keyIcon": ""
+      "keyIcon": "",
     },
     {
       "type": "host",
-      "keyIcon": "󰌢"
+      "keyIcon": "󰌢",
     },
     {
       "type": "kernel",
-      "keyIcon": ""
+      "keyIcon": "",
     },
     {
       "type": "uptime",
-      "keyIcon": ""
+      "keyIcon": "",
     },
     {
       "type": "packages",
       "keyIcon": "󰏖",
-      "disabled": [
-        "winget"
-      ],
-      "combined": false
+      "disabled": ["winget"],
+      "combined": false,
     },
     {
       "type": "shell",
-      "keyIcon": ""
+      "keyIcon": "",
     },
     {
       "type": "display",
       "keyIcon": "󰍹",
       "compactType": "none",
       "preciseRefreshRate": false,
-      "order": "desc"
+      "order": "desc",
     },
     {
       "type": "de",
       "keyIcon": "",
-      "slowVersionDetection": false
+      "slowVersionDetection": false,
     },
     {
       "type": "wm",
       "keyIcon": "",
-      "detectPlugin": false
+      "detectPlugin": false,
     },
     {
       "type": "wmtheme",
-      "keyIcon": "󰓸"
+      "keyIcon": "󰓸",
     },
     {
       "type": "theme",
-      "keyIcon": "󰉼"
+      "keyIcon": "󰉼",
     },
     {
       "type": "icons",
-      "keyIcon": ""
+      "keyIcon": "",
     },
     {
       "type": "font",
-      "keyIcon": ""
+      "keyIcon": "",
     },
     {
       "type": "cursor",
-      "keyIcon": "󰆿"
+      "keyIcon": "󰆿",
     },
     {
       "type": "terminal",
-      "keyIcon": ""
+      "keyIcon": "",
     },
     {
       "type": "terminalfont",
-      "keyIcon": ""
+      "keyIcon": "",
     },
     {
       "type": "cpu",
       "keyIcon": "",
       "temp": false,
-      "showPeCoreCount": false
+      "showPeCoreCount": false,
     },
     {
       "type": "gpu",
@@ -223,8 +218,8 @@
       "percent": {
         "green": 50,
         "yellow": 80,
-        "type": 0
-      }
+        "type": 0,
+      },
     },
     {
       "type": "memory",
@@ -232,18 +227,18 @@
       "percent": {
         "green": 50,
         "yellow": 80,
-        "type": 0
-      }
+        "type": 0,
+      },
     },
     {
       "type": "swap",
       "percent": {
         "green": 50,
         "yellow": 80,
-        "type": 0
+        "type": 0,
       },
       "keyIcon": "󰓡",
-      "separate": false
+      "separate": false,
     },
     {
       "type": "disk",
@@ -261,8 +256,8 @@
       "percent": {
         "green": 50,
         "yellow": 80,
-        "type": 0
-      }
+        "type": 0,
+      },
     },
     {
       "type": "localip",
@@ -278,7 +273,7 @@
       "compact": false,
       "defaultRouteOnly": true,
       "showAllIps": false,
-      "namePrefix": ""
+      "namePrefix": "",
     },
     {
       "type": "battery",
@@ -287,16 +282,16 @@
       "percent": {
         "green": 50,
         "yellow": 20,
-        "type": 0
-      }
+        "type": 0,
+      },
     },
     {
       "type": "poweradapter",
-      "keyIcon": "󰚥"
+      "keyIcon": "󰚥",
     },
     {
       "type": "locale",
-      "keyIcon": ""
+      "keyIcon": "",
     },
     "break",
     {
@@ -307,11 +302,8 @@
       "paddingLeft": 0,
       "block": {
         "width": 3,
-        "range": [
-          0,
-          15
-        ]
-      }
-    }
-  ]
+        "range": [0, 15],
+      },
+    },
+  ],
 }
