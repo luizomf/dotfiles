@@ -1,50 +1,27 @@
-# Normal
+# Colors from omxterm/themes/omtheme.json
 
-# Black (Original #0f0f14)
+# Normal
 palette = 0=#000000
-# Red (Original #ff7e9a)
-palette = 1=#ff7e9a
-# Green (Original #37feb7)
-palette = 2=#37feb7
-# Yellow (Original #ffda76)
-palette = 3=#ffda76
-# Blue (Original #88aaf2)
-palette = 4=#88aaf2
-# Magenta/Purple (Original #ff87bc)
-palette = 5=#ff87bc
-# Cyan (Original #5CF4FF)
-palette = 6=#6bccff
-# White (Original #d6d1ff)
+palette = 1=#ff80aa
+palette = 2=#00ffbf
+palette = 3=#ffd480
+palette = 4=#80aaff
+palette = 5=#e2a1f7
+palette = 6=#80d4ff
 palette = 7=#f0f0ff
 
 # Bright
-
-# B. Black (Original #6a6a8a)
 palette = 8=#505068
-# B. Red (Original #ffa8bb)
-palette = 9=#ffa8bb
-# B. Green (Original #72ffcd)
-palette = 10=#72ffcd
-# B. Yellow (Original #ffeab2)
-palette = 11=#ffeab2
-# B. Blue (Original #b2cbff)
-palette = 12=#b2cbff
-# B. Magenta/Purple (Original #ff88ef)
-palette = 13=#ff88ef
-# B. Cyan (Original #00EEFF)
-palette = 14=#77c6ff
-# B. White (Original #f0efff)
+palette = 9=#ff99bb
+palette = 10=#66ffd9
+palette = 11=#fee59a
+palette = 12=#99bbff
+palette = 13=#ebb4fd
+palette = 14=#99ddff
 palette = 15=#ffffff
 
-# Same as 0
 background = #000000
-# Same as 7
 foreground = #f0f0ff
-
-# Same as 7
 cursor-color = #f0f0ff
-
-# Selection blueish
-selection-background = #3b4fa6
-selection-foreground = #FFFFFF
-
+selection-background = #505064
+selection-foreground = #f0f0ff
