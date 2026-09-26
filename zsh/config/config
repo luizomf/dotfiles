@@ -1,8 +1,8 @@
 #!/usr/bin/env zsh
 # vim: set filetype=zsh :
 
-SAVEHIST=30000 # Thats way too big, but I'm testing something
-HISTSIZE=30000
+SAVEHIST=1000000                 # Save history
+HISTSIZE=1000000                 # History size
 
 setopt BANG_HIST                 # Treat the '!' character specially during expansion.
 setopt EXTENDED_HISTORY          # Write the history file in the ":start:elapsed;command" format.
@@ -17,7 +17,7 @@ setopt HIST_IGNORE_SPACE         # Don't record an entry starting with a space.
 setopt HIST_SAVE_NO_DUPS         # Don't write duplicate entries in the history file.
 setopt HIST_REDUCE_BLANKS        # Remove superfluous blanks before recording entry.
 setopt HIST_VERIFY               # Don't execute immediately upon history expansion.
-setopt HIST_BEEP                 # Beep when accessing nonexistent history.
+setopt NO_BEEP                   # Turn off annoying beep
 
 setopt AUTO_CD                   # cd by typing directory name if it's not a command.
 setopt AUTO_LIST                 # Automatically list choices on ambiguous completion.
