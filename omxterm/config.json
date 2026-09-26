@@ -2,6 +2,7 @@
   "version": 1,
   "confirmClose": true,
   "logLevel": "info",
+  "windowsShell": "C:\\Program Files\\Git\\bin\\bash.exe",
   "font": {
     "family": "FiraCode Nerd Font",
     "size": 27,
@@ -24,6 +25,8 @@
   },
   "window": {
     "alwaysOnTop": false,
+    "blur": true,
+    "transparency": 0.35,
     "showTabBar": false,
     "showTitleBar": false
   },
