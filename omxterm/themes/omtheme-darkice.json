@@ -7,14 +7,14 @@
     "cursor": "#f0f0ff",
     "selectionBackground": "#505064",
     "selectionForeground": "#f0f0ff",
-    "black": "#101014",
+    "black": "#202028",
     "red": "#ff80aa",
     "green": "#00ffbf",
     "yellow": "#ffd480",
     "blue": "#80aaff",
     "magenta": "#e38fff",
     "cyan": "#80d4ff",
-    "white": "#f0f0ff",
+    "white": "#dfdfef",
     "brightBlack": "#505068",
     "brightRed": "#ff99bb",
     "brightGreen": "#66ffd9",
@@ -22,6 +22,6 @@
     "brightBlue": "#99bbff",
     "brightMagenta": "#f1a8ff",
     "brightCyan": "#99ddff",
-    "brightWhite": "#ffffff"
+    "brightWhite": "#f0f0ff"
   }
 }
