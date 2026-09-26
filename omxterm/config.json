@@ -4,13 +4,13 @@
   "logLevel": "info",
   "font": {
     "family": "FiraCode Nerd Font",
-    "size": 28,
+    "size": 27,
     "lineHeight": 1,
     "ligatures": false
   },
   "terminal": {
     "padding": {
-      "top": 4,
+      "top": 16,
       "right": 16,
       "bottom": 4,
       "left": 16
@@ -23,7 +23,9 @@
     "optionAsAlt": "none"
   },
   "window": {
-    "alwaysOnTop": false
+    "alwaysOnTop": false,
+    "showTabBar": false,
+    "showTitleBar": false
   },
   "theme": {
     "path": "./themes/omtheme.json"
@@ -53,6 +55,8 @@
     "actualSize": "CommandOrControl+0",
     "toggleFullScreen": "CommandOrControl+Enter",
     "toggleSnippets": "CommandOrControl+Shift+S",
+    "toggleTabBar": "CommandOrControl+Shift+B",
+    "toggleTitleBar": "CommandOrControl+Shift+D",
     "reloadConfig": "CommandOrControl+Shift+,"
   }
 }
