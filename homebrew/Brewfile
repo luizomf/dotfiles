@@ -140,6 +140,8 @@ cask "google-drive"
 cask "keycastr"
 # GPU-based terminal emulator
 cask "kitty"
+# Screenshot and screen recording tool
+cask "macshot"
 # Open-source software for live streaming and screen recording
 cask "obs"
 # Build, run, and govern agents across the software development lifecycle

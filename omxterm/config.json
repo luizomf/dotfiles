@@ -28,7 +28,7 @@
     "showTitleBar": false
   },
   "theme": {
-    "path": "./themes/omtheme.json"
+    "path": "./themes/omtheme-darkice.json"
   },
   "keybinds": {
     "quit": "CommandOrControl+Q",
