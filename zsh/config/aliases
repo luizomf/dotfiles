@@ -2,7 +2,7 @@
 # vim: set filetype=sh :
 
 # Misc
-alias gitlog='git log --graph --pretty=format:"%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset" --abbrev-commit'
+alias gitlog='git log --graph --pretty=format:"%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset" --abbrev-commit --all'
 alias pipupgrade="pip freeze | sed -e 's/==.*//' | xargs pip install --upgrade"
 alias pipdeleteall='pip freeze | xargs pip uninstall -y'
 
