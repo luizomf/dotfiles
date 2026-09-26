@@ -26,12 +26,12 @@
   "window": {
     "alwaysOnTop": false,
     "blur": true,
-    "transparency": 0.35,
+    "transparency": 0.2,
     "showTabBar": false,
     "showTitleBar": false
   },
   "theme": {
-    "path": "./themes/omtheme-darkice.json"
+    "path": "./themes/omtheme.json"
   },
   "keybinds": {
     "quit": "CommandOrControl+Q",

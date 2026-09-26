@@ -23,8 +23,9 @@ window-padding-balance = true
 window-decoration = true
 macos-titlebar-style = native
 window-theme = ghostty
-background-opacity = 1
-background-blur = false
+macos-window-buttons = visible
+background-opacity = 0.85
+background-blur = true
 
 # Novo atalho: Minimiza a janela em vez de usar o toggle_quick_terminal
 # O AltTab detecta perfeitamente janelas minimizadas
