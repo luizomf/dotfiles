@@ -12,11 +12,11 @@
     "muted": "#777792",
     "dim": "#505068",
     "selection": "#3b4fa6",
-    "surface": "#15151f",
-    "surfaceAlt": "#1c1c29",
-    "successBg": "#161e21",
-    "errorBg": "#22151e",
-    "warningBg": "#28223f"
+    "surface": "#111116",
+    "surfaceAlt": "#19191f",
+    "successBg": "#121719",
+    "errorBg": "#1e161a",
+    "warningBg": "#1d1b24"
   },
   "colors": {
     "accent": "cyan",
