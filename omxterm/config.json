@@ -27,7 +27,7 @@
     "alwaysOnTop": false,
     "blur": true,
     "transparency": 0.2,
-    "showTabBar": false,
+    "showTabBar": true,
     "showTitleBar": false
   },
   "theme": {
