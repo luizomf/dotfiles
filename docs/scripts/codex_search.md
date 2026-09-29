@@ -2,7 +2,7 @@
 
 `scripts/codex_search` is a direct Codex CLI helper. Its `--profile quick`
 (default) uses `gpt-6-luna` with `xhigh` reasoning; `--profile research` uses
-`gpt-6-sol` with `medium` reasoning. `codex_search --help` shows the current
+`gpt-6.1-sol` with `medium` reasoning. `codex_search --help` shows the current
 profiles, permissions, and invocation examples.
 
 The profile defaults can be changed with `CODEX_SEARCH_QUICK_MODEL`,

@@ -21,7 +21,7 @@ case "$profile" in
     default_reasoning="${CODEX_SEARCH_QUICK_REASONING:-xhigh}"
     ;;
   research)
-    default_model="${CODEX_SEARCH_RESEARCH_MODEL:-gpt-6-sol}"
+    default_model="${CODEX_SEARCH_RESEARCH_MODEL:-gpt-6.1-sol}"
     default_reasoning="${CODEX_SEARCH_RESEARCH_REASONING:-medium}"
     ;;
   *)
@@ -43,7 +43,7 @@ Usage:
 Profiles:
   quick     Search, scraping, extraction, and source cleanup (default:
             gpt-6-luna with xhigh reasoning).
-  research  Complex source comparison and synthesis (default: gpt-6-sol
+  research  Complex source comparison and synthesis (default: gpt-6.1-sol
             with medium reasoning).
 
 Permissions:
