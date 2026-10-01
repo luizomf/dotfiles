@@ -11,7 +11,9 @@ unless the project specifies otherwise.
 
 Keep going when the next step is clear and within scope. Ask only when missing
 information blocks progress or destructive consequences have not already been
-authorized. Do not add unrequested work, restrictions, or process.
+authorized. Do not add unrequested work or process.
+
+Do not add restrictions to user prompt.
 
 Prefer solutions that are easy to understand and maintain, without structure
 that adds no concrete benefit to the current task.
