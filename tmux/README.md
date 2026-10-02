@@ -113,6 +113,29 @@ before typing into a newly activated window: empty panes do not buffer keyboard
 input. If a working directory is missing, correct it or close and recreate that
 window; revisiting retries pending panes without replacing a running process.
 
+## Persistent terminal popup
+
+**Prefix Ctrl-w** opens the `float` session in a popup. If it does not exist,
+`scripts/popup.sh` creates it with window `term1` in the invoking pane's current
+working directory. An existing session is reused without changing directories or
+replacing processes. The same shortcut inside `float` detaches the popup;
+exiting its last shell ends the session normally. `POPUP_WIDTH` and
+`POPUP_HEIGHT` default to `80%`.
+
+Only the popup's attach process has `TMUX` removed from its environment; an
+explicit socket keeps it on the invoking server. This avoids false
+nested-session errors when a popup reuses the terminal of a retained
+dead/sleeping pane. Lazy's normal `client-attached` hook wakes a pending window,
+including a session whose windows are all asleep; the popup does not perform its
+own restore or respawn.
+
+Script changes take effect on the next invocation; no reload or server restart
+is needed. Isolated regression checks (real clients, temporary sockets/home):
+
+```sh
+python3 -m unittest tests.test_tmux_popup tests.test_tmux_lazy
+```
+
 ## Sleeping a window
 
 **Prefix x**, then **y**, ends the current window's pane processes and leaves

@@ -1,5 +1,6 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 # vim: set filetype=sh :
+
 # shellcheck disable=SC1091,SC2154
 
 export KEYTIMEOUT=30
@@ -13,7 +14,7 @@ ZSH_HIGHLIGHT_STYLES[comment]='fg=240'
 ZSH_HIGHLIGHT_STYLES[default]='fg=251'
 ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=red,bold'
 
-export MANPAGER='nvim +Man!'
+# export MANPAGER='nvim +Man!'
 
 export KOKORO_VOICES_PT='pf_dora,af_heart,if_sara,ff_siwis,ef_dora,pm_santa'
 export KOKORO_VOICES_EN='bf_emma,af_heart,af_bella,bf_isabella,ff_siwis,if_sara'

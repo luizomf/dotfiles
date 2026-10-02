@@ -5,6 +5,7 @@ WINDOW_NAME="${2:-term}"
 CURDIR="${3:-$(tmux display-message -p '#{pane_current_path}')}"
 
 CURRENT_SESSION=$(tmux display-message -p "#{session_name}")
+SOCKET_PATH=$(tmux display-message -p "#{socket_path}") || exit
 
 POPUP_WIDTH="${POPUP_WIDTH:-80%}"
 POPUP_HEIGHT="${POPUP_HEIGHT:-80%}"
@@ -17,7 +18,7 @@ else
   # tmux send-keys "$(tmux display-message -p '#{pane_name}')" C-m
 
   # We are not in a popup, then check if a session exist
-  if ! tmux has-session -t "${SESSION_NAME}" 2> /dev/null; then
+  if ! tmux has-session -t "=${SESSION_NAME}" 2> /dev/null; then
       # If not, we create it
       tmux new-session -d -s "${SESSION_NAME}" -n "${WINDOW_NAME}1" -c "${CURDIR}"
       tmux set status
@@ -26,7 +27,9 @@ else
 
   # Open the popup
   # -E: closes when command ends
-  # attach: attach to the floating session
+  # A retained sleeping pane may have the same tty as the new popup. Clear
+  # TMUX only for attach to avoid a false nesting error; keep the server explicit.
+  # Multiple arguments bypass shell parsing (including paths/names with spaces).
   tmux popup -d "#{pane_current_path}" -xC -yC -w "${POPUP_WIDTH}" -h "${POPUP_HEIGHT}" \
-      -E "tmux attach -t ${SESSION_NAME}"
+      -E env -u TMUX tmux -S "${SOCKET_PATH}" attach-session -t "=${SESSION_NAME}"
 fi
