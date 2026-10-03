@@ -20,6 +20,10 @@ detect_install_platform() {
   case "$kernel:$distro" in
     Darwin:*) printf 'darwin\n' ;;
     Linux:ubuntu) printf 'ubuntu\n' ;;
+    Linux:arch|Linux:omarchy)
+      [[ "$ostree" != 1 ]] || return 1
+      printf 'arch\n'
+      ;;
     Linux:fedora|Linux:fedora-asahi-remix)
       # DNF mutation is not the deployment model for Atomic/OSTree hosts.
       [[ "$ostree" != 1 ]] || return 1
@@ -38,24 +42,53 @@ require_new_toolchain_dir() {
   fi
 }
 
-install_fedora_packages() {
-  loginfo "Installing Fedora development and terminal packages..."
-  # Based on the working Fedora Asahi environment. Use virtual capabilities
-  # for zlib/wget so Fedora can select zlib-ng and wget2 implementations.
-  # Do not change Asahi kernels, graphics drivers, boot, SSH or repositories.
-  sudo dnf install -y \
-    aria2 autoconf automake bzip2-devel cmake curl fd-find ffmpeg-free \
-    gcc gcc-c++ gdbm-devel gettext git glibc-langpack-en htop libffi-devel \
-    libtool llvm lua lua-devel luarocks make nano ncurses-devel ninja-build \
-    openssl openssl-devel patch pkgconf python3-devel readline-devel ripgrep \
-    sqlite sqlite-devel tcl tcl-devel tk tk-devel tree unzip util-linux \
-    vim-enhanced wget xz-devel zlib-devel zsh fastfetch tmux just
+install_platform_packages() {
+  local platform=$1 platforms provider package _option
+  local native_packages=() brew_packages=() pacman_options=(-S --needed)
+
+  case "$platform" in
+    darwin)
+      install_homebrew
+      brew update
+      brew bundle --file="$REPO_DIR/homebrew/Brewfile"
+      return
+      ;;
+    ubuntu|fedora|arch) ;;
+    *) printf 'Unsupported package platform: %s\n' "$platform" >&2; return 1 ;;
+  esac
+
+  while read -r platforms provider package _option || [[ -n "$platforms" ]]; do
+    [[ -n "$platforms" && "$platforms" != \#* ]] || continue
+    case ",$platforms," in
+      *",$platform,"*)
+        case "$provider" in
+          native) native_packages+=("$package") ;;
+          brew) brew_packages+=("$package") ;;
+        esac
+        ;;
+    esac
+  done < "$REPO_DIR/config/packages.list"
+
+  loginfo "Installing $platform development and terminal packages..."
+  case "$platform" in
+    ubuntu)
+      sudo DEBIAN_FRONTEND=noninteractive apt-get update
+      sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${native_packages[@]}"
+      ;;
+    fedora)
+      # Preserve Asahi/host repositories, kernels, graphics and services.
+      sudo dnf install -y "${native_packages[@]}"
+      ;;
+    arch)
+      # Use the host's existing sync database. Never perform a partial upgrade
+      # (-Sy) or take over Omarchy's system-update/repository policy.
+      if [[ "${OM_INSTALL_ASSUME_YES:-0}" == 1 ]]; then
+        pacman_options+=(--noconfirm)
+      fi
+      sudo pacman "${pacman_options[@]}" "${native_packages[@]}"
+      ;;
+  esac
 
   install_homebrew
-  # Keep the distro tmux fallback for explicit/non-interactive callers, while
-  # also installing the preferred interactive Homebrew version.
-  # Keep the same providers used by the interactive environment on fedoraair.
-  # Personal services/projects (Ollama, EdgeTTS, etc.) are not provisioned here.
-  brew install bash-completion@2 bat fzf gh glow hf lazygit neovim rtk \
-    trash-cli tree-sitter-cli tmux pi-coding-agent shellcheck woff2 kitty
+  brew install "${brew_packages[@]}"
 }

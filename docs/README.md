@@ -14,6 +14,7 @@ maintenance guidance.
 
 ## Other topics
 
+- [Installer maintenance and package catalog](installation.md)
 - [Development tools](development.md)
 - [Shared host paths](shared-host-paths.md)
 - [Pi Coding Agent configuration](pi.md)

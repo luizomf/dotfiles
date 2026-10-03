@@ -3,19 +3,25 @@
 These are my personal dotfiles. They install the exact environment I use every
 day, and they are intentionally opinionated.
 
-Since I use both Mac and Linux, most things here need to work on both (tested on
-Fedora and Ubuntu).
+Since I use both Mac and Linux, most things here need to work on both.
 
 See [`docs/`](docs/) for technical and maintenance documentation.
 
 I have tested clean installations on:
 
 - Ubuntu 24.04 and 26.04 on ARM;
-- macOS Sequoia and macOS 26 on Apple Silicon.
+- macOS Sequoia and macOS 26 on Apple Silicon;
+- Omarchy on ARM64 (disposable VM, including a repeat installation).
 
 I also use them daily on Fedora Asahi Remix 44 (ARM64), but Fedora has not been
-tested from a clean installation yet. Traditional Fedora is accepted; Atomic or
-OSTree variants and other Linux distributions are rejected by the installer.
+tested from a clean installation yet. Traditional Fedora and plain Arch are
+accepted; plain Arch and x86_64 Omarchy have not had clean-install tests. Atomic
+or OSTree variants and other Linux distributions are rejected by the installer.
+
+Package selections live in [`config/packages.list`](config/packages.list),
+shared by all supported systems and the macOS Brewfile. See
+[installer maintenance](docs/installation.md) for adding packages and the
+Arch/Omarchy installation policy.
 
 No major problems have shown up so far. That is not a promise that the installer
 will work on your machine.

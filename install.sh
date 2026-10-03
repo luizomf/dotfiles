@@ -145,41 +145,18 @@ case "$(uname -s)" in
     loginfo "Sistema detectado: macOS $(sw_vers -productVersion)."
     ;;
   *)
-    logerror "Apenas macOS, Ubuntu e Fedora tradicional/Asahi são suportados."
+    logerror "Apenas macOS, Ubuntu, Fedora tradicional/Asahi e Arch/Omarchy são suportados."
     exit 1
     ;;
 esac
 
-if [[ "$OP_SYSTEM" == "darwin" ]]; then
-  install_homebrew
-  loginfo "Atualizando o Homebrew..."
-  brew update
-  loginfo "Instalando o Brewfile..."
-  brew bundle --file="$REPO_DIR/homebrew/Brewfile"
-fi
+install_platform_packages "$OP_SYSTEM"
 
 if [[ "$OP_SYSTEM" == "ubuntu" ]]; then
-  loginfo "Atualizando o índice de pacotes do Ubuntu..."
-  sudo DEBIAN_FRONTEND=noninteractive apt-get update
-
-  loginfo "Instalando dependências do Ubuntu..."
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    aria2 autoconf automake blt-dev build-essential cmake curl ffmpeg \
-    fd-find fonts-firacode fonts-jetbrains-mono gettext git htop libbz2-dev \
-    libgdbm-dev liblua5.4-dev liblzma-dev libreadline-dev libsqlite3-dev locales \
-    libssl-dev libtool libtool-bin llvm lua5.4 luarocks make nano ninja-build \
-    openssl pkgconf python3-dev ripgrep sqlite3 tcl tcl-dev tk tk-dev \
-    tree unzip vim watch wget zlib1g-dev
-
   if ! locale -a | grep -Eqi '^en_US\.utf-?8$'; then
     sudo locale-gen en_US.UTF-8
   fi
   sudo update-locale LANG=en_US.UTF-8
-
-  install_homebrew
-  brew install fastfetch font-fira-code-nerd-font gcc neovim tree-sitter-cli rtk glow \
-    bat chafa fzf tmux btop gh imagemagick just lazygit p7zip pandoc vhs trash-cli hf \
-    pi-coding-agent pipes-sh cmatrix asciiquarium cbonsai nyancat shellcheck woff2 kitty
 
   mkdir -p "$HOME/.local/bin"
   if ! command -v fd > /dev/null 2>&1 && command -v fdfind > /dev/null 2>&1; then
@@ -187,18 +164,6 @@ if [[ "$OP_SYSTEM" == "ubuntu" ]]; then
   fi
   if ! command -v bat > /dev/null 2>&1 && command -v batcat > /dev/null 2>&1; then
     ln -sf "$(command -v batcat)" "$HOME/.local/bin/bat"
-  fi
-
-  if ! command -v zsh > /dev/null 2>&1; then
-    loginfo "Instalando Zsh..."
-    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y zsh
-  else
-    loginfo "Zsh já está instalado."
-  fi
-
-  zsh_path=$(command -v zsh)
-  if [[ "$(getent passwd "$(id -un)" | cut -d: -f7)" != "$zsh_path" ]]; then
-    sudo chsh -s "$zsh_path" "$(id -un)"
   fi
 
   if ! command -v ghostty > /dev/null 2>&1; then
@@ -210,14 +175,13 @@ if [[ "$OP_SYSTEM" == "ubuntu" ]]; then
   fi
 fi
 
-if [[ "$OP_SYSTEM" == "fedora" ]]; then
-  install_fedora_packages
+if [[ "$OP_SYSTEM" != "darwin" ]]; then
   zsh_path=$(command -v zsh)
   if [[ "$(getent passwd "$(id -un)" | cut -d: -f7)" != "$zsh_path" ]]; then
     sudo chsh -s "$zsh_path" "$(id -un)"
   fi
-  # Fedora keeps the host's locale and terminal choice. Ghostty's Ubuntu-only
-  # installer must not run here; the existing desktop terminal is sufficient.
+  # Fedora and Arch/Omarchy keep the host's locale and installed terminal.
+  # Ghostty's Ubuntu-only installer must not run on either.
 fi
 
 loginfo "Configurando Oh My Zsh..."

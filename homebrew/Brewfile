@@ -1,160 +1,18 @@
-tap "docker/tap", trusted: true
-# Aquarium animation in ASCII art
-brew "asciiquarium"
-# Cryptography and SSL/TLS Toolkit
-brew "openssl@3"
-# General-purpose data compression with high compression ratio
-brew "xz"
-# Play, record, convert, and stream select audio and video codecs
-brew "ffmpeg"
-# Effort free video editing!
-brew "auto-editor"
-# Library for command-line editing
-brew "readline"
-# Programmable completion for Bash 4.2+
-brew "bash-completion@2"
-# Clone of cat(1) with syntax highlighting and Git integration
-brew "bat"
-# Resource monitor. C++ version and continuation of bashtop and bpytop
-brew "btop"
-# Console Bonsai is a bonsai tree generator, written in C using ncurses
-brew "cbonsai"
-# CD/DVD/Blu-ray premastering and recording software
-brew "cdrtools"
-# Versatile and fast Unicode/ASCII/ANSI graphics renderer
-brew "chafa"
-# Cross-platform make
-brew "cmake"
-# Console Matrix
-brew "cmatrix"
-# GNU File, Shell, and Text utilities
-brew "coreutils"
-# Like neofetch, but much faster because written mostly in C
-brew "fastfetch"
-# Simple, fast and user-friendly alternative to find
-brew "fd"
-# Command-line fuzzy finder written in Go
-brew "fzf"
-# GitHub command-line tool
-brew "gh"
-# Render markdown on the CLI
-brew "glow"
-# GNU Privacy Guard (OpenPGP)
-brew "gnupg"
-# Open source programming language to build simple/reliable/efficient software
-brew "go"
-# Command-line interface for SQLite
-brew "sqlite"
-# Client library for huggingface.co hub
-brew "hf"
-# Improved top (interactive process viewer)
-brew "htop"
-# Tools and libraries to manipulate images in select formats
-brew "imagemagick"
-# Handy way to save and run project-specific commands
-brew "just"
-# Simple terminal UI for git commands
-brew "lazygit"
-# Text-based web browser
-brew "lynx"
-# Deep clean and optimize your Mac
-brew "mole"
-# Free (GNU) replacement for the Pico text editor
-brew "nano"
-# Incremental parsing library
-brew "tree-sitter"
-# Ambitious Vim-fork focused on extensibility and agility
-brew "neovim"
-# Renders an animated, color, ANSI-text loop of the Poptart Cat
-brew "nyancat"
-# Create, run, and share large language models (LLMs)
-brew "ollama"
-# 7-Zip (high compression file archiver) implementation
-brew "p7zip"
-# Swiss-army knife of markup format conversion
-brew "pandoc"
-# Animated pipes terminal screensaver
-brew "pipes-sh"
-# Package compiler and linker metadata toolkit
-brew "pkgconf"
-# Library like getopt(3) with a number of enhancements
-brew "popt", link: false
-# Python version management
-brew "pyenv"
-# Search tool like grep and The Silver Searcher
-brew "ripgrep"
-# Extremely fast non-cryptographic hash algorithm
-brew "xxhash"
-# Utility that provides fast incremental file transfer
-brew "rsync"
-# CLI proxy to minimize LLM token consumption
-brew "rtk"
-# Static analysis and lint tool, for (ba)sh scripts
-brew "shellcheck"
-# Prints a steam locomotive if you type sl instead of ls
-brew "sl"
-# SOund eXchange: universal sound sample translator
-brew "sox"
-# Tool Command Language
-brew "tcl-tk"
-# Terminal multiplexer
-brew "tmux"
-# Display directories as trees (with optional color/HTML output)
-brew "tree"
-# Parser generator tool
-brew "tree-sitter-cli"
-# Your CLI home video recorder
-brew "vhs"
-# Executes a program periodically, showing output fullscreen
-brew "watch"
-# Internet file retriever
-brew "wget"
-# Tools for the WireGuard secure network tunnel
-brew "wireguard-tools"
-# Utilities to create and convert Web Open Font File (WOFF) files
-brew "woff2"
-# HTTP benchmarking tool
-brew "wrk"
-# General-purpose lossless data-compression library
-brew "zlib"
-# Menu bar tool to limit maximum charging percentage
-cask "aldente"
-# Enable Windows-like alt-tab
-cask "alt-tab"
-# Video editing and image design platform
-cask "capcut"
-# OpenAI's coding agent that runs in your terminal
-cask "codex"
-# App to build and share containerised applications and microservices
-cask "docker-desktop"
-cask "font-fira-code"
-cask "font-fira-code-nerd-font"
-cask "font-jetbrains-mono"
-# Terminal emulator that uses platform-native UI and GPU acceleration
-cask "ghostty"
-# Web browser
-cask "google-chrome"
-# Client for the Google Drive storage service
-cask "google-drive"
-# Open-source keystroke visualiser
-cask "keycastr"
-# GPU-based terminal emulator
-cask "kitty"
-# Screenshot and screen recording tool
-cask "macshot"
-# Open-source software for live streaming and screen recording
-cask "obs"
-# Build, run, and govern agents across the software development lifecycle
-cask "docker/tap/sbx"
-# Virtual machines UI using QEMU
-cask "utm"
-# Multimedia player
-cask "vlc"
-# Native desktop client for WhatsApp
-cask "whatsapp"
-# Video communication and virtual meeting platform
-cask "zoom"
-uv "langgraph-cli[inmem]"
-uv "mypy"
-uv "pyright"
-uv "ruff"
+# Package selections live in config/packages.list, shared with the Linux installer.
+# Keep this adapter: `brew bundle dump --force` would overwrite it.
+File.foreach(File.expand_path("../config/packages.list", __dir__)) do |line|
+  platforms, provider, package, option = line.split
+  next if platforms.nil? || platforms.start_with?("#")
+  next unless platforms.split(",").include?("darwin")
+
+  case provider
+  when "tap"
+    option == "trusted" ? tap(package, trusted: true) : tap(package)
+  when "brew"
+    option == "unlinked" ? brew(package, link: false) : brew(package)
+  when "cask"
+    cask package
+  when "uv"
+    uv package
+  end
+end

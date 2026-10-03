@@ -1,6 +1,8 @@
 # Copyright (c) 2026 Otávio Miranda
 """Test installer policy without executing install.sh or package managers."""
 
+import json
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -17,6 +19,7 @@ class InstallPlatformTests(unittest.TestCase):
       [
         "/bin/bash",
         "-c",
+        'REPO_DIR=$(dirname "$(dirname "$(dirname "$1")")"); '
         'source "$1" || exit; ' + script,
         "test",
         str(MODULE),
@@ -236,6 +239,8 @@ class InstallPlatformTests(unittest.TestCase):
       ("Linux", "ubuntu", "ubuntu"),
       ("Linux", "fedora", "fedora"),
       ("Linux", "fedora-asahi-remix", "fedora"),
+      ("Linux", "omarchy", "arch"),
+      ("Linux", "arch", "arch"),
     ):
       with self.subTest(distro=distro or kernel):
         result = self.shell('detect_install_platform "$2" "$3" 0', kernel, distro)
@@ -248,6 +253,8 @@ class InstallPlatformTests(unittest.TestCase):
       ("FreeBSD", "", "0"),
       ("Linux", "fedora", "1"),
       ("Linux", "fedora-asahi-remix", "1"),
+      ("Linux", "omarchy", "1"),
+      ("Linux", "arch", "1"),
     ):
       with self.subTest(distro=distro, ostree=ostree):
         result = self.shell(
@@ -262,7 +269,7 @@ class InstallPlatformTests(unittest.TestCase):
             sudo() { printf 'sudo'; printf ' <%s>' "$@"; printf '\\n'; }
             install_homebrew() { printf 'load-homebrew\\n'; }
             brew() { printf 'brew'; printf ' <%s>' "$@"; printf '\\n'; }
-            install_fedora_packages
+            install_platform_packages fedora
         """)
     self.assertEqual(result.returncode, 0, result.stderr)
     lines = result.stdout.splitlines()
@@ -288,6 +295,188 @@ class InstallPlatformTests(unittest.TestCase):
       "bootloader",
     ):
       self.assertNotIn(forbidden, result.stdout)
+
+  def test_arch_installs_native_build_dependencies_and_shared_brew_tools(self):
+    result = self.shell("""
+      set -Eeuo pipefail
+      loginfo() { :; }
+      sudo() { printf 'sudo'; printf ' <%s>' "$@"; printf '\\n'; }
+      install_homebrew() { printf 'load-homebrew\\n'; }
+      brew() { printf 'brew'; printf ' <%s>' "$@"; printf '\\n'; }
+      install_platform_packages arch
+    """)
+    self.assertEqual(result.returncode, 0, result.stderr)
+    lines = result.stdout.splitlines()
+    self.assertEqual(len(lines), 3)
+    self.assertTrue(lines[0].startswith("sudo <pacman> <-S> <--needed>"))
+    self.assertNotIn("--noconfirm", lines[0])
+    for package in ("base-devel", "libffi", "openssl", "zlib", "zsh", "tmux"):
+      self.assertIn(f"<{package}>", lines[0])
+    self.assertEqual(lines[1], "load-homebrew")
+    for package in ("neovim", "rtk", "pi-coding-agent", "shellcheck"):
+      self.assertIn(f"<{package}>", lines[2])
+    for forbidden in ("yay", "-Sy", "systemctl", "chsh", "ghostty-ubuntu", "dnf"):
+      self.assertNotIn(forbidden, result.stdout)
+
+  def test_unattended_arch_uses_noninteractive_pacman(self):
+    result = self.shell("""
+      set -Eeuo pipefail
+      OM_INSTALL_ASSUME_YES=1
+      loginfo() { :; }
+      sudo() { printf '%s\\n' "$*"; }
+      install_homebrew() { :; }
+      brew() { :; }
+      install_platform_packages arch
+    """)
+    self.assertEqual(result.returncode, 0, result.stderr)
+    self.assertTrue(result.stdout.startswith("pacman -S --needed --noconfirm "))
+
+  def test_ubuntu_and_macos_keep_their_package_managers(self):
+    for platform in ("ubuntu", "darwin"):
+      with self.subTest(platform=platform):
+        result = self.shell(
+          """
+          set -Eeuo pipefail
+          loginfo() { :; }
+          sudo() { printf 'sudo %s\\n' "$*"; }
+          install_homebrew() { printf 'load-homebrew\\n'; }
+          brew() { printf 'brew %s\\n' "$*"; }
+          install_platform_packages "$2"
+          """,
+          platform,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        if platform == "ubuntu":
+          self.assertIn("apt-get update", result.stdout)
+          self.assertIn("apt-get install -y", result.stdout)
+          self.assertIn("libssl-dev", result.stdout)
+          self.assertIn("fd-find", result.stdout)
+          self.assertIn("font-fira-code-nerd-font", result.stdout)
+        else:
+          self.assertEqual(
+            result.stdout.splitlines(),
+            [
+              "load-homebrew",
+              "brew update",
+              f"brew bundle --file={ROOT}/homebrew/Brewfile",
+            ],
+          )
+
+  @unittest.skipUnless(shutil.which("ruby"), "Ruby is required for the Brewfile DSL")
+  def test_brewfile_reads_only_macos_entries_from_the_shared_catalog(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      root = Path(tmp)
+      (root / "homebrew").mkdir()
+      (root / "config").mkdir()
+      brewfile = root / "homebrew/Brewfile"
+      shutil.copyfile(ROOT / "homebrew/Brewfile", brewfile)
+      (root / "config/packages.list").write_text(
+        "# platforms provider package [option]\n"
+        "darwin tap docker/tap trusted\n"
+        "darwin,ubuntu,fedora,arch brew bat\n"
+        "darwin brew popt unlinked\n"
+        "darwin cask ghostty\n"
+        "darwin uv mypy\n"
+        "ubuntu,arch native git\n"
+        "fedora,arch brew pi-coding-agent\n"
+      )
+      # Evaluate Bundle's DSL with inert package declarations, never Homebrew.
+      result = subprocess.run(  # noqa: S603
+        [
+          shutil.which("ruby") or "ruby",
+          "-e",
+          (
+            'require "json"; %w[tap brew cask uv].each { |name| '
+            "define_singleton_method(name) { |*args| "
+            "puts JSON.generate([name, *args]) } }; load ARGV.fetch(0)"
+          ),
+          str(brewfile),
+        ],
+        text=True,
+        capture_output=True,
+        timeout=10,
+        check=False,
+      )
+      self.assertEqual(result.returncode, 0, result.stderr)
+      self.assertEqual(
+        [json.loads(line) for line in result.stdout.splitlines()],
+        [
+          ["tap", "docker/tap", {"trusted": True}],
+          ["brew", "bat"],
+          ["brew", "popt", {"link": False}],
+          ["cask", "ghostty"],
+          ["uv", "mypy"],
+        ],
+      )
+
+  def test_linux_catalog_keeps_the_last_package_without_a_final_newline(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      root = Path(tmp)
+      (root / "config").mkdir()
+      (root / "config/packages.list").write_text(
+        "# Fixture catalog\n"
+        "arch native git\n"
+        "darwin brew mac-only\n"
+        "arch brew bat\n"
+        "arch brew rtk"
+      )
+      result = self.shell(
+        """
+        set -Eeuo pipefail
+        REPO_DIR=$2
+        loginfo() { :; }
+        sudo() { printf 'sudo %s\\n' "$*"; }
+        install_homebrew() { :; }
+        brew() { printf 'brew %s\\n' "$*"; }
+        install_platform_packages arch
+        """,
+        tmp,
+      )
+      self.assertEqual(result.returncode, 0, result.stderr)
+      self.assertEqual(
+        result.stdout.splitlines(),
+        ["sudo pacman -S --needed git", "brew install bat rtk"],
+      )
+
+  def test_native_package_failure_stops_before_homebrew(self):
+    result = self.shell("""
+      set -Eeuo pipefail
+      loginfo() { :; }
+      sudo() { printf 'package download failed\\n' >&2; return 23; }
+      install_homebrew() { printf 'UNREACHABLE\\n'; }
+      install_platform_packages arch
+    """)
+    self.assertEqual(result.returncode, 23)
+    self.assertIn("package download failed", result.stderr)
+    self.assertNotIn("UNREACHABLE", result.stdout)
+
+  def test_catalog_has_supported_unique_declarations(self):
+    seen: set[tuple[str, str, str]] = set()
+    providers = {
+      "darwin": {"brew", "cask", "tap", "uv"},
+      "ubuntu": {"native", "brew"},
+      "fedora": {"native", "brew"},
+      "arch": {"native", "brew"},
+    }
+    for number, line in enumerate(
+      (ROOT / "config/packages.list").read_text().splitlines(), start=1
+    ):
+      if not line.strip() or line.lstrip().startswith("#"):
+        continue
+      with self.subTest(line=number):
+        fields = line.split()
+        self.assertIn(len(fields), (3, 4))
+        platforms, provider, package, *options = fields
+        for platform in platforms.split(","):
+          self.assertIn(platform, providers)
+          self.assertIn(provider, providers[platform])
+          self.assertNotIn((platform, provider, package), seen)
+          seen.add((platform, provider, package))
+        if options:
+          self.assertEqual(platforms, "darwin")
+          self.assertIn(
+            (provider, options[0]), (("brew", "unlinked"), ("tap", "trusted"))
+          )
 
   def test_existing_toolchain_is_never_removed(self):
     with tempfile.TemporaryDirectory() as tmp:
