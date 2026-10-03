@@ -19,7 +19,7 @@
     "-../../.codex/skills/",
     "-../../.claude/skills/"
   ],
-  "lastChangelogVersion": "1.0.0",
+  "lastChangelogVersion": "1.0.1",
   "outputPad": 1,
   "steeringMode": "one-at-a-time",
   "enableSkillCommands": true,
