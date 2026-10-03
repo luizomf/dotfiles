@@ -68,6 +68,15 @@ interactive tmux, while retaining native tmux as a fallback. Python and Node use
 the existing pyenv/nvm setup. Omarchy's existing mise installation is not
 removed; the dotfiles shell prioritizes its own pyenv/nvm tools.
 
+Node bootstrap explicitly selects `~/.nvm` before invoking nvm's installer,
+matching the shell configuration even when `XDG_CONFIG_HOME` or an inherited
+`NVM_DIR` points elsewhere. It creates the new target directory before that
+call, as upstream requires for an explicit non-default destination. Existing nvm
+installations elsewhere (such as `~/.config/nvm`) are left intact, not migrated
+or removed. If an older install placed nvm in `~/.config/nvm` but then failed to
+load `~/.nvm/nvm.sh`, update the checkout and rerun; no manual move is needed.
+An incomplete existing `~/.nvm` still requires manual repair, as before.
+
 The installer switches the login shell to Zsh and replaces the normal dotfiles
 targets, including Neovim, Ghostty and fastfetch configuration, with backups
 under `~/.dotfiles-backups/`. This is not a transparent addition to Omarchy's
@@ -97,4 +106,8 @@ including Python/Node, Vim/Neovim plugins, Mason and Tree-sitter. A new Zsh
 login resolved both dotfiles tools and Omarchy commands. Plain Arch and x86_64
 Omarchy have not had a clean-install test. macOS/Ubuntu/Fedora package
 selections were compared with the previous installer; they were not freshly
-reinstalled for this change.
+reinstalled by the agent for this change. The maintainer also reported
+successful Fedora KDE and Ubuntu GNOME runs. A follow-up Omarchy test reproduced
+the nvm path failure with `XDG_CONFIG_HOME` set, then completed the full
+installer with the fix under that same environment; this was recovery from the
+failed install, not a snapshot-reset test.

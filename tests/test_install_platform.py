@@ -121,6 +121,60 @@ class InstallPlatformTests(unittest.TestCase):
         self.assertNotIn("UNREACHABLE", result.stdout)
         self.assertIn("INSTALLER_ERR", result.stderr)
 
+  def test_nvm_bootstrap_uses_the_shell_path_with_xdg_config_home(self):
+    # Exercise the actual Node block, without packages, links or network calls.
+    # The fixture implements nvm v0.40.3's destination selection and its
+    # requirement that an explicitly configured non-default directory exists.
+    source = (ROOT / "install.sh").read_text()
+    node_setup = (
+      source.split('loginfo "Instalando Lazy.nvim..."', 1)[1]
+      .split("\nfi\n", 1)[1]
+      .split("\nif configure_install_python;", 1)[0]
+    )
+    for scenario in ("xdg", "inherited"):
+      with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as tmp:
+        home = Path(tmp)
+        other_nvm = home / ".config/nvm"
+        other_nvm.mkdir(parents=True)
+        sentinel = other_nvm / "user-data"
+        sentinel.write_text("preserve me")
+        (home / "fixture-install.sh").write_text(
+          "#!/bin/bash\n"
+          'default="$HOME/.nvm"\n'
+          '[[ -z "${XDG_CONFIG_HOME:-}" ]] || default="$XDG_CONFIG_HOME/nvm"\n'
+          "target=${NVM_DIR:-$default}\n"
+          'if [[ -n "${NVM_DIR:-}" && "$target" != "$default" '
+          '&& ! -d "$target" ]]; then exit 44; fi\n'
+          'mkdir -p "$target"\n'
+          'printf \'nvm() { printf "nvm %%s\\\\n" "$*"; }\\n\' '
+          '> "$target/nvm.sh"\n'
+        )
+        result = self.shell(
+          """
+          set -Eeuo pipefail
+          export HOME=$2 XDG_CONFIG_HOME=$2/.config
+          unset NVM_DIR
+          unset -f nvm || :
+          if [[ "$3" == inherited ]]; then
+            export NVM_DIR="$HOME/.config/nvm"
+            nvm() { printf 'WRONG_NVM\\n'; }
+          fi
+          OM_INSTALL_SKIP_TOOLCHAINS=0
+          loginfo() { :; }
+          run_remote_script() { "$1" "$HOME/fixture-install.sh"; }
+          npm() { printf 'npm %s\\n' "$*"; }
+          """
+          + node_setup,
+          tmp,
+          scenario,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((home / ".nvm/nvm.sh").is_file())
+        self.assertEqual(sentinel.read_text(), "preserve me")
+        self.assertIn("nvm install --lts", result.stdout)
+        self.assertIn("npm install --global prettier", result.stdout)
+        self.assertNotIn("WRONG_NVM", result.stdout)
+
   def test_python_build_failure_preserves_error_and_skips_dependents(self):
     result = self.shell(
       """

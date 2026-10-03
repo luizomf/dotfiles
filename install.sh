@@ -213,16 +213,19 @@ if [[ ! -d "$LAZY_PATH" ]]; then
     --filter=blob:none --branch=stable "$LAZY_PATH"
 fi
 
-if ! command -v nvm > /dev/null 2>&1 && [[ ! -s "$HOME/.nvm/nvm.sh" ]]; then
+# Match zsh/config/exports even when the desktop sets XDG_CONFIG_HOME.
+export NVM_DIR="$HOME/.nvm"
+if [[ ! -s "$NVM_DIR/nvm.sh" ]]; then
   loginfo "Instalando nvm..."
-  require_new_toolchain_dir "$HOME/.nvm"
+  require_new_toolchain_dir "$NVM_DIR"
+  # nvm requires an explicit non-default install directory to exist first.
+  mkdir -p "$NVM_DIR"
   run_remote_script /bin/bash \
     https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh
 fi
 
 if [[ "${OM_INSTALL_SKIP_TOOLCHAINS:-0}" != "1" ]]; then
   loginfo "Configurando Node.js e ferramentas npm..."
-  export NVM_DIR="$HOME/.nvm"
   # shellcheck disable=SC1091
   . "$NVM_DIR/nvm.sh"
   nvm install --lts
