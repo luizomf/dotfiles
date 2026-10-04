@@ -57,7 +57,7 @@
     },
     {
       "name": "Sannux Rebuild (only used)",
-      "body": " for t in codex codex-ollama agy pi; do sannux setup \"$t\"; sannux rebuild \"$t\"; done",
+      "body": " for t in codex codex-ollama agy pi; do sannux setup \"$t\"; sannux rebuild \"$t\"; done; sleep 10; test_models",
       "description": "Rebuild selected Sannux Templates",
       "execute": false
     },
