@@ -6,7 +6,9 @@ The launcher is `scripts/texteditor`; the app source is
 OMXterm installed, and `nvim` on the login shell's PATH. The launcher uses
 `$SHELL` (a POSIX-compatible shell such as sh, bash, or zsh), falling back to
 `/bin/sh` when empty (Bash may initialize an unset `$SHELL` from the user
-account).
+account). If that shell cannot find Node, it loads `$NVM_DIR/nvm.sh` (defaulting
+to `~/.nvm/nvm.sh`) when available, so Node-based language servers also work
+when launched from Finder. An already available Node is left unchanged.
 
 - Launch the app normally for an empty editor.
 - Use Finder's **Open With → TextEditor**, or drop files onto the app.
