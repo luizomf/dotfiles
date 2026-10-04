@@ -1,4 +1,4 @@
-" INSTALL PLUGGEG:
+" INSTALL:
 " curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
 " vim +PlugInstall
 call plug#begin('~/.vim/plugged')
@@ -45,7 +45,7 @@ set t_Co=256
 " colorscheme sorbet " Nice
 " colorscheme lunaperche " Nice
 " colorscheme pablo " Nice
- colorscheme slate " Nice
+colorscheme slate " Nice
 " colorscheme wildcharm " Nice
 " colorscheme zaibatsu " Nice
 " set background=dark
@@ -78,15 +78,14 @@ nnoremap <leader>bd :bdelete<CR>
 nnoremap <leader>bu <C-^><CR>
 
 " CURSOR SHAPE
-let &t_SI = "\<Esc>[6 q" " SI = Start Insert mode -> cursor em linha
-let &t_EI = "\<Esc>[2 q" " EI = End Insert mode -> cursor em bloco (Normal mode)
+let &t_SI = "\<Esc>[6 q" " SI = Start Insert mode
+let &t_EI = "\<Esc>[2 q" " EI = End Insert mode
 set guicursor=n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50
 
 " Really Simple Auto Session (KISS)
 let s:sessions_dir = split(&runtimepath, ',')[0] . '/sessions'
 
 function! s:session_id() abort
-  " usa cwd e sanitiza para nome de arquivo
   let l:cwd = getcwd()
   return tolower(substitute(l:cwd, '[^A-Za-z0-9_.-]', '_', 'g'))
 endfunction
