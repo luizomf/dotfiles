@@ -5,11 +5,11 @@ vim.opt.termguicolors = true
 -- Use omtheme for dark background only
 vim.cmd("colorscheme omtheme")
 
--- -- -- LIGHT THEMES
--- -- -- For light backgrounds, use the colorscheme you like
+-- -- LIGHT THEMES
+-- -- For light backgrounds, use the colorscheme you like
 -- vim.cmd("colorscheme peachpuff")
 --
--- -- -- Remove background to use the terminal background color
+-- -- Remove background to use the terminal background color
 -- local bg_groups = {
 --   "Normal",
 --   "NormalNC",
