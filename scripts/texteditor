@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 
+# Resolve relative paths before switching the editor's working directory.
+files=()
+for file in "$@"; do
+  case "$file" in
+    /*) files+=("$file") ;;
+    *) files+=("$PWD/$file") ;;
+  esac
+done
+
 cd "${HOME}" || exit 1
 
 open -na OMXterm --args \
-  -e "$SHELL" -lc \
-  "nvim -n"
+  -e "${SHELL:-/bin/sh}" -lc \
+  'exec nvim -n -- "$@"' texteditor "${files[@]}"
