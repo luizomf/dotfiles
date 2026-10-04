@@ -73,3 +73,46 @@ as text, use **Open With → Other → Enable: All Applications**.
 Run isolated launcher checks with `bash tests/test_texteditor.sh`. After
 updating the app, manually confirm Finder opens a disposable text file in
 Neovim.
+
+## Make TextEditor the default in bulk
+
+With the app installed and registered, use the macOS Swift toolchain:
+
+```sh
+# Preview only; does not change associations or create backups.
+swift scripts/lib/texteditor-defaults.swift
+
+# Save local backups, apply associations, and verify the resulting handlers.
+swift scripts/lib/texteditor-defaults.swift --apply
+```
+
+The script covers common plain-text, source-code, markup, and configuration
+extensions, plus generic plain-text/source-code types. The preview includes
+every proposed type, including generic ones without an extension. It does not
+install software or sync machines. Repeat it on each Mac; defaults are per user.
+
+macOS may ask **Use TextEditor** separately for many types. Run `--apply` with
+access to that Mac's desktop and approve the requested changes there; SSH does
+not bypass these confirmations. Already-correct associations are skipped. If a
+confirmation takes more than 90 seconds, the script stops without retrying;
+resolve any pending dialog and inspect the result before running it again.
+
+Backups of raw Launch Services preferences and resolved previous handlers go to
+`~/Library/Application Support/OM/TextEditor/`, never into Git. Preserve these
+files if you need to restore previous choices. Importing a complete preferences
+backup also reverts unrelated association changes made since that backup;
+restore selectively when necessary. Partial failures are reported with a nonzero
+exit code, without silently rolling back other successful changes.
+
+The script does not claim generic data, images, PDFs, archives, or executables.
+Some extensions are ambiguous: macOS classifies `.ts` as video, but this script
+explicitly assigns it to TextEditor for TypeScript. Consequently, actual video
+files named `.ts` also use TextEditor. `.mts` is skipped when its type also
+covers `.m2ts` videos. Declared non-text types (for example GarageBand's `.exs`)
+and extensions resolving to generic `public.data` are also skipped. Unknown
+extensions and extensionless names are not guaranteed; Finder's per-file **Open
+With** remains available. No blanket association can reliably infer whether
+arbitrary file contents are source code.
+
+Run the read-only association checks with
+`bash tests/test_texteditor_defaults.sh`.
