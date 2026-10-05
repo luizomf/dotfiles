@@ -14,6 +14,12 @@ information blocks progress or destructive consequences have not already been
 authorized. Do not add unrequested restrictions, work or process to the original
 prompt.
 
+When you encounter a concrete problem outside the current task—such as confusing
+navigation, conflicting instructions, broken tooling, or misleading docs—record
+it in the configured issue tracker for later investigation rather than ignore it
+silently. Check for an existing issue first, include observed evidence and
+impact, distinguish observations from hypotheses, and omit sensitive data.
+
 Prefer solutions that are easy to understand and maintain, without structure
 that adds no concrete benefit to the current task.
 
