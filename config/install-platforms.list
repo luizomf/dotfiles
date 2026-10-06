@@ -1,0 +1,8 @@
+# platform linux-ids package-manager
+# Exact /etc/os-release IDs only; no automatic ID_LIKE support.
+# Package selectors may name a platform or its package manager.
+darwin - brew
+ubuntu ubuntu apt
+debian debian apt
+fedora fedora,fedora-asahi-remix dnf
+arch arch,omarchy pacman

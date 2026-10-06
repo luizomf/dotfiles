@@ -15,13 +15,18 @@ I have tested clean installations on:
 
 I also use them daily on Fedora Asahi Remix 44 (ARM64), but Fedora has not been
 tested from a clean installation yet. Traditional Fedora and plain Arch are
-accepted; plain Arch and x86_64 Omarchy have not had clean-install tests. Atomic
-or OSTree variants and other Linux distributions are rejected by the installer.
+accepted; plain Arch and x86_64 Omarchy have not had clean-install tests. Debian
+is also accepted (Debian 13 ARM64 packages checked, full install not yet
+tested). Atomic or OSTree variants and other Linux distributions are rejected by
+the installer.
 
 Package selections live in [`config/packages.list`](config/packages.list),
 shared by all supported systems and the macOS Brewfile. See
 [installer maintenance](docs/installation.md) for adding packages and the
-Arch/Omarchy installation policy.
+Debian/Arch/Omarchy policies. Supported distro IDs and package managers live in
+[`config/install-platforms.list`](config/install-platforms.list); adding a
+distro with an existing package manager no longer requires new dispatch
+branches.
 
 No major problems have shown up so far. That is not a promise that the installer
 will work on your machine.

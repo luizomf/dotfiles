@@ -17,20 +17,30 @@ configure_install_interaction() {
 
 detect_install_platform() {
   local kernel=$1 distro=${2:-} ostree=${3:-0}
-  case "$kernel:$distro" in
-    Darwin:*) printf 'darwin\n' ;;
-    Linux:ubuntu) printf 'ubuntu\n' ;;
-    Linux:arch|Linux:omarchy)
-      [[ "$ostree" != 1 ]] || return 1
-      printf 'arch\n'
-      ;;
-    Linux:fedora|Linux:fedora-asahi-remix)
-      # DNF mutation is not the deployment model for Atomic/OSTree hosts.
-      [[ "$ostree" != 1 ]] || return 1
-      printf 'fedora\n'
-      ;;
-    *) return 1 ;;
-  esac
+  local platform ids manager
+  if [[ "$kernel" == Darwin ]]; then
+    printf 'darwin\n'
+    return
+  fi
+  [[ "$kernel" == Linux && "$ostree" != 1 && -n "$distro" ]] || return 1
+  while read -r platform ids manager || [[ -n "$platform" ]]; do
+    [[ -n "$platform" && "$platform" != \#* && "$ids" != - ]] || continue
+    case ",$ids," in
+      *",$distro,"*) printf '%s\n' "$platform"; return ;;
+    esac
+  done < "$REPO_DIR/config/install-platforms.list"
+  return 1
+}
+
+install_package_manager() {
+  local target=$1 platform ids manager
+  while read -r platform ids manager || [[ -n "$platform" ]]; do
+    [[ "$platform" == "$target" ]] || continue
+    printf '%s\n' "$manager"
+    return
+  done < "$REPO_DIR/config/install-platforms.list"
+  printf 'Unsupported package platform: %s\n' "$target" >&2
+  return 1
 }
 
 require_new_toolchain_dir() {
@@ -43,24 +53,25 @@ require_new_toolchain_dir() {
 }
 
 install_platform_packages() {
-  local platform=$1 platforms provider package _option
+  local platform=$1 platforms provider package _option manager
+  manager=$(install_package_manager "$platform") || return $?
   local native_packages=() brew_packages=() pacman_options=(-S --needed)
 
-  case "$platform" in
-    darwin)
+  case "$manager" in
+    brew)
       install_homebrew
       brew update
       brew bundle --file="$REPO_DIR/homebrew/Brewfile"
       return
       ;;
-    ubuntu|fedora|arch) ;;
-    *) printf 'Unsupported package platform: %s\n' "$platform" >&2; return 1 ;;
+    apt|dnf|pacman) ;;
+    *) printf 'Unsupported package manager: %s\n' "$manager" >&2; return 1 ;;
   esac
 
   while read -r platforms provider package _option || [[ -n "$platforms" ]]; do
     [[ -n "$platforms" && "$platforms" != \#* ]] || continue
     case ",$platforms," in
-      *",$platform,"*)
+      *",$platform,"*|*",$manager,"*)
         case "$provider" in
           native) native_packages+=("$package") ;;
           brew) brew_packages+=("$package") ;;
@@ -70,16 +81,16 @@ install_platform_packages() {
   done < "$REPO_DIR/config/packages.list"
 
   loginfo "Installing $platform development and terminal packages..."
-  case "$platform" in
-    ubuntu)
+  case "$manager" in
+    apt)
       sudo DEBIAN_FRONTEND=noninteractive apt-get update
       sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${native_packages[@]}"
       ;;
-    fedora)
+    dnf)
       # Preserve Asahi/host repositories, kernels, graphics and services.
       sudo dnf install -y "${native_packages[@]}"
       ;;
-    arch)
+    pacman)
       # Use the host's existing sync database. Never perform a partial upgrade
       # (-Sy) or take over Omarchy's system-update/repository policy.
       if [[ "${OM_INSTALL_ASSUME_YES:-0}" == 1 ]]; then

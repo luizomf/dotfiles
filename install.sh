@@ -145,7 +145,7 @@ case "$(uname -s)" in
     loginfo "Sistema detectado: macOS $(sw_vers -productVersion)."
     ;;
   *)
-    logerror "Apenas macOS, Ubuntu, Fedora tradicional/Asahi e Arch/Omarchy são suportados."
+    logerror "Sistema não suportado; consulte config/install-platforms.list."
     exit 1
     ;;
 esac
@@ -157,21 +157,15 @@ if [[ "$OP_SYSTEM" == "ubuntu" ]]; then
     sudo locale-gen en_US.UTF-8
   fi
   sudo update-locale LANG=en_US.UTF-8
+fi
 
+if [[ "$(install_package_manager "$OP_SYSTEM")" == apt ]]; then
   mkdir -p "$HOME/.local/bin"
   if ! command -v fd > /dev/null 2>&1 && command -v fdfind > /dev/null 2>&1; then
     ln -sf "$(command -v fdfind)" "$HOME/.local/bin/fd"
   fi
   if ! command -v bat > /dev/null 2>&1 && command -v batcat > /dev/null 2>&1; then
     ln -sf "$(command -v batcat)" "$HOME/.local/bin/bat"
-  fi
-
-  if ! command -v ghostty > /dev/null 2>&1; then
-    loginfo "Instalando Ghostty..."
-    run_remote_script /bin/bash \
-      https://raw.githubusercontent.com/mkasberg/ghostty-ubuntu/HEAD/install.sh
-  else
-    loginfo "Ghostty já está instalado."
   fi
 fi
 
@@ -180,8 +174,7 @@ if [[ "$OP_SYSTEM" != "darwin" ]]; then
   if [[ "$(getent passwd "$(id -un)" | cut -d: -f7)" != "$zsh_path" ]]; then
     sudo chsh -s "$zsh_path" "$(id -un)"
   fi
-  # Fedora and Arch/Omarchy keep the host's locale and installed terminal.
-  # Ghostty's Ubuntu-only installer must not run on either.
+  # Linux hosts keep their installed terminal; only Ubuntu adjusts the locale.
 fi
 
 loginfo "Configurando Oh My Zsh..."
@@ -333,9 +326,6 @@ fi
 
 loginfo "Verificando a instalação..."
 required_commands=(git nvim vim zsh tmux python3 brew fastfetch fd fzf bat shellcheck)
-if [[ "$OP_SYSTEM" == "ubuntu" ]]; then
-  required_commands+=(ghostty)
-fi
 if [[ "${OM_INSTALL_SKIP_TOOLCHAINS:-0}" != "1" ]]; then
   required_commands+=(node npm prettier)
 fi

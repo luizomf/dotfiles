@@ -14,9 +14,13 @@ Each non-comment line is whitespace-separated:
 platforms provider package [option]
 ```
 
-- Platforms: `darwin`, `ubuntu`, `fedora`, `arch` (Arch and Omarchy). Combine
-  platforms with commas, without spaces. There is no implicit inheritance.
-- `native`: apt on Ubuntu, DNF on Fedora, pacman on Arch/Omarchy. Use the
+- Selectors: platform names from `config/install-platforms.list` (`darwin`,
+  `ubuntu`, `debian`, `fedora`, `arch`) or their Linux package managers (`apt`,
+  `dnf`, `pacman`). Combine selectors with commas, without spaces. A row is
+  selected once when either the platform or its manager matches. `apt` shares
+  both native and Brew selections between Debian and Ubuntu; use a platform name
+  for exceptions. The macOS Brewfile selects only `darwin` rows.
+- `native`: apt on Debian/Ubuntu, DNF on Fedora, pacman on Arch/Omarchy. Use the
   package name that each distro actually provides; differing names need separate
   rows.
 - `brew`: Homebrew formula/tool on the selected platforms.
@@ -28,13 +32,13 @@ platforms provider package [option]
 For example, bat needs just one declaration:
 
 ```text
-darwin,ubuntu,fedora,arch brew bat
+darwin,apt,fedora,arch brew bat
 ```
 
 Distro name differences remain explicit:
 
 ```text
-ubuntu,fedora native fd-find
+apt,fedora native fd-find
 arch native fd
 darwin brew fd
 ```
@@ -50,6 +54,45 @@ replace those workflows.
 run `brew bundle dump --force` over it. Neither the `brewupdate` alias nor
 `scripts/updateall` exports the current machine's installed inventory over the
 tracked Brewfile anymore; package updates leave the catalog reader intact.
+
+## Adding a Linux distribution
+
+`config/install-platforms.list` is the registry: each row declares the canonical
+platform, comma-separated exact `/etc/os-release` IDs, and package manager.
+Aliases map to the same platform. Unknown IDs and OSTree systems are rejected;
+`ID_LIKE` never opts an untested derivative in automatically.
+
+For a distro using an existing backend (`apt`, `dnf`, `pacman`):
+
+1. Add its registry row. Detection and package-manager dispatch use that row; no
+   new `case` branch in `install.sh` is needed.
+2. Check the manager-shared rows in `config/packages.list` against its actual
+   repositories, and add platform-specific selections where necessary. DNF and
+   pacman selections currently name Fedora and Arch explicitly; sharing those
+   requires an intentional catalog edit.
+3. Add detection/package tests in `tests/test_install_platform.py` and document
+   what was actually checked. A new package manager still needs a backend in
+   `scripts/lib/install-platform.sh`.
+
+Ubuntu's locale setup remains an explicit Ubuntu-only exception in `install.sh`;
+the `fd`/`bat` command-name compatibility links apply to APT hosts. New distros
+otherwise keep their locale. Ghostty is neither installed nor required on Linux;
+its configuration is still linked for users who install it separately. The macOS
+cask is unchanged.
+
+## Debian
+
+Debian uses APT for native dependencies and the shared APT-platform Homebrew
+selection for current CLI tools (including Neovim and tmux). It uses the
+existing pyenv/nvm workflows, changes the login shell to Zsh, and links the same
+dotfiles with the normal backups. Extra native Python build libraries are
+declared for Debian in the catalog. Sudo must already be installed and
+authorized for the normal user; do not launch the installer as root.
+
+Debian does not install Ghostty or change the system locale. Ghostty
+configuration is still linked, but its executable is not required. Debian 13
+ARM64 package availability was inspected read-only; no full Debian installation
+has been performed by the agent. The maintainer will test it.
 
 ## Arch and Omarchy
 
@@ -83,8 +126,8 @@ under `~/.dotfiles-backups/`. This is not a transparent addition to Omarchy's
 shell/editor defaults. It does not replace Bash configuration, but the existing
 nvm bootstrap may append initialization to a shell profile (including `.bashrc`
 when launched from Bash). Locale, Hyprland, boot, services, distro repositories
-and the installed desktop terminal are left alone. The Ubuntu-only Ghostty
-installer never runs on Arch/Omarchy.
+and the installed desktop terminal are left alone. No Linux platform runs a
+Ghostty installer.
 
 ## Verification
 

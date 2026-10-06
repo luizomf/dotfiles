@@ -291,6 +291,7 @@ class InstallPlatformTests(unittest.TestCase):
     for kernel, distro, expected in (
       ("Darwin", "", "darwin"),
       ("Linux", "ubuntu", "ubuntu"),
+      ("Linux", "debian", "debian"),
       ("Linux", "fedora", "fedora"),
       ("Linux", "fedora-asahi-remix", "fedora"),
       ("Linux", "omarchy", "arch"),
@@ -303,7 +304,10 @@ class InstallPlatformTests(unittest.TestCase):
 
   def test_unsupported_and_immutable_platforms(self):
     for kernel, distro, ostree in (
-      ("Linux", "debian", "0"),
+      ("Linux", "linuxmint", "0"),
+      ("Linux", "", "0"),
+      ("Linux", "debian", "1"),
+      ("Linux", "ubuntu", "1"),
       ("FreeBSD", "", "0"),
       ("Linux", "fedora", "1"),
       ("Linux", "fedora-asahi-remix", "1"),
@@ -385,8 +389,8 @@ class InstallPlatformTests(unittest.TestCase):
     self.assertEqual(result.returncode, 0, result.stderr)
     self.assertTrue(result.stdout.startswith("pacman -S --needed --noconfirm "))
 
-  def test_ubuntu_and_macos_keep_their_package_managers(self):
-    for platform in ("ubuntu", "darwin"):
+  def test_apt_and_macos_package_managers(self):
+    for platform in ("ubuntu", "debian", "darwin"):
       with self.subTest(platform=platform):
         result = self.shell(
           """
@@ -400,12 +404,17 @@ class InstallPlatformTests(unittest.TestCase):
           platform,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
-        if platform == "ubuntu":
+        if platform in ("ubuntu", "debian"):
           self.assertIn("apt-get update", result.stdout)
           self.assertIn("apt-get install -y", result.stdout)
           self.assertIn("libssl-dev", result.stdout)
           self.assertIn("fd-find", result.stdout)
           self.assertIn("font-fira-code-nerd-font", result.stdout)
+          if platform == "debian":
+            native_line = result.stdout.splitlines()[1].split()
+            self.assertIn("procps", native_line)
+            self.assertIn("libffi-dev", native_line)
+            self.assertNotIn("watch", native_line)
         else:
           self.assertEqual(
             result.stdout.splitlines(),
@@ -469,10 +478,13 @@ class InstallPlatformTests(unittest.TestCase):
       (root / "config").mkdir()
       (root / "config/packages.list").write_text(
         "# Fixture catalog\n"
-        "arch native git\n"
+        "arch,pacman native git\n"
         "darwin brew mac-only\n"
         "arch brew bat\n"
         "arch brew rtk"
+      )
+      shutil.copyfile(
+        ROOT / "config/install-platforms.list", root / "config/install-platforms.list"
       )
       result = self.shell(
         """
@@ -509,6 +521,10 @@ class InstallPlatformTests(unittest.TestCase):
     providers = {
       "darwin": {"brew", "cask", "tap", "uv"},
       "ubuntu": {"native", "brew"},
+      "debian": {"native", "brew"},
+      "apt": {"native", "brew"},
+      "dnf": {"native", "brew"},
+      "pacman": {"native", "brew"},
       "fedora": {"native", "brew"},
       "arch": {"native", "brew"},
     }
@@ -531,6 +547,83 @@ class InstallPlatformTests(unittest.TestCase):
           self.assertIn(
             (provider, options[0]), (("brew", "unlinked"), ("tap", "trusted"))
           )
+
+  def test_linux_does_not_install_or_require_ghostty(self):
+    source = (ROOT / "install.sh").read_text()
+    self.assertNotIn("ghostty-ubuntu", source)
+    self.assertNotIn("command -v ghostty", source)
+    self.assertNotIn("required_commands+=(ghostty)", source)
+
+  def test_debian_preserves_locale_and_does_not_install_ubuntu_ghostty(self):
+    source = (ROOT / "install.sh").read_text()
+    setup = source.split('install_platform_packages "$OP_SYSTEM"', 1)[1].split(
+      'loginfo "Configurando Oh My Zsh..."', 1
+    )[0]
+    with tempfile.TemporaryDirectory() as tmp:
+      result = self.shell(
+        """
+        set -Eeuo pipefail
+        OP_SYSTEM=debian
+        HOME=$2
+        sudo() { printf 'sudo %s\\n' "$*"; }
+        locale() { printf 'UNEXPECTED_LOCALE\\n'; }
+        run_remote_script() { printf 'UNEXPECTED_REMOTE\\n'; }
+        getent() { printf 'user:x:1000:1000::/home/user:/bin/bash\\n'; }
+        command() {
+          case "$*" in
+            '-v fd'|'-v bat') return 1 ;;
+            '-v fdfind') printf '/usr/bin/fdfind\\n' ;;
+            '-v batcat') printf '/usr/bin/batcat\\n' ;;
+            '-v zsh') printf '/usr/bin/zsh\\n' ;;
+            *) return 99 ;;
+          esac
+        }
+        """
+        + setup,
+        tmp,
+      )
+      self.assertEqual(result.returncode, 0, result.stderr)
+      self.assertNotIn("UNEXPECTED", result.stdout)
+      self.assertNotIn("locale", result.stdout)
+      self.assertIn("chsh -s /usr/bin/zsh", result.stdout)
+      self.assertEqual(
+        (Path(tmp) / ".local/bin/fd").readlink(), Path("/usr/bin/fdfind")
+      )
+      self.assertEqual(
+        (Path(tmp) / ".local/bin/bat").readlink(), Path("/usr/bin/batcat")
+      )
+
+  def test_platform_table_can_add_an_apt_distro_without_shell_changes(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      root = Path(tmp)
+      (root / "config").mkdir()
+      # Both detection and manager lookup must consume an unterminated last row.
+      (root / "config/install-platforms.list").write_text("example example,alias apt")
+      (root / "config/packages.list").write_text(
+        "apt,example native git\nexample brew bat\nubuntu native ubuntu-only\n"
+      )
+      result = self.shell(
+        """
+        set -Eeuo pipefail
+        REPO_DIR=$2
+        loginfo() { :; }
+        sudo() { printf 'sudo %s\\n' "$*"; }
+        install_homebrew() { :; }
+        brew() { printf 'brew %s\\n' "$*"; }
+        platform=$(detect_install_platform Linux alias)
+        install_platform_packages "$platform"
+        """,
+        tmp,
+      )
+      self.assertEqual(result.returncode, 0, result.stderr)
+      self.assertEqual(
+        result.stdout.splitlines(),
+        [
+          "sudo DEBIAN_FRONTEND=noninteractive apt-get update",
+          "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y git",
+          "brew install bat",
+        ],
+      )
 
   def test_existing_toolchain_is_never_removed(self):
     with tempfile.TemporaryDirectory() as tmp:
