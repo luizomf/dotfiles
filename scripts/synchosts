@@ -27,7 +27,7 @@ done
 set -- "${host_args[@]}"
 if (( $# == 1 )) && [[ "$1" == -h || "$1" == --help ]]; then
   print -r -- "Usage: ${0:t} [--sync-auth] [--additional-hosts HOST [HOST ...]]"
-  print -r -- 'Collect shared data from all peers, then distribute it to all peers.'
+  print -r -- 'Merge the main fleet, then publish to it and any receive-only additional hosts.'
   print -r -- '--sync-auth also publishes Pi/Codex auth files from this caller to trusted peers.'
   print -r -- 'Keep consumers idle. Auth is never collected; absent files do not log peers out.'
   exit 0
@@ -60,7 +60,16 @@ run_step() {
     return "$result"
   fi
 }
-# Delegate validation and fleet membership before any side effects.
+# The runner's editable default list is the single main-fleet definition.
+# Validate all destinations separately; temporary additions are never sources.
+if main_output="$("$host_runner" --list)"; then
+  main_hosts=("${(@f)main_output}")
+else
+  result=$?
+  report_failure 'main host list' "$result"
+  blocked+=('all synchronization: main host list unavailable')
+  exit "$result"
+fi
 if host_output="$("$host_runner" --list "$@")"; then
   sync_hosts=("${(@f)host_output}")
 else
@@ -74,11 +83,30 @@ if ! local_host="$(hostname -s)"; then
   blocked+=('all synchronization: local host unknown')
   exit 1
 fi
+local_is_main=0
+for host in "${main_hosts[@]}"; do
+  [[ "${host:l}" != "${local_host:l}" ]] || local_is_main=1
+done
+if (( ! local_is_main )); then
+  print -u2 -r -- 'Run synchosts from the main fleet, or add this machine to hosts in run_all_hosts first.'
+  report_failure 'caller is not in the main fleet' 2
+  blocked+=('all synchronization: receive-only machines cannot publish')
+  exit 2
+fi
 peers=()
 for host in "${sync_hosts[@]}"; do
   [[ "${host:l}" == "${local_host:l}" ]] || peers+=("$host")
 done
 sync_hosts=("${peers[@]}")
+main_peers=()
+additional_peers=()
+for host in "${sync_hosts[@]}"; do
+  if (( ${main_hosts[(Ie)$host]} )); then
+    main_peers+=("$host")
+  else
+    additional_peers+=("$host")
+  fi
+done
 
 if command -v trash >/dev/null 2>&1; then
   trash_command=(trash)
@@ -110,7 +138,10 @@ rsync_remote='PATH="/opt/homebrew/bin:/usr/local/bin:$PATH" rsync'
 
 # Ordinary sync never stops services or prunes their state. Idle maintenance
 # remains a separate explicit operation with its own guards (see docs/scripts/).
-run_step 'history merge (offline peers are optional)' "$script_dir/zsh_history_sync.py" "$@"
+history_ready=0
+if run_step 'history merge (offline peers are optional)' "$script_dir/zsh_history_sync.py"; then
+  history_ready=1
+fi
 # Publish the default server, not an incidental custom/agent socket inherited
 # from the terminal running this command. Never export an old save after failure.
 tmux_saved=0
@@ -118,7 +149,7 @@ if run_step 'tmux save' env -u TMUX -u TMUX_PANE "$script_dir/tmux-lazy" save --
   tmux_saved=1
 fi
 
-run_step 'pullall' "$host_runner" "$@" -- '. ~/.zshrc ; pullall || true'
+run_step 'pullall' "$host_runner" "$@" -- '. ~/.zshrc ; pullall'
 
 echo
 prline
@@ -184,6 +215,11 @@ sync_home() {
   case "$route" in
     push:*)
       source="$HOME/${directory%/}/"
+      if (( ! ${main_hosts[(Ie)$host]} )); then
+        # The main fleet owns additional destinations, even when their files
+        # are newer or have identical size/mtime but different contents.
+        copy_flags=-havzc
+      fi
       if [[ "$directory" == "$tmux_directory" ]]; then
         (( tmux_ready )) || return 1
         source="$tmux_stage/snapshot/state.json"
@@ -264,7 +300,7 @@ sync_auth_home() {
 # caller-only tmux export below is independent of this collection.
 collection_failed=0
 for directory in "${data_directories[@]}"; do
-  for host in "${sync_hosts[@]}"; do
+  for host in "${main_peers[@]}"; do
     if sync_data_home "$directory" "pull:$host"; then
       (( succeeded += 1 ))
     else
@@ -285,6 +321,17 @@ else
       fi
     done
   done
+  # Main histories retain their existing collection/merge workflow. Temporary
+  # destinations receive that merged file and never supply history of their own.
+  if (( history_ready )); then
+    for host in "${additional_peers[@]}"; do
+      run_step "history push $host" "$rsync_bin" -havz \
+        --rsync-path="$rsync_remote" --checksum --delay-updates --chmod=F600 \
+        "$HOME/.zsh_history" "$host:~/.zsh_history"
+    done
+  elif (( ${#additional_peers} )); then
+    blocked+=('additional-host history publication: history merge failed')
+  fi
   if (( sync_auth )); then
     print -r -- 'Publishing caller-owned Pi/Codex credentials; consumers must remain idle.'
     auth_directories=('.codex/' '.pi/agent/')

@@ -99,8 +99,10 @@ class SyncHostsTests(unittest.TestCase):
       " if 'scripts/clear_sannux_transients' in command: "
       "sys.exit(19 if os.environ.get('FAIL_IDLE') else 0)\n"
       " if 'scripts/stop_omnivoicetts' in command: sys.exit(0)\n"
-      " if '.zsh_history' in command: "
-      "print(': 100:0;echo fixture'); sys.exit(0)\n"
+      " if '.zsh_history' in command:\n"
+      "  p=home/'.zsh_history'\n"
+      "  if not p.is_file(): sys.exit(1)\n"
+      "  sys.stdout.buffer.write(p.read_bytes()); sys.exit(0)\n"
       " env={**os.environ,'HOME':str(home),'ZDOTDIR':str(home)}\n"
       " if host==os.environ.get('FAIL_REMOTE_TRASH') and 'trash' in command: "
       "env['FAIL_TRASH']='1'\n"
@@ -508,6 +510,130 @@ class SyncHostsTests(unittest.TestCase):
     for host in ["m132", "m4128", "fedoraair"]:
       for rel in live:
         self.assertEqual((self.root / "homes" / host / rel).read_text(), host, rel)
+
+  def test_additional_host_receives_main_winner_without_contributing_newer_settings(
+    self,
+  ):
+    expected = '{"theme":"chosen","defaultModel":"chosen-model"}\n'
+    for host, content, timestamp in (
+      ("m132", '{"theme":"old"}\n', 100),
+      ("m4128", expected, 200),
+      ("fedoraair", '{"theme":"middle"}\n', 150),
+      ("extra", '{"lastChangelogVersion":"new"}\n', 300),
+    ):
+      path = self.root / "homes" / host / ".pi/agent/settings.json"
+      path.write_text(content)
+      os.utime(path, (timestamp, timestamp))
+    result = self.run_sync("--additional-hosts", "extra")
+    self.assertEqual(result.returncode, 0, result.stderr)
+    for host in ("m132", "m4128", "fedoraair", "extra"):
+      home = self.root / "homes" / host
+      self.assertEqual((home / ".pi/agent/settings.json").read_text(), expected)
+      if host != "extra":
+        self.assertFalse((home / ".pi/agent/extra.txt").exists())
+    copies = [c for c in self.commands() if c[0] == "rsync"]
+    self.assertFalse(any(c[-2].startswith("extra:~/") for c in copies))
+    history_reads = [
+      c
+      for c in self.commands()
+      if c[0] == "ssh" and c[-2] == "extra" and ".zsh_history" in c[-1]
+    ]
+    self.assertEqual(history_reads, [])
+
+  def test_additional_host_receives_merged_history_but_never_contributes_entries(self):
+    entries: dict[str, str] = {}
+    for index, host in enumerate(("m132", "m4128", "fedoraair", "extra"), start=1):
+      entries[host] = f": {index * 100}:0;echo {host}\n"
+      (self.root / "homes" / host / ".zsh_history").write_text(entries[host])
+    expected = entries["m132"] + entries["m4128"] + entries["fedoraair"]
+    result = self.run_sync("--additional-hosts", "extra")
+    self.assertEqual(result.returncode, 0, result.stderr)
+    self.assertEqual((self.home / ".zsh_history").read_text(), expected)
+    self.assertEqual((self.root / "homes/extra/.zsh_history").read_text(), expected)
+    self.assertFalse(
+      any(
+        c[0] == "ssh" and c[-2] == "extra" and ".zsh_history" in c[-1]
+        for c in self.commands()
+      )
+    )
+
+  def test_additional_destination_is_corrected_even_with_identical_size_and_mtime(self):
+    for host in ("m132", "m4128", "fedoraair", "extra"):
+      path = self.root / "homes" / host / ".pi/agent/settings.json"
+      path.write_text('"good"' if host != "extra" else '"oops"')
+      os.utime(path, (100, 100))
+    result = self.run_sync("--additional-hosts", "extra")
+    self.assertEqual(result.returncode, 0, result.stderr)
+    self.assertEqual(
+      (self.root / "homes/extra/.pi/agent/settings.json").read_text(), '"good"'
+    )
+
+  def test_main_member_remains_bidirectional_when_also_named_as_additional(self):
+    path = self.root / "homes/m4128/.pi/agent/new-setting"
+    path.write_text("from main member")
+    result = self.run_sync("--additional-hosts", "m4128", "extra", "extra")
+    self.assertEqual(result.returncode, 0, result.stderr)
+    for host in ("m132", "fedoraair", "extra"):
+      self.assertEqual(
+        (self.root / "homes" / host / ".pi/agent/new-setting").read_text(),
+        "from main member",
+      )
+    extra_pi_pushes = [
+      c for c in self.commands() if c[0] == "rsync" and c[-1] == "extra:~/.pi/"
+    ]
+    self.assertEqual(len(extra_pi_pushes), 1)
+
+  def test_editing_the_main_fleet_promotes_a_machine_to_bidirectional_caller(self):
+    runner = self.script.with_name("run_all_hosts")
+    runner.write_text(
+      runner.read_text().replace(
+        "hosts=(m132 m4128 fedoraair)", "hosts=(m132 m4128 fedoraair extra)"
+      )
+    )
+    self.home = self.root / "homes/extra"
+    result = self.run_sync(extra_env={"FAKE_HOST": "extra"})
+    self.assertEqual(result.returncode, 0, result.stderr)
+    for host in ("m132", "m4128", "fedoraair", "extra"):
+      for origin in ("m132", "m4128", "fedoraair", "extra"):
+        self.assertEqual(
+          (self.root / "homes" / host / ".pi/agent" / (origin + ".txt")).read_text(),
+          origin,
+        )
+
+  def test_additional_push_failure_does_not_prevent_main_fleet_sync(self):
+    result = self.run_sync(
+      "--additional-hosts", "extra", extra_env={"FAIL_PUSH": "extra"}
+    )
+    self.assertEqual(result.returncode, 1, result.stderr)
+    self.assertIn("FAILED: push extra", result.stdout)
+    for host in ("m132", "m4128", "fedoraair"):
+      for origin in ("m132", "m4128", "fedoraair"):
+        self.assertTrue(
+          (self.root / "homes" / host / ".pi/agent" / (origin + ".txt")).is_file()
+        )
+    self.assertNotIn("BLOCKED: data publication", result.stdout)
+
+  def test_additional_auth_receives_caller_credentials_only_with_flag(self):
+    caller = self.home / ".pi/agent/auth.json"
+    receiver = self.root / "homes/extra/.pi/agent/auth.json"
+    caller.write_text("synthetic main auth")
+    receiver.write_text("synthetic temporary auth")
+    result = self.run_sync("--additional-hosts", "extra")
+    self.assertEqual(result.returncode, 0, result.stderr)
+    self.assertEqual(receiver.read_text(), "synthetic temporary auth")
+    self.assertEqual(caller.read_text(), "synthetic main auth")
+    result = self.run_sync("--sync-auth", "--additional-hosts", "extra")
+    self.assertEqual(result.returncode, 0, result.stderr)
+    self.assertEqual(receiver.read_text(), "synthetic main auth")
+    self.assertEqual(receiver.stat().st_mode & 0o777, 0o600)
+
+  def test_receive_only_machine_cannot_publish_by_running_synchosts(self):
+    self.home = self.root / "homes/extra"
+    result = self.run_sync(extra_env={"FAKE_HOST": "extra"})
+    self.assertEqual(result.returncode, 2, result.stderr)
+    self.assertIn("main fleet", result.stderr)
+    self.assertFalse(any(c[0] in {"ssh", "rsync"} for c in self.commands()))
+    self.assertFalse((self.root / "trash").exists())
 
   def test_additional_host_does_not_trigger_idle_maintenance(self):
     result = self.run_sync("--additional-hosts", "extra")

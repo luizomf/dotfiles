@@ -2,8 +2,9 @@
 
 set -euo pipefail
 
-# Personal, editable default fleet. Temporary host changes are expected when
-# bootstrapping machines or running one-off syncs; keep SSH aliases, not paths.
+# Editable main fleet: synchosts merges these machines bidirectionally.
+# Add permanent members here; use --additional-hosts for receive-only sync
+# destinations instead. Keep SSH aliases, not paths.
 hosts=(m132 m4128 fedoraair)
 additional_hosts=()
 selected_host=''
@@ -53,7 +54,9 @@ while (( $# )); do
 done
 
 if (( capture )); then
-  [[ -n "$selected_host" ]] && (( ! list_only )) || fail '--capture requires --host and cannot be combined with --list.'
+  if [[ -z "$selected_host" ]] || (( list_only )); then
+    fail '--capture requires --host and cannot be combined with --list.'
+  fi
 fi
 
 if [[ -n "$selected_host" ]]; then
@@ -89,6 +92,8 @@ failures=()
 for host in "${hosts[@]}"; do
   printf '\e[32mHost:\e[0m %s\n' "$host"
   printf '\e[32mCommand:\e[0m \e[33m%s\e[0m\n\n' "$cmd"
+  # cmd is intentionally one caller-supplied remote command, not a local script.
+  # shellcheck disable=SC2029
   if ssh ${ssh_options[@]+"${ssh_options[@]}"} "$host" "$cmd"; then
     :
   else

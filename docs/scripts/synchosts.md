@@ -1,12 +1,53 @@
 # `synchosts`
 
 `scripts/synchosts [--sync-auth] [--additional-hosts HOST ...]` copies personal
-working files between the trusted hosts in `scripts/run_all_hosts`.
+working files between the trusted main hosts in `scripts/run_all_hosts`, and
+optionally publishes the result to temporary receive-only hosts.
 
 The policy is **copy whole roots, minus explicit exclusions**. New files do not
 need an allowlist entry. This is personal, private file synchronization, not a
 public-data export, deployment pipeline, or credential manager. The script and
 documentation are public; the files they transfer must not be committed here.
+
+## Main fleet and temporary destinations
+
+The `hosts=(...)` array in `scripts/run_all_hosts` is the single editable main
+fleet. Add permanent machines there to make them bidirectional; there is no
+second list in `synchosts`. Keep that runner updated on every main machine. The
+caller must be a main member, identified by its short hostname (matching an
+entry in that array, case-insensitively). Running from an unlisted machine fails
+before history, SSH or transfer operations; it cannot publish temporary data
+back to the main fleet.
+
+```sh
+synchosts
+synchosts --additional-hosts sandbox-vm
+synchosts --sync-auth --additional-hosts sandbox-vm test-vps
+```
+
+- **Main hosts:** collect from all other main members, keeping the newest
+  modification time per file, then distribute the consolidated data among them.
+- **Additional hosts:** receive the consolidated data but are never collection
+  sources, including for Zsh history. Their newer files cannot replace main-host
+  files. Publication ignores destination mtimes and uses checksums, so even a
+  different file with identical size/mtime is replaced by the main result.
+- An alias already in the main fleet remains bidirectional even if repeated in
+  `--additional-hosts`. Duplicate destinations are processed only once.
+- Additional-only files are not deleted and never flow back. Shared exclusions
+  and auth rules still apply; this is not a destructive mirror.
+
+History is merged locally from the main fleet as before. Additional hosts also
+receive that merged `~/.zsh_history` when collection and history merge succeed;
+their own history is not merged in. Keep shells/other consumers idle during
+publication to avoid a running process writing its old state back afterward.
+Tmux still publishes the caller's portable snapshot, not a fleet merge. Auth
+still requires `--sync-auth` and remains caller-authoritative.
+
+File timestamps are not user-intent tracking: a newly generated or emptied file
+on a **main** member can still win if it has the newest mtime. The
+destination-only rule prevents temporary machines from causing that problem; it
+does not merge JSON fields or detect accidental edits. Keep backups for
+recovery.
 
 ## What travels
 
@@ -113,9 +154,10 @@ and notes, not the entire running environment. A few boundaries remain visible:
   beside `synchosts`. It does not push commits and skips dirty checkouts.
   Uncommitted dotfiles edits do not reach peers through this command. Commit and
   push intended versioned changes; the Git-update step pulls them on prepared
-  hosts before data collection. New hosts still need the shell/tools and
-  checkout required to run `pullall`. Private sync data and scratch notes stay
-  out of Git.
+  hosts before data collection. Additional hosts also run this Git-update step,
+  but do not contribute files or history to collection. New hosts still need the
+  shell/tools and checkout required to run `pullall`. Private sync data and
+  scratch notes stay out of Git.
 - Project `.pi`, `.codex` and `.claude` directories retain their existing
   exclusions. Project-local agent settings may therefore differ even though the
   whole host `~/.pi/` travels.
@@ -176,16 +218,19 @@ Apple's OpenRSYNC rejects that option. Nothing is installed automatically.
 
 The command validates the host list, merges Zsh history, saves/stages tmux
 state, runs `pullall` over SSH on the selected fleet (including additional
-hosts), then collects data from every peer before distributing it. If any
-collection fails, data and optional auth publication are blocked; already
-collected local files are not rolled back. Tmux publication is independent. A
-failed push does not stop other pushes or the separate auth phase. The summary
-reports failures and exits nonzero for incomplete work.
+hosts), then collects data from main peers only before distributing it to main
+and additional peers. A `pullall` failure is reported, but independent transfer
+work continues. If any main-host data collection fails, data, additional-host
+history and optional auth publication are blocked; already collected local files
+are not rolled back. Tmux publication is independent. A failed push does not
+stop other pushes or the separate auth phase. The summary reports failures and
+exits nonzero for incomplete work.
 
-Normal data uses the existing mtime-based `rsync -u` merge. It is not version
+Main-host data uses the existing mtime-based `rsync -u` merge. It is not version
 control or an exact mirror: simultaneous edits are not resolved, and ordinary
-equal-size/equal-mtime changes may be missed. Auth and tmux use their distinct
-caller-owned publication rules. See
+equal-size/equal-mtime changes may be missed. Additional-host data publication
+uses checksums without `-u`, so destination timestamps cannot block the main
+result. Auth and tmux use their distinct caller-owned publication rules. See
 [tmux synchronization](../../tmux/README.md#migration-and-synchronization).
 
 There is **no deletion propagation**, cleanup, or service shutdown. Missing auth
@@ -196,8 +241,10 @@ history, `pullall`, and tmux steps retain their effects.
 
 Paths are relative to each host's own home. The script does not discover peer
 `PROJECTS_DIR`, `OM_PATHS_FILE`, `AGENT_HOME_PATH`, or `CODEX_HOME` overrides.
-Update the script on every machine where it is invoked before relying on these
-filters. No real synchronization is needed to validate a code change.
+Update the script on every main machine where it is invoked before relying on
+these filters and directional host roles. An older caller can still collect from
+additional hosts; updating only the temporary destination is insufficient. No
+real synchronization is needed to validate a code change.
 
 ## Verification
 
@@ -206,6 +253,9 @@ python3 -m unittest tests.test_synchosts
 ```
 
 Tests use synthetic private files, fake remote commands and local rsync
-fixtures. They cover whole-directory transfer, preserved relative links, shared
-exclusions, auth publication with a selected rsync despite an older PATH
-candidate, host Codex isolation, failure handling and tmux behavior.
+fixtures. They cover main-fleet merging, receive-only additional hosts
+(including newer/equal-mtime settings and isolated history), promotion through
+the main array, rejection of non-main callers, whole-directory transfer,
+preserved relative links, shared exclusions, auth publication with a selected
+rsync despite an older PATH candidate, host Codex isolation, failure handling
+and tmux behavior.
