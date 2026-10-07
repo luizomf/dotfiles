@@ -16,18 +16,22 @@ report_failure() {
 script_dir="${0:A:h}"
 host_runner="$script_dir/run_all_hosts"
 sync_auth=0
+skip_pull=0
 host_args=()
 for argument in "$@"; do
   if [[ "$argument" == '--sync-auth' ]]; then
     sync_auth=1
+  elif [[ "$argument" == '--skip-pull' ]]; then
+    skip_pull=1
   else
     host_args+=("$argument")
   fi
 done
 set -- "${host_args[@]}"
 if (( $# == 1 )) && [[ "$1" == -h || "$1" == --help ]]; then
-  print -r -- "Usage: ${0:t} [--sync-auth] [--additional-hosts HOST [HOST ...]]"
+  print -r -- "Usage: ${0:t} [--skip-pull] [--sync-auth] [--additional-hosts HOST [HOST ...]]"
   print -r -- 'Merge the main fleet, then publish to it and any receive-only additional hosts.'
+  print -r -- '--skip-pull skips Git repository updates (pullall), not main-host file collection.'
   print -r -- '--sync-auth also publishes Pi/Codex auth files from this caller to trusted peers.'
   print -r -- 'Keep consumers idle. Auth is never collected; absent files do not log peers out.'
   exit 0
@@ -149,7 +153,11 @@ if run_step 'tmux save' env -u TMUX -u TMUX_PANE "$script_dir/tmux-lazy" save --
   tmux_saved=1
 fi
 
-run_step 'pullall' "$host_runner" "$@" -- '. ~/.zshrc ; pullall'
+if (( skip_pull )); then
+  print -r -- 'Skipping Git updates (--skip-pull); file synchronization remains enabled.'
+else
+  run_step 'pullall' "$host_runner" "$@" -- '. ~/.zshrc ; pullall'
+fi
 
 echo
 prline

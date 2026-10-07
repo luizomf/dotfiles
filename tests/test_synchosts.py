@@ -682,6 +682,34 @@ class SyncHostsTests(unittest.TestCase):
           origin,
         )
 
+  def test_skip_pull_skips_git_updates_but_keeps_collection_auth_and_additional_push(
+    self,
+  ):
+    (self.home / ".pi/agent/auth.json").write_text("synthetic caller auth")
+    result = self.run_sync(
+      "--additional-hosts",
+      "extra",
+      "--skip-pull",
+      "--sync-auth",
+      extra_env={"FAIL_COMMAND": "pullall"},
+    )
+    self.assertEqual(result.returncode, 0, result.stderr)
+    self.assertIn("Skipping Git updates (--skip-pull)", result.stdout)
+    self.assertFalse(
+      any(
+        c[0] == "pullall" or (c[0] == "ssh" and "pullall" in c[-1])
+        for c in self.commands()
+      )
+    )
+    for host in ("m132", "m4128", "fedoraair", "extra"):
+      home = self.root / "homes" / host
+      for origin in ("m132", "m4128", "fedoraair"):
+        self.assertEqual((home / ".pi/agent" / (origin + ".txt")).read_text(), origin)
+      self.assertEqual(
+        (home / ".pi/agent/auth.json").read_text(), "synthetic caller auth"
+      )
+    self.assertFalse((self.home / ".pi/agent/extra.txt").exists())
+
   def test_pullall_failure_warns_and_continues_copying(self):
     result = self.run_sync(extra_env={"FAIL_COMMAND": "pullall"})
     self.assertEqual(result.returncode, 1, result.stderr)
@@ -774,6 +802,7 @@ class SyncHostsTests(unittest.TestCase):
   def test_help_and_invalid_arguments_have_no_operational_effects(self):
     self.assertEqual(self.run_sync("--help").returncode, 0)
     self.assertEqual(self.run_sync("--sync-auth", "--help").returncode, 0)
+    self.assertEqual(self.run_sync("--skip-pull", "--help").returncode, 0)
     self.assertEqual(self.run_sync("--invalid").returncode, 2)
     self.assertEqual(self.commands(), [])
 

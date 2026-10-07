@@ -1,8 +1,9 @@
 # `synchosts`
 
-`scripts/synchosts [--sync-auth] [--additional-hosts HOST ...]` copies personal
-working files between the trusted main hosts in `scripts/run_all_hosts`, and
-optionally publishes the result to temporary receive-only hosts.
+`scripts/synchosts [--skip-pull] [--sync-auth] [--additional-hosts HOST ...]`
+copies personal working files between the trusted main hosts in
+`scripts/run_all_hosts`, and optionally publishes the result to temporary
+receive-only hosts.
 
 The policy is **copy whole roots, minus explicit exclusions**. New files do not
 need an allowlist entry. This is personal, private file synchronization, not a
@@ -22,6 +23,7 @@ back to the main fleet.
 ```sh
 synchosts
 synchosts --additional-hosts sandbox-vm
+synchosts --skip-pull --additional-hosts sandbox-vm
 synchosts --sync-auth --additional-hosts sandbox-vm test-vps
 ```
 
@@ -149,20 +151,28 @@ the known generated directories is ordinary project data.
 For an already-prepared peer, this transfers working files, private agent homes
 and notes, not the entire running environment. A few boundaries remain visible:
 
-- `~/dotfiles` itself is outside the rsync data roots. `pullall` runs over SSH
-  on the selected fleet, including `--additional-hosts`, using the host runner
-  beside `synchosts`. It does not push commits and skips dirty checkouts.
-  Uncommitted dotfiles edits do not reach peers through this command. Commit and
-  push intended versioned changes; the Git-update step pulls them on prepared
-  hosts before data collection. Additional hosts also run this Git-update step,
-  but do not contribute files or history to collection. New hosts still need the
-  shell/tools and checkout required to run `pullall`. Private sync data and
-  scratch notes stay out of Git.
+- `~/dotfiles` itself is outside the rsync data roots. Unless `--skip-pull` is
+  supplied, `pullall` runs over SSH on the selected fleet, including
+  `--additional-hosts`, using the host runner beside `synchosts`. It does not
+  push commits and skips dirty checkouts. Uncommitted dotfiles edits do not
+  reach peers through this command. Commit and push intended versioned changes;
+  the Git-update step pulls them on prepared hosts before data collection.
+  Additional hosts also run this Git-update step, but do not contribute files or
+  history to collection. New hosts still need the shell/tools and checkout
+  required to run `pullall`. Private sync data and scratch notes stay out of
+  Git.
 - Project `.pi`, `.codex` and `.claude` directories retain their existing
   exclusions. Project-local agent settings may therefore differ even though the
   whole host `~/.pi/` travels.
 - Dependencies, installed tools, images, services and intentionally local Queue
   state are not installed or migrated. Use the existing manual setup on peers.
+
+`--skip-pull` is opt-in and skips only the Git-update (`pullall`) step on all
+selected hosts. It does not skip main-host file collection, history merge, tmux
+publication or requested auth publication. Use it when the repositories are
+already current or Git updates would be too slow. It does not update an outdated
+`synchosts` on another machine; update those checkouts separately before relying
+on new synchronization behavior.
 
 These are transfer boundaries, not new automatic exclusions or setup actions.
 
@@ -218,13 +228,13 @@ Apple's OpenRSYNC rejects that option. Nothing is installed automatically.
 
 The command validates the host list, merges Zsh history, saves/stages tmux
 state, runs `pullall` over SSH on the selected fleet (including additional
-hosts), then collects data from main peers only before distributing it to main
-and additional peers. A `pullall` failure is reported, but independent transfer
-work continues. If any main-host data collection fails, data, additional-host
-history and optional auth publication are blocked; already collected local files
-are not rolled back. Tmux publication is independent. A failed push does not
-stop other pushes or the separate auth phase. The summary reports failures and
-exits nonzero for incomplete work.
+hosts) unless `--skip-pull` was requested, then collects data from main peers
+only before distributing it to main and additional peers. A `pullall` failure is
+reported, but independent transfer work continues. If any main-host data
+collection fails, data, additional-host history and optional auth publication
+are blocked; already collected local files are not rolled back. Tmux publication
+is independent. A failed push does not stop other pushes or the separate auth
+phase. The summary reports failures and exits nonzero for incomplete work.
 
 Main-host data uses the existing mtime-based `rsync -u` merge. It is not version
 control or an exact mirror: simultaneous edits are not resolved, and ordinary
