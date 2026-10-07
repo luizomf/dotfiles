@@ -1,26 +1,20 @@
 #!/usr/bin/env bash
 #
-# keepwarm — keeps configured agent OAuth tokens alive in the sannux
-# *persistent* containers.
+# keepwarm — pings Codex and Pi on the host and in Sannux persistent homes.
 #
-# The ephemeral containers (sannux_ephemeral) copy the persistent home and,
-# at the end, `rm -rf` it — throwing away any token refresh they performed.
-# Because of refresh-token rotation (only one is valid at a time), an
-# ephemeral that refreshes and then discards invalidates the persistent token.
+# Each environment uses its own login; this script never copies credentials.
+# Normal agent calls may refresh OAuth tokens and persist them in that home.
+# A successful ping confirms a working request, not that a refresh occurred.
 #
-# This script avoids that by periodically pinging each agent via `sannux run`
-# (which mounts the persistent home read-write), keeping the *access token*
-# always fresh. That way the ephemerals always copy a valid token and never
-# need to refresh on their own.
-#
-# INTERVAL must be shorter than the access-token lifetime, so that some ping
-# always lands near expiry and triggers the refresh that gets persisted.
+# This does not make copied auth safe: sannux_ephemeral can still refresh a
+# copied token and discard its replacement. Periodic pings cannot guarantee
+# that every ephemeral run finishes before its copied access token expires.
 
 set -uo pipefail
 
 LOG_FILE="$HOME/dotfiles/scripts/keepwarm.log"
 
-INTERVAL="1h"        # Default: 1h  — time between pings (< access-token lifetime)
+INTERVAL="1h"        # Default: 1h  — time between pings
 INITIAL_RUN=1        # Default: 1   — 1 = ping once shortly after starting
 INITIAL_DELAY="10s"  # Default: 10s — wait before the first ping
 
@@ -51,7 +45,7 @@ run_ping() {
   # would otherwise pollute every successful ping. We only want the answer on
   # success, and the diagnostics only when something actually fails.
   errfile="$(mktemp)"
-  out="$(echo "Testing. Answer with true" | "$@" 2>"$errfile")"
+  out="$(echo 'Reply with exactly: Oi. Do not use tools.' | "$@" 2>"$errfile")"
   rc=$?
   err="$(cat "$errfile")"; rm -f "$errfile"
 
@@ -70,10 +64,17 @@ ping_agents() {
   # sannux run claude-code auth status >/dev/null 2>&1 || true
 
   # Preserve the maintenance model unless the owner overrides it.
-  run_ping codex sannux run \
-    codex exec --yolo - --ephemeral --model "${KEEPWARM_CODEX_MODEL:-gpt-6-luna}" -c model_reasoning_effort=low --color never
+  # Host and container calls resolve credentials from their respective homes.
+  run_ping codex-host \
+    codex exec --skip-git-repo-check - --ephemeral --model "${KEEPWARM_CODEX_MODEL:-gpt-6-luna}" -c model_reasoning_effort=low --color never
 
-  run_ping pi sannux run \
+  run_ping pi-host \
+    pi -p --no-session --model openai-codex/gpt-6-luna:low
+
+  run_ping codex-sannux sannux run \
+    codex exec --skip-git-repo-check - --ephemeral --model "${KEEPWARM_CODEX_MODEL:-gpt-6-luna}" -c model_reasoning_effort=low --color never
+
+  run_ping pi-sannux sannux run \
     pi -p --no-session --model openai-codex/gpt-6-luna:low
 }
 
