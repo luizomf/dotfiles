@@ -54,10 +54,10 @@ if [[ "$OSTYPE" == darwin* ]]; then
   PATH="/opt/homebrew/opt/curl/bin:/opt/homebrew/opt/mysql-client/bin:/opt/homebrew/opt/libpq/bin:${PATH}"
 fi
 
-if [ "$(uname -s)" = "Linux" ]; then
+if [[ "$OSTYPE" == linux* && -x /home/linuxbrew/.linuxbrew/bin/brew ]]; then
   PATH="/home/linuxbrew/.linuxbrew/bin:${PATH}"
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-elif [ "$(uname -s)" = "Darwin" ]; then
+elif [[ "$OSTYPE" == darwin* && -x /opt/homebrew/bin/brew ]]; then
   PATH="/opt/homebrew/opt/sqlite/bin:${PATH}"
   eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
