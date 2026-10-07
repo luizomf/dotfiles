@@ -1,0 +1,26 @@
+#!/usr/bin/env zsh
+# Shared basic PATH policy. Add user directories here, not in each startup file.
+# --initial preserves .zshenv's fallback demotion; later calls leave toolchain
+# ordering intact and only restore our basic user-path priority.
+() {
+  local directory
+  local -a fallbacks=(/usr/local/bin)
+  if [[ "$OSTYPE" == darwin* ]]; then
+    fallbacks+=(/opt/homebrew/bin /opt/homebrew/sbin)
+  fi
+  if [[ ${1:-} == --initial ]]; then
+    for directory in "${fallbacks[@]}"; do
+      path=("${(@)path:#$directory}")
+    done
+  fi
+
+  path=("$HOME/.cargo/bin" "$HOME/.docker/bin" "${path[@]}")
+  # Keep an active/inherited nvm Node ahead of Homebrew and system Node.
+  if [[ -n ${NVM_BIN:-} && -x "$NVM_BIN/node" ]]; then
+    path=("$NVM_BIN" "${path[@]}")
+  fi
+  path=("$HOME/dotfiles/scripts" "$HOME/.local/bin" "${path[@]}" "${fallbacks[@]}")
+  # Keep the first occurrence; repeated sourcing must not grow PATH.
+  typeset -gU path
+  export PATH
+} "$@"

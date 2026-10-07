@@ -8,10 +8,11 @@ it: its default mode also accesses another host.
 
 ## One shell default
 
-[`zsh/.zshenv`](../zsh/.zshenv) owns the local shell default:
+[`zsh/config/env`](../zsh/config/env), loaded by `.zshenv`, owns the local shell
+default:
 
 ```sh
-export LOCAL_MODEL="${LOCAL_MODEL:-muse-glimmer:30b-q4_K_M}"
+export LOCAL_MODEL="${LOCAL_MODEL:-qwen3.8:27b-mlx}"
 export LOCAL_MODEL_REASONING="${LOCAL_MODEL_REASONING:-high}"
 export MODEL="${LOCAL_MODEL}"
 ```

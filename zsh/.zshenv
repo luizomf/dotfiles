@@ -1,32 +1,5 @@
-# Keep user-managed toolchains ahead of Homebrew in non-interactive zsh
-# sessions. This prevents Homebrew's node/npm from shadowing nvm when a parent
-# process already exported NVM_BIN.
-path=("${(@)path:#$HOME/.local/bin}")
-path=("$HOME/.local/bin" "${path[@]}")
-path=("$HOME/dotfiles/scripts" "${path[@]}")
-path=("$HOME/.docker/bin" "${path[@]}")
-
-path=("${(@)path:#/usr/local/bin}")
-if [[ "$OSTYPE" == darwin* ]]; then
-  path=("${(@)path:#/opt/homebrew/bin}")
-  path=("${(@)path:#/opt/homebrew/sbin}")
-  path=("${path[@]}" /usr/local/bin /opt/homebrew/bin /opt/homebrew/sbin)
-else
-  path=("${path[@]}" /usr/local/bin)
-fi
-typeset -gU path
-
-export PATH
-
-# Keep non-interactive zsh sessions usable over SSH without loading the full
-# interactive config.
-# shellcheck source=../config/paths.sh
-. "$HOME/dotfiles/config/paths.sh"
-export OLLAMA_HOST="${OLLAMA_HOST:-192.168.0.109:11434}"
-export OLLAMA_TIMEOUT_MS="${OLLAMA_TIMEOUT_MS:-10000}"
-export OLLAMA_LOAD_TIMEOUT="${OLLAMA_LOAD_TIMEOUT:-10m}"
-export OLLAMA_KEEP_ALIVE="${OLLAMA_KEEP_ALIVE:-10m}"
-export LOCAL_MODEL="${LOCAL_MODEL:-qwen3.8:27b-mlx}"
-export LOCAL_MODEL_REASONING="${LOCAL_MODEL_REASONING:-high}"
-export MODEL="${LOCAL_MODEL}"
-
+# Minimal setup for every Zsh. Later login/interactive files can overwrite it.
+# Global profiles reset/reorder PATH on Alpine/macOS, so reapply the shared PATH
+# in .zprofile and after interactive toolchain initialization as well.
+source "$HOME/dotfiles/zsh/config/env"
+source "$HOME/dotfiles/zsh/config/path" --initial

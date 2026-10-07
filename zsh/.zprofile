@@ -6,3 +6,6 @@ fi
 
 # Set PATH, MANPATH, etc., for Homebrew.
 # eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# Global login profiles may reset/reorder PATH after .zshenv.
+source "$HOME/dotfiles/zsh/config/path" --refresh

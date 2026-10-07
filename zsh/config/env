@@ -1,0 +1,12 @@
+#!/usr/bin/env zsh
+# Public defaults for every Zsh, including non-interactive SSH commands.
+# Keep private ~/.env files and credential lookups in the interactive loader.
+. "$HOME/dotfiles/config/paths.sh"
+export OLLAMA_HOST="${OLLAMA_HOST:-192.168.0.109:11434}"
+export OLLAMA_TIMEOUT_MS="${OLLAMA_TIMEOUT_MS:-10000}"
+export OLLAMA_LOAD_TIMEOUT="${OLLAMA_LOAD_TIMEOUT:-10m}"
+export OLLAMA_KEEP_ALIVE="${OLLAMA_KEEP_ALIVE:-10m}"
+export LOCAL_MODEL="${LOCAL_MODEL:-qwen3.8:27b-mlx}"
+export LOCAL_MODEL_REASONING="${LOCAL_MODEL_REASONING:-high}"
+# Preserve the existing contract: MODEL follows LOCAL_MODEL.
+export MODEL="${LOCAL_MODEL}"
