@@ -32,9 +32,11 @@ No major problems have shown up so far. That is not a promise that the installer
 will work on your machine.
 
 Before running anything, open `install.sh` and check what it does. It installs
-packages and replaces shell, editor, terminal, Git, tmux, and Pi configuration.
-Existing targets are moved to a timestamped directory under
-`~/.dotfiles-backups/`, but you should still keep your own backup.
+packages and replaces shell, editor, terminal, Git, and tmux configuration.
+Personal Pi configuration is managed separately by
+[`synchosts`](docs/scripts/synchosts.md), not by the installer. Existing targets
+are moved to a timestamped directory under `~/.dotfiles-backups/`, but you
+should still keep your own backup.
 
 Install Git first. For a **new checkout** (`~/dotfiles` must not already exist),
 run:

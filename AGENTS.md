@@ -17,8 +17,8 @@ Preserve personal preferences and keep changes focused on the requested task.
 ## Real safety boundaries
 
 - Tracked files and commits are public. Keep secrets, private host details,
-  credentials, sessions, logs, and machine-local state out of Git. `pi/agent/`
-  contains static configuration only.
+  credentials, sessions, logs, and machine-local state out of Git. Personal Pi
+  configuration lives outside this repository and is managed by `synchosts`.
 - Deployed configs are often symlinks into this checkout: edits can affect the
   live environment immediately. Check affected consumers before changing paths,
   arguments, defaults, or environment-variable contracts.

@@ -238,13 +238,7 @@ else
 fi
 
 loginfo "Criando links de configuração..."
-mkdir -p "$HOME/.config" "$HOME/.pi/agent/themes"
-
-backup_and_link "../../dotfiles/pi/agent/AGENTS.md" "$HOME/.pi/agent/AGENTS.md"
-backup_and_link "../../dotfiles/pi/agent/RTK.md" "$HOME/.pi/agent/RTK.md"
-backup_and_link "../../dotfiles/pi/agent/settings.json" "$HOME/.pi/agent/settings.json"
-backup_and_link "../../../dotfiles/pi/agent/themes/omtheme.json" \
-  "$HOME/.pi/agent/themes/omtheme.json"
+mkdir -p "$HOME/.config"
 
 backup_and_link "$REPO_DIR/zsh/.zshrc" "$HOME/.zshrc"
 backup_and_link "$REPO_DIR/zsh/.zprofile" "$HOME/.zprofile"
@@ -358,7 +352,6 @@ required_links=(
   "$HOME/.config/omxterm/snippets.json"
   "$HOME/.config/omxterm/themes"
   "$HOME/.config/fastfetch"
-  "$HOME/.pi/agent/settings.json"
 )
 for required_link in "${required_links[@]}"; do
   if [[ ! -L "$required_link" ]]; then
