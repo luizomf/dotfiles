@@ -52,6 +52,22 @@ require_new_toolchain_dir() {
   fi
 }
 
+# Alpine normally supplies doas, not sudo. Other platforms keep their existing
+# sudo path, including configure_install_interaction's unattended wrapper.
+run_install_privileged() {
+  local platform=$1
+  shift
+  if [[ "$platform" == alpine ]] && command -v doas > /dev/null 2>&1; then
+    if [[ "${OM_INSTALL_ASSUME_YES:-0}" == 1 ]]; then
+      doas -n "$@"
+    else
+      doas "$@"
+    fi
+  else
+    sudo "$@"
+  fi
+}
+
 install_platform_packages() {
   local platform=$1 platforms provider package _option manager
   manager=$(install_package_manager "$platform") || return $?
@@ -64,7 +80,7 @@ install_platform_packages() {
       brew bundle --file="$REPO_DIR/homebrew/Brewfile"
       return
       ;;
-    apt|dnf|pacman) ;;
+    apt|dnf|pacman|apk) ;;
     *) printf 'Unsupported package manager: %s\n' "$manager" >&2; return 1 ;;
   esac
 
@@ -82,6 +98,11 @@ install_platform_packages() {
 
   loginfo "Installing $platform development and terminal packages..."
   case "$manager" in
+    apk)
+      # Use the host's configured repositories; no distro upgrade or glibc layer.
+      run_install_privileged "$platform" apk add "${native_packages[@]}"
+      return $?
+      ;;
     apt)
       sudo DEBIAN_FRONTEND=noninteractive apt-get update
       sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${native_packages[@]}"

@@ -17,15 +17,16 @@ I also use them daily on Fedora Asahi Remix 44 (ARM64), but Fedora has not been
 tested from a clean installation yet. Traditional Fedora and plain Arch are
 accepted; plain Arch and x86_64 Omarchy have not had clean-install tests. Debian
 is also accepted (Debian 13 ARM64 packages checked, full install not yet
-tested). Atomic or OSTree variants and other Linux distributions are rejected by
-the installer.
+tested). Alpine has a native `apk` path (Alpine 3.24 ARM64 components tested;
+full installer and repeat full install not yet verified). Atomic or OSTree
+variants and other Linux distributions are rejected by the installer.
 
 Package selections live in [`config/packages.list`](config/packages.list),
 shared by all supported systems and the macOS Brewfile. See
 [installer maintenance](docs/installation.md) for adding packages and the
-Debian/Arch/Omarchy policies. Supported distro IDs and package managers live in
-[`config/install-platforms.list`](config/install-platforms.list); adding a
-distro with an existing package manager no longer requires new dispatch
+Debian/Arch/Omarchy/Alpine policies. Supported distro IDs and package managers
+live in [`config/install-platforms.list`](config/install-platforms.list); adding
+a distro with an existing package manager no longer requires new dispatch
 branches.
 
 No major problems have shown up so far. That is not a promise that the installer
@@ -38,8 +39,10 @@ Personal Pi configuration is managed separately by
 are moved to a timestamped directory under `~/.dotfiles-backups/`, but you
 should still keep your own backup.
 
-Install Git first. For a **new checkout** (`~/dotfiles` must not already exist),
-run:
+Install Git first. On Alpine, also install Bash and configure `doas` or sudo for
+your normal user; enable the release's `main` and `community` repositories. See
+the [Alpine policy](docs/installation.md#alpine) for native tools and limits.
+For a **new checkout** (`~/dotfiles` must not already exist), run:
 
 ```bash
 git clone https://github.com/luizomf/dotfiles.git ~/dotfiles
@@ -76,11 +79,13 @@ If you're feeling lucky... bet on it:
 errors remain visible. It skips confirmation and Git identity prompts, enables
 Homebrew's non-interactive installer, disables Git credential prompts, and
 closes stdin for child installers. Direct `sudo` calls use `-n`: missing
-authorization fails instead of waiting for a password. Provision sudo access
-beforehand; an interactive `sudo -v` can help for a local run, but its cached
-authorization may expire during a long installation. Third-party commands that
-require interaction may fail rather than complete unattended. No privileges are
-granted by this flag.
+authorization fails instead of waiting for a password. Alpine prefers `doas` and
+likewise uses `doas -n` in unattended mode; the sudo examples below apply when
+using sudo, not doas. Provision the appropriate privilege access beforehand; an
+interactive `sudo -v` can help for a local run, but its cached authorization may
+expire during a long installation. Third-party commands that require interaction
+may fail rather than complete unattended. No privileges are granted by this
+flag.
 
 ### Local terminal: authenticate once, then skip installer prompts
 

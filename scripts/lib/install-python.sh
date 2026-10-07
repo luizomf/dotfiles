@@ -8,6 +8,17 @@ configure_install_python() {
   local python_version pyenv_init tool installed_tools python_path
   # This function is called in an if: Bash disables errexit throughout its body.
   # Every required operation must therefore propagate failure explicitly.
+  if [[ "${OP_SYSTEM:-}" == alpine ]]; then
+    PYTHON_SETUP_STEP="Use Alpine system Python"
+    [[ "${OM_INSTALL_SKIP_TOOLCHAINS:-0}" != 1 ]] || return 0
+    loginfo "Alpine: keeping apk Python; OM_PYTHON_VERSION does not replace it."
+    PYTHON_SETUP_STEP="Sync the dotfiles development environment"
+    UV_PROJECT_ENVIRONMENT="$REPO_DIR/.venv" uv sync \
+      --project "$REPO_DIR" --locked --python /usr/bin/python3 \
+      --no-python-downloads || return $?
+    return 0
+  fi
+
   PYTHON_SETUP_STEP="Install pyenv"
   if ! command -v pyenv > /dev/null 2>&1; then
     loginfo "Instalando pyenv..."

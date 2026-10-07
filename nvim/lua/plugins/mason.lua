@@ -1,5 +1,5 @@
 -- lua/plugins/mason.lua
 return {
   "mason-org/mason.nvim",
-  opts = {},
+  opts = require("settings.tooling").is_alpine and { PATH = "append" } or {},
 }

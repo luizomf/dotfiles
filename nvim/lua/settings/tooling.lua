@@ -1,5 +1,8 @@
 local M = {}
 
+M.is_alpine = vim.uv.os_uname().sysname == "Linux"
+  and vim.fn.filereadable("/etc/alpine-release") == 1
+
 M.lsp_servers = {
   "ruff",
   "taplo",
@@ -16,9 +19,18 @@ M.lsp_servers = {
   "astro",
 }
 
-M.mason_tools = {
-  "stylua",
+local native_lsp_servers = {
+  ruff = true,
+  taplo = true,
+  lua_ls = true,
+  rust_analyzer = true,
 }
+
+M.mason_lsp_servers = vim.tbl_filter(function(server)
+  return not M.is_alpine or not native_lsp_servers[server]
+end, M.lsp_servers)
+
+M.mason_tools = M.is_alpine and {} or { "stylua" }
 
 M.treesitter_parsers = {
   "c",
@@ -67,7 +79,7 @@ local function mason_packages()
   local packages = {}
   local seen = {}
 
-  for _, server in ipairs(M.lsp_servers) do
+  for _, server in ipairs(M.mason_lsp_servers) do
     local package = mapping.lspconfig_to_package[server]
     if not package then
       abort("No Mason package mapping found for LSP server: " .. server)
@@ -153,6 +165,33 @@ function M.sync_treesitter()
 end
 
 function M.bootstrap()
+  if M.is_alpine then
+    local missing = {}
+    local mason_root = vim.fn.stdpath("data") .. "/mason/"
+    for _, command in ipairs({
+      "ruff",
+      "taplo",
+      "lua-language-server",
+      "rust-analyzer",
+      "stylua",
+      "tree-sitter",
+    }) do
+      local path = vim.fn.exepath(command)
+      if
+        vim.fn.executable(command) ~= 1 or vim.startswith(path, mason_root)
+      then
+        table.insert(missing, command)
+      end
+    end
+    if #missing > 0 then
+      abort(
+        "Missing Alpine native tools on PATH (outside Mason): "
+          .. table.concat(missing, ", ")
+          .. ". Install with apk: ruff taplo lua-language-server rust-analyzer stylua tree-sitter-cli."
+      )
+      return
+    end
+  end
   install_mason_packages()
   local ok, err = pcall(M.sync_treesitter)
   if not ok then

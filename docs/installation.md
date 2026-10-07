@@ -15,14 +15,15 @@ platforms provider package [option]
 ```
 
 - Selectors: platform names from `config/install-platforms.list` (`darwin`,
-  `ubuntu`, `debian`, `fedora`, `arch`) or their Linux package managers (`apt`,
-  `dnf`, `pacman`). Combine selectors with commas, without spaces. A row is
-  selected once when either the platform or its manager matches. `apt` shares
-  both native and Brew selections between Debian and Ubuntu; use a platform name
-  for exceptions. The macOS Brewfile selects only `darwin` rows.
-- `native`: apt on Debian/Ubuntu, DNF on Fedora, pacman on Arch/Omarchy. Use the
-  package name that each distro actually provides; differing names need separate
-  rows.
+  `ubuntu`, `debian`, `fedora`, `arch`, `alpine`) or their Linux package
+  managers (`apt`, `dnf`, `pacman`, `apk`). Combine selectors with commas,
+  without spaces. A row is selected once when either the platform or its manager
+  matches. `apt` shares both native and Brew selections between Debian and
+  Ubuntu; use a platform name for exceptions. The macOS Brewfile selects only
+  `darwin` rows.
+- `native`: apt on Debian/Ubuntu, DNF on Fedora, pacman on Arch/Omarchy, apk on
+  Alpine. Use the package name that each distro actually provides; differing
+  names need separate rows.
 - `brew`: Homebrew formula/tool on the selected platforms.
 - `cask`, `tap`, `uv`: macOS Bundle declarations only. `uv` keeps the existing
   Brewfile's Python-tool selections; it does not configure the Python runtime.
@@ -129,20 +130,75 @@ when launched from Bash). Locale, Hyprland, boot, services, distro repositories
 and the installed desktop terminal are left alone. No Linux platform runs a
 Ghostty installer.
 
+## Alpine
+
+Alpine uses only native `apk` packages from its existing repositories. Install
+Bash and Git first, enable the release's `main` and `community` repositories,
+and authorize `doas` (preferred when available) or sudo for your normal user. Do
+not launch the entire installer as root. Unattended mode uses `doas -n` or the
+existing `sudo -n` behavior; it grants no privileges.
+
+The native path targets Alpine 3.24 with musl. It installs Zsh, tmux, Vim,
+Neovim, native Node/Python/uv, build tools, terminal utilities, clipboard tools
+and a Nerd Font. It does not install Homebrew, nvm, pyenv, a glibc compatibility
+layer, a different init system, containers, or a desktop. It does not upgrade
+the distro or rewrite its repositories. Existing non-Alpine package selections
+and toolchain setup are unchanged.
+
+With toolchain setup enabled, npm installs Prettier, Pyright and Pi into
+`~/.local`, without privileged npm or changing the global npm configuration.
+Python remains `/usr/bin/python3`; `OM_PYTHON_VERSION` does not replace it on
+Alpine. The checkout's development environment still uses `uv sync --locked`,
+with that interpreter and managed Python downloads disabled. A failed sync
+retains the existing incomplete-installation reporting and does not prevent
+independent configuration steps. `OM_INSTALL_SKIP_TOOLCHAINS=1` skips npm tools
+and the development-environment sync, not the native package selection.
+
+The tmux Python popup uses `/usr/bin/python3` on Alpine; other systems retain
+their existing pyenv command.
+
+Neovim uses native Ruff, Taplo, Lua Language Server, Rust Analyzer and StyLua,
+while Mason supplies the remaining language servers. On Alpine, native PATH
+entries take precedence over Mason's bin directory and native tools are not
+requested from the Mason registry. Bootstrap checks their availability before
+installing the remaining tools and compiling the Tree-sitter parsers. Other
+platforms keep the existing Mason policy. Pi instructions, settings and auth
+remain outside this repository; their existing private synchronization is
+separate from installation.
+
+This is a native terminal/development subset, not every macOS/Homebrew utility.
+The installer does not install OMXTerm/Electron or Ghostty on Alpine; their
+configuration links do not imply working binaries. Electron's prebuilt glibc
+runtime did not execute in the Alpine experiment, including with `gcompat`.
+Generating an AppImage using native squashfs tools did not solve runtime
+compatibility, so neither workaround is part of this installer.
+
+Alpine 3.24 ARM64 package installation, Zsh/tmux, Pi version startup, Neovim
+plugins, 38 Tree-sitter parsers and Python LSP initialization were exercised in
+a disposable VM. After a snapshot reset, the candidate package, Node, Python and
+Neovim setup components also passed; repeating the package/Python/Neovim
+components passed without Homebrew or managed runtimes. The tmux popup binding
+was checked on Alpine and macOS. Those checks are not a completed full-installer
+or repeat full-install test. Other Alpine versions and architectures are
+unverified.
+
 ## Verification
 
 Isolated policy checks (no package installation):
 
 ```sh
 python3 -m unittest tests.test_install_platform
-bash -n install.sh scripts/lib/install-platform.sh
-shellcheck -x install.sh scripts/lib/install-platform.sh
+bash -n install.sh scripts/lib/install-platform.sh scripts/lib/install-python.sh
+shellcheck -x install.sh scripts/lib/install-platform.sh scripts/lib/install-python.sh
+nvim --clean --headless -i NONE -l tests/test_nvim_alpine.lua
 ```
 
 The tests exercise platform detection, package-manager arguments, catalog
 selection, Bundle declarations, unattended behavior and failure propagation.
 Ruby is needed for the inert Bundle DSL test; that test skips if Ruby is absent.
-The shell tests also run on macOS Bash 3.2.
+The shell tests also run on macOS Bash 3.2. The Neovim test needs installed
+nvim-lspconfig; it mocks platform detection and installation boundaries without
+downloading tools or starting language servers.
 
 A full install and a repeat run were tested in a disposable Omarchy ARM64 VM,
 including Python/Node, Vim/Neovim plugins, Mason and Tree-sitter. A new Zsh

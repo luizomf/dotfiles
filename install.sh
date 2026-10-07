@@ -120,7 +120,7 @@ fi
 confirm_installation
 configure_install_interaction
 if [[ "${OM_INSTALL_ASSUME_YES:-0}" == "1" ]]; then
-  loginfo "Unattended mode: prompts disabled; sudo must already be authorized. Logs and errors remain visible."
+  loginfo "Unattended mode: prompts disabled; sudo (or Alpine doas) must already be authorized. Logs and errors remain visible."
 fi
 
 OP_SYSTEM=""
@@ -172,7 +172,7 @@ fi
 if [[ "$OP_SYSTEM" != "darwin" ]]; then
   zsh_path=$(command -v zsh)
   if [[ "$(getent passwd "$(id -un)" | cut -d: -f7)" != "$zsh_path" ]]; then
-    sudo chsh -s "$zsh_path" "$(id -un)"
+    run_install_privileged "$OP_SYSTEM" chsh -s "$zsh_path" "$(id -un)"
   fi
   # Linux hosts keep their installed terminal; only Ubuntu adjusts the locale.
 fi
@@ -206,26 +206,34 @@ if [[ ! -d "$LAZY_PATH" ]]; then
     --filter=blob:none --branch=stable "$LAZY_PATH"
 fi
 
-# Match zsh/config/exports even when the desktop sets XDG_CONFIG_HOME.
-export NVM_DIR="$HOME/.nvm"
-if [[ ! -s "$NVM_DIR/nvm.sh" ]]; then
-  loginfo "Instalando nvm..."
-  require_new_toolchain_dir "$NVM_DIR"
-  # nvm requires an explicit non-default install directory to exist first.
-  mkdir -p "$NVM_DIR"
-  run_remote_script /bin/bash \
-    https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh
-fi
-
-if [[ "${OM_INSTALL_SKIP_TOOLCHAINS:-0}" != "1" ]]; then
-  loginfo "Configurando Node.js e ferramentas npm..."
-  # shellcheck disable=SC1091
-  . "$NVM_DIR/nvm.sh"
-  nvm install --lts
-  nvm install-latest-npm
-  npm install --global prettier
+if [[ "${OP_SYSTEM:-}" == alpine ]]; then
+  loginfo "Alpine: using apk Node/Python and native musl tools; no Homebrew or nvm."
+  if [[ "${OM_INSTALL_SKIP_TOOLCHAINS:-0}" != "1" ]]; then
+    npm install --global --prefix "$HOME/.local" \
+      prettier pyright @earendil-works/pi-coding-agent
+  fi
 else
-  loginfo "Toolchain setup skipped; run 'uv sync --locked' in $REPO_DIR to prepare development tools."
+  # Match zsh/config/exports even when the desktop sets XDG_CONFIG_HOME.
+  export NVM_DIR="$HOME/.nvm"
+  if [[ ! -s "$NVM_DIR/nvm.sh" ]]; then
+    loginfo "Instalando nvm..."
+    require_new_toolchain_dir "$NVM_DIR"
+    # nvm requires an explicit non-default install directory to exist first.
+    mkdir -p "$NVM_DIR"
+    run_remote_script /bin/bash \
+      https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh
+  fi
+
+  if [[ "${OM_INSTALL_SKIP_TOOLCHAINS:-0}" != "1" ]]; then
+    loginfo "Configurando Node.js e ferramentas npm..."
+    # shellcheck disable=SC1091
+    . "$NVM_DIR/nvm.sh"
+    nvm install --lts
+    nvm install-latest-npm
+    npm install --global prettier
+  else
+    loginfo "Toolchain setup skipped; run 'uv sync --locked' in $REPO_DIR to prepare development tools."
+  fi
 fi
 
 if configure_install_python; then
@@ -319,12 +327,21 @@ if [[ "${OM_INSTALL_SKIP_PLUGINS:-0}" != "1" ]]; then
 fi
 
 loginfo "Verificando a instalação..."
-required_commands=(git nvim vim zsh tmux python3 brew fastfetch fd fzf bat shellcheck)
+required_commands=(git nvim vim zsh tmux python3 fastfetch fd fzf bat shellcheck)
+if [[ "$OP_SYSTEM" != alpine ]]; then
+  required_commands+=(brew)
+fi
 if [[ "${OM_INSTALL_SKIP_TOOLCHAINS:-0}" != "1" ]]; then
   required_commands+=(node npm prettier)
+  if [[ "$OP_SYSTEM" == alpine ]]; then
+    required_commands+=(pi pyright)
+  fi
 fi
 if [[ "${OM_INSTALL_SKIP_TOOLCHAINS:-0}" != "1" && -z "$python_failure" ]]; then
-  required_commands+=(pyenv python uv pyright ruff)
+  required_commands+=(uv pyright ruff)
+  if [[ "$OP_SYSTEM" != alpine ]]; then
+    required_commands+=(pyenv python)
+  fi
   for development_tool in python pyright ruff; do
     if [[ ! -x "$REPO_DIR/.venv/bin/$development_tool" ]]; then
       logerror "Development tool not found: $REPO_DIR/.venv/bin/$development_tool"

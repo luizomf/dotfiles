@@ -19,7 +19,8 @@ return {
     config = function()
       require("mason-lspconfig").setup({
         automatic_enable = false,
-        ensure_installed = #vim.api.nvim_list_uis() > 0 and tooling.lsp_servers
+        ensure_installed = #vim.api.nvim_list_uis() > 0
+            and tooling.mason_lsp_servers
           or {},
       })
 

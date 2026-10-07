@@ -1,7 +1,7 @@
 # Package catalog: selectors provider package [option]
 # Selectors: platform or package manager from install-platforms.list.
 # apt shares packages between Debian and Ubuntu.
-# Providers: native (apt/dnf/pacman), brew, cask, tap, uv.
+# Providers: native (apt/dnf/pacman/apk), brew, cask, tap, uv.
 # Options: unlinked for brew; trusted for tap. No inline comments.
 # Keep shared packages on one row; distro-specific names need separate rows.
 # Consumed by install.sh and homebrew/Brewfile. See docs/installation.md.
@@ -97,6 +97,42 @@ fedora native zlib-devel
 apt native zlib1g-dev
 apt,fedora,arch native zsh
 arch native zstd
+
+# Alpine uses native musl builds, including the editor's compiled tools.
+alpine native bash
+alpine native bat
+alpine native build-base
+alpine native ca-certificates
+alpine native curl
+alpine native fastfetch
+alpine native fd
+alpine native font-meslo-nerd
+alpine native fzf
+alpine native git
+alpine native htop
+alpine native lua-language-server
+alpine native neovim
+alpine native nodejs
+alpine native npm
+alpine native python3
+alpine native py3-pynvim
+alpine native ripgrep
+alpine native rsync
+alpine native ruff
+alpine native rust-analyzer
+alpine native shadow
+alpine native shellcheck
+alpine native stylua
+alpine native taplo
+alpine native tmux
+alpine native tree-sitter-cli
+alpine native unzip
+alpine native uv
+alpine native vim
+alpine native wget
+alpine native wl-clipboard
+alpine native xclip
+alpine native zsh
 
 # tap
 darwin tap docker/tap trusted

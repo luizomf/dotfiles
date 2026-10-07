@@ -8,7 +8,9 @@ shell scripts and Bash 3.2 compatibility where their current contracts require
 it.
 
 The installer syncs the checkout's ignored `.venv` from the lockfile. Set
-`OM_INSTALL_SKIP_TOOLCHAINS=1` to skip that step.
+`OM_INSTALL_SKIP_TOOLCHAINS=1` to skip that step. Alpine uses its native
+`/usr/bin/python3` with managed Python downloads disabled, rather than pyenv;
+see the [Alpine installation policy](installation.md#alpine).
 
 Python setup is recoverable: if pyenv, uv, tool installation, or sync fails, the
 installer continues independent configuration and reports an incomplete

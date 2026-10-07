@@ -175,6 +175,80 @@ class InstallPlatformTests(unittest.TestCase):
         self.assertIn("npm install --global prettier", result.stdout)
         self.assertNotIn("WRONG_NVM", result.stdout)
 
+  def test_alpine_node_setup_uses_native_node_and_user_npm_prefix(self):
+    source = (ROOT / "install.sh").read_text()
+    node_setup = (
+      source.split('loginfo "Instalando Lazy.nvim..."', 1)[1]
+      .split("\nfi\n", 1)[1]
+      .split("\nif configure_install_python;", 1)[0]
+    )
+    for skip in ("0", "1"):
+      with self.subTest(skip=skip), tempfile.TemporaryDirectory() as tmp:
+        result = self.shell(
+          """
+          set -Eeuo pipefail
+          HOME=$2 OP_SYSTEM=alpine OM_INSTALL_SKIP_TOOLCHAINS=$3
+          loginfo() { :; }
+          run_remote_script() { printf 'UNEXPECTED_DOWNLOAD\\n'; return 99; }
+          npm() { printf 'npm'; printf ' <%s>' "$@"; printf '\\n'; }
+          """
+          + node_setup,
+          tmp,
+          skip,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("UNEXPECTED", result.stdout)
+        self.assertFalse((Path(tmp) / ".nvm").exists())
+        if skip == "0":
+          self.assertIn(
+            f"npm <install> <--global> <--prefix> <{tmp}/.local>", result.stdout
+          )
+          for package in ("prettier", "pyright", "@earendil-works/pi-coding-agent"):
+            self.assertIn(f"<{package}>", result.stdout)
+        else:
+          self.assertEqual(result.stdout, "")
+
+  def test_alpine_python_sync_uses_system_python_without_managed_downloads(self):
+    for skip, failure in (("0", "0"), ("0", "29"), ("1", "0")):
+      with self.subTest(skip=skip, failure=failure):
+        result = self.shell(
+          """
+          set -Eeuo pipefail
+          source "$2"
+          OP_SYSTEM=alpine OM_INSTALL_SKIP_TOOLCHAINS=$3
+          failure=$4 REPO_DIR='/fixture/repo with spaces'
+          loginfo() { :; }
+          pyenv() { printf 'UNEXPECTED_PYENV\\n'; return 99; }
+          run_remote_script() { printf 'UNEXPECTED_DOWNLOAD\\n'; return 99; }
+          uv() {
+            printf 'venv=<%s> uv' "$UV_PROJECT_ENVIRONMENT"
+            printf ' <%s>' "$@"; printf '\\n'
+            return "$failure"
+          }
+          if configure_install_python; then
+            printf 'SUCCESS\\n'
+          else
+            printf 'FAILED %s: %s\\n' "$?" "$PYTHON_SETUP_STEP"
+          fi
+          """,
+          str(ROOT / "scripts/lib/install-python.sh"),
+          skip,
+          failure,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("UNEXPECTED", result.stdout)
+        if skip == "1":
+          self.assertEqual(result.stdout, "SUCCESS\n")
+        else:
+          self.assertIn("venv=</fixture/repo with spaces/.venv>", result.stdout)
+          self.assertIn(
+            "<--locked> <--python> </usr/bin/python3> <--no-python-downloads>",
+            result.stdout,
+          )
+          self.assertIn(
+            "SUCCESS" if failure == "0" else "FAILED 29: Sync", result.stdout
+          )
+
   def test_python_build_failure_preserves_error_and_skips_dependents(self):
     result = self.shell(
       """
@@ -296,6 +370,7 @@ class InstallPlatformTests(unittest.TestCase):
       ("Linux", "fedora-asahi-remix", "fedora"),
       ("Linux", "omarchy", "arch"),
       ("Linux", "arch", "arch"),
+      ("Linux", "alpine", "alpine"),
     ):
       with self.subTest(distro=distro or kernel):
         result = self.shell('detect_install_platform "$2" "$3" 0', kernel, distro)
@@ -353,6 +428,89 @@ class InstallPlatformTests(unittest.TestCase):
       "bootloader",
     ):
       self.assertNotIn(forbidden, result.stdout)
+
+  def test_alpine_uses_native_packages_and_noninteractive_doas_without_brew(self):
+    result = self.shell("""
+      set -Eeuo pipefail
+      OM_INSTALL_ASSUME_YES=1
+      loginfo() { :; }
+      doas() { printf 'doas'; printf ' <%s>' "$@"; printf '\\n'; }
+      sudo() { printf 'UNEXPECTED_SUDO\\n'; return 99; }
+      install_homebrew() { printf 'UNEXPECTED_BREW\\n'; return 99; }
+      install_platform_packages alpine
+    """)
+    self.assertEqual(result.returncode, 0, result.stderr)
+    self.assertTrue(result.stdout.startswith("doas <-n> <apk> <add>"))
+    for package in (
+      "bash",
+      "build-base",
+      "git",
+      "zsh",
+      "tmux",
+      "neovim",
+      "vim",
+      "nodejs",
+      "npm",
+      "python3",
+      "uv",
+      "ruff",
+      "stylua",
+      "taplo",
+      "lua-language-server",
+      "rust-analyzer",
+      "tree-sitter-cli",
+      "shadow",
+    ):
+      self.assertIn(f"<{package}>", result.stdout)
+    for forbidden in ("UNEXPECTED", "gcompat", "glibc", "systemd", "upgrade"):
+      self.assertNotIn(forbidden, result.stdout)
+
+  def test_alpine_package_failure_is_not_hidden(self):
+    result = self.shell("""
+      set -Eeuo pipefail
+      loginfo() { :; }
+      doas() { printf 'apk failed\\n' >&2; return 23; }
+      install_homebrew() { printf 'UNEXPECTED_BREW\\n'; }
+      install_platform_packages alpine
+      printf 'UNEXPECTED_SUCCESS\\n'
+    """)
+    self.assertEqual(result.returncode, 23)
+    self.assertIn("apk failed", result.stderr)
+    self.assertNotIn("UNEXPECTED", result.stdout)
+
+  def test_alpine_uses_existing_sudo_when_doas_is_absent(self):
+    result = self.shell("""
+      set -Eeuo pipefail
+      command() {
+        if [[ "$*" == '-v doas' ]]; then return 1; fi
+        builtin command "$@"
+      }
+      sudo() { printf 'sudo'; printf ' <%s>' "$@"; printf '\\n'; }
+      run_install_privileged alpine chsh -s /bin/zsh 'user with spaces'
+    """)
+    self.assertEqual(result.returncode, 0, result.stderr)
+    self.assertEqual(result.stdout, "sudo <chsh> <-s> </bin/zsh> <user with spaces>\n")
+
+  def test_alpine_login_shell_uses_doas(self):
+    source = (ROOT / "install.sh").read_text()
+    setup = source.split('install_platform_packages "$OP_SYSTEM"', 1)[1].split(
+      'loginfo "Configurando Oh My Zsh..."', 1
+    )[0]
+    result = self.shell(
+      """
+      set -Eeuo pipefail
+      OP_SYSTEM=alpine
+      OM_INSTALL_ASSUME_YES=0
+      doas() { printf 'doas %s\\n' "$*"; }
+      sudo() { printf 'UNEXPECTED_SUDO\\n'; return 99; }
+      getent() { printf 'user:x:1000:1000::/home/user:/bin/bash\\n'; }
+      zsh() { :; }
+      """
+      + setup
+    )
+    self.assertEqual(result.returncode, 0, result.stderr)
+    self.assertIn("doas chsh -s zsh", result.stdout)
+    self.assertNotIn("UNEXPECTED", result.stdout)
 
   def test_arch_installs_native_build_dependencies_and_shared_brew_tools(self):
     result = self.shell("""
@@ -527,6 +685,8 @@ class InstallPlatformTests(unittest.TestCase):
       "pacman": {"native", "brew"},
       "fedora": {"native", "brew"},
       "arch": {"native", "brew"},
+      "alpine": {"native"},
+      "apk": {"native"},
     }
     for number, line in enumerate(
       (ROOT / "config/packages.list").read_text().splitlines(), start=1
@@ -547,6 +707,41 @@ class InstallPlatformTests(unittest.TestCase):
           self.assertIn(
             (provider, options[0]), (("brew", "unlinked"), ("tap", "trusted"))
           )
+
+  def test_alpine_verification_does_not_require_brew_or_pyenv(self):
+    source = (ROOT / "install.sh").read_text()
+    verification = source.split('loginfo "Verificando a instalação..."', 1)[1].split(
+      "\nrequired_links=", 1
+    )[0]
+    with tempfile.TemporaryDirectory() as tmp:
+      root = Path(tmp)
+      (root / ".venv/bin").mkdir(parents=True)
+      for name in ("python", "pyright", "ruff"):
+        tool = root / ".venv/bin" / name
+        tool.write_text("#!/bin/sh\nexit 0\n")
+        tool.chmod(0o755)
+      for platform in ("alpine", "darwin", "ubuntu", "debian", "fedora", "arch"):
+        with self.subTest(platform=platform):
+          result = self.shell(
+            """
+            set -Eeuo pipefail
+            REPO_DIR=$2 OP_SYSTEM=$3 python_failure=''
+            OM_INSTALL_SKIP_TOOLCHAINS=0
+            logerror() { printf '%s\\n' "$1" >&2; }
+            command() {
+              case "$2" in brew|pyenv|python) return 1 ;; esac
+              return 0
+            }
+            """
+            + verification,
+            tmp,
+            platform,
+          )
+          if platform == "alpine":
+            self.assertEqual(result.returncode, 0, result.stderr)
+          else:
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("brew", result.stderr)
 
   def test_linux_does_not_install_or_require_ghostty(self):
     source = (ROOT / "install.sh").read_text()

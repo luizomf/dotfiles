@@ -6,3 +6,4 @@ ubuntu ubuntu apt
 debian debian apt
 fedora fedora,fedora-asahi-remix dnf
 arch arch,omarchy pacman
+alpine alpine apk
