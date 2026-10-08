@@ -55,9 +55,16 @@ class SannuxEphemeralTests(unittest.TestCase):
                 import json
                 import os
                 import sys
+                from pathlib import Path
 
                 with open(os.environ["DOCKER_LOG"], "a", encoding="utf-8") as handle:
                     handle.write(json.dumps(sys.argv[1:]) + "\\n")
+                for arg in sys.argv[1:]:
+                    if arg.endswith(":/home/agent"):
+                        home = Path(arg.removesuffix(":/home/agent"))
+                        auth = home / ".codex/auth.json"
+                        snapshot = auth.read_text() if auth.exists() else None
+                        Path(os.environ["AUTH_SNAPSHOT"]).write_text(json.dumps(snapshot))
                 """
       ),
       encoding="utf-8",
@@ -71,6 +78,7 @@ class SannuxEphemeralTests(unittest.TestCase):
       "PROJECTS_DIR": str(self.projects),
       "CURDIR": str(self.workspace),
       "DOCKER_LOG": str(self.docker_log),
+      "AUTH_SNAPSHOT": str(self.root / "auth-snapshot.json"),
       "PATH": f"{self.fake_bin}{os.pathsep}{os.environ['PATH']}",
     }
 
@@ -115,6 +123,30 @@ class SannuxEphemeralTests(unittest.TestCase):
     self.assertFalse(run_home.exists())
     self.assertEqual(stat.S_IMODE(ephemeral_root.stat().st_mode), 0o700)
     self.assertEqual(marker.read_text(encoding="utf-8"), "keep")
+
+  def test_pi_ephemeral_uses_only_its_own_nested_codex_login(self) -> None:
+    (self.codex_home / ".codex").mkdir()
+    (self.codex_home / ".codex/auth.json").write_text(
+      "standalone-codex-login", encoding="utf-8"
+    )
+    (self.pi_home / ".codex").mkdir()
+    nested_auth = self.pi_home / ".codex/auth.json"
+    for credential in ("nested-codex-login", None):
+      with self.subTest(credential=credential):
+        if credential is not None:
+          nested_auth.write_text(credential, encoding="utf-8")
+        else:
+          nested_auth.unlink()
+        result = self.run_script("pi", "--shell", "-c", "codex login status")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+          json.loads((self.root / "auth-snapshot.json").read_text(encoding="utf-8")),
+          credential,
+        )
+        if credential is not None:
+          self.assertEqual(nested_auth.read_text(encoding="utf-8"), credential)
+        else:
+          self.assertFalse(nested_auth.exists())
 
   def test_shell_mode_keeps_ephemeral_mounts_and_replaces_only_entrypoint(
     self,
@@ -165,9 +197,20 @@ class SannuxEphemeralTests(unittest.TestCase):
     linked_source.write_text("export const linked = true;\n", encoding="utf-8")
     (extensions / "linked.ts").symlink_to(linked_source)
 
+    for home, credential in (
+      (self.codex_home, "standalone-codex-login"),
+      (self.pi_home, "nested-codex-login"),
+    ):
+      (home / ".codex").mkdir()
+      (home / ".codex" / "auth.json").write_text(credential, encoding="utf-8")
+
     result = self.run_script("--refresh-pi-resources")
 
     self.assertEqual(result.returncode, 0, result.stderr)
+    self.assertEqual(
+      (self.pi_home / ".codex" / "auth.json").read_text(encoding="utf-8"),
+      "nested-codex-login",
+    )
     snapshot = self.pi_home / ".pi" / "agent"
     self.assertEqual(
       (snapshot / "extensions" / "linked.ts").read_text(encoding="utf-8"),

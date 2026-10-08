@@ -28,9 +28,9 @@ shells. For an existing terminal, explicitly export the new value and refresh
 per-command `MODEL=...` overrides remain independent. `test_models` consumes
 `LOCAL_MODEL`. It first runs `sannux_ephemeral --refresh-pi-resources`, then
 makes real host/container model calls (including Daily's launcher). The refresh
-prepares extensions, skills, helpers and nested Codex auth, but **does not
-generate or synchronize model catalogs**. Run it manually with consumers idle;
-it is not a static check or a complete runner installer. `OMNIVOICE_MODEL` is a
+prepares extensions, skills, and helpers, but **does not replace credentials or
+generate/synchronize model catalogs**. Run it manually with consumers idle; it
+is not a static check or a complete runner installer. `OMNIVOICE_MODEL` is a
 separate TTS model, not this chat-model default.
 
 This does not make every application's configuration environment-aware. Literal
@@ -72,9 +72,35 @@ ephemeral homes retain their copied catalog; new runs copy the updated
 persistent home. Do not modify active private run homes to force a switch.
 
 [`sannux_ephemeral --refresh-pi-resources`](../scripts/sannux_ephemeral)
-refreshes extensions, skills, helpers, and authentication-related resources. It
-is not the model-catalog update command and should not be run merely to add a
-model.
+refreshes extensions, skills, and helpers. It never copies auth from the
+standalone Codex home into the Pi home. It is not the model-catalog update
+command and should not be run merely to add a model.
+
+### Independent Sannux logins
+
+The Pi container has two independent credentials: Pi's `.pi/agent/auth.json` and
+the nested Codex helper's `.codex/auth.json`. The latter must be logged in
+separately from the standalone Codex container:
+
+```sh
+sannux compose pi run --rm --entrypoint codex agent login --device-auth
+sannux compose pi run --rm -T --entrypoint codex agent login status
+```
+
+After changing from copied credentials, log in to nested Codex on each machine;
+existing files are not deleted or automatically migrated. Resource refresh
+preserves them, even if missing. Pi ephemeral runs still copy the Pi persistent
+home, including both credentials, but no longer override nested Codex auth from
+the standalone Codex home. Ephemeral refresh-token rotation can still invalidate
+the persistent copy; refreshed credentials are discarded with the temporary
+home. This remains an accepted limitation, not a solved rotation problem.
+
+`test_models` now makes a real cloud-model request through nested Codex as well
+as the existing host/container checks; nested failures appear in the summary and
+produce a nonzero exit. `keepwarm` includes a separate `codex-in-pi` ping and
+logs failures in `~/dotfiles/scripts/keepwarm.log`. Neither command performs
+login automatically. A login status alone does not prove a model request works,
+and the background keepwarm log is not an external failure notification.
 
 ## Capabilities and limits
 

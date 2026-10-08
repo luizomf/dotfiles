@@ -107,13 +107,8 @@ refresh_pi_resources() (
       uninstall --prefix /home/agent/.local @openai/codex
   fi
 
-  local sannux_codex_home
-  sannux_codex_home="$(resolve_agent_home codex)"
-  if [[ -f "${sannux_codex_home}/.codex/auth.json" ]]; then
-    install -m 0600 \
-      "${sannux_codex_home}/.codex/auth.json" \
-      "${persistent_home}/.codex/auth.json"
-  fi
+  # Resource refresh never replaces credentials. Nested Codex has its own
+  # login in the persistent Pi home, separate from the standalone Codex home.
 
   printf 'extensions_source=%s\nrefreshed_at=%s\n' \
     "${host_agent_dir}/extensions" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
@@ -206,16 +201,9 @@ case $template in
     mkdir -p "${tmp_home}"
     cp -a "$persistent_home"/. "$tmp_home"/
 
-    # Nested Codex calls in Pi use the same current authentication as the
-    # persistent Sannux Codex runner, never the host Codex session.
-    sannux_codex_home="$(resolve_agent_home codex)"
-    rm -f "${tmp_home}/.codex/auth.json"
-    if [[ -f "${sannux_codex_home}/.codex/auth.json" ]]; then
-      mkdir -p "${tmp_home}/.codex"
-      install -m 0600 \
-        "${sannux_codex_home}/.codex/auth.json" \
-        "${tmp_home}/.codex/auth.json"
-    fi
+    # Keep nested Codex auth from this Pi home, just like Pi's own auth.
+    # Never replace it with the standalone Codex runner's credentials.
+    # Refreshes in this ephemeral copy are still discarded during cleanup.
 
     shift
     ;;

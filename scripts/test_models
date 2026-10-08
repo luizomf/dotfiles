@@ -62,6 +62,12 @@ for model in "${cloud_models[@]}"; do
   check_model "Codex persistent home / $model" \
     sannux run codex --model "$model" -c model_reasoning_effort=low \
     exec --skip-git-repo-check --ephemeral
+  # Nested Codex owns a separate login in the Pi home. Check it even if the
+  # resource refresh failed; neither login nor this binary depends on refresh.
+  check_model "Codex inside Pi persistent home / $model" \
+    sannux compose pi run --rm -T --entrypoint codex agent \
+    --model "$model" -c model_reasoning_effort=low \
+    exec --skip-git-repo-check --ephemeral
 
   check_model "Pi host / $model" \
     pi --provider openai-codex --model "$model" --thinking medium --no-session -p

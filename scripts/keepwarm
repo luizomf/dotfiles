@@ -76,6 +76,9 @@ ping_agents() {
 
   run_ping pi-sannux sannux run \
     pi -p --no-session --model openai-codex/gpt-6-luna:low
+
+  run_ping codex-in-pi sannux compose pi run --rm -T --entrypoint codex agent \
+    exec --skip-git-repo-check - --ephemeral --model "${KEEPWARM_CODEX_MODEL:-gpt-6-luna}" -c model_reasoning_effort=low --color never
 }
 
 reload_loop() {
