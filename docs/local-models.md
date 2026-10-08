@@ -97,10 +97,35 @@ home. This remains an accepted limitation, not a solved rotation problem.
 
 `test_models` now makes a real cloud-model request through nested Codex as well
 as the existing host/container checks; nested failures appear in the summary and
-produce a nonzero exit. `keepwarm` includes a separate `codex-in-pi` ping and
-logs failures in `~/dotfiles/scripts/keepwarm.log`. Neither command performs
-login automatically. A login status alone does not prove a model request works,
-and the background keepwarm log is not an external failure notification.
+produce a nonzero exit. Neither command performs login automatically. A login
+status alone does not prove a model request works.
+
+`keepwarm` is a **single central worker**: every round calls all five targets on
+`m132`, `m4128`, and `fedoraair` through SSH, even when the alias identifies the
+worker's own machine. Each remote login shell loads its own PATH and
+PROJECTS_DIR; credentials stay in their respective homes. The five targets are
+host Codex, host Pi, Sannux Codex, Sannux Pi, and Codex inside Sannux Pi. Update
+the `scripts/pi` wrapper on each host too: headless requests must skip terminal
+titles, and an unsupported cosmetic title must not prevent Pi from starting.
+
+```sh
+keepwarm --once  # Foreground 15-target round; nonzero if any request fails
+keepwarm         # Replace the worker on this machine and start the hourly loop
+```
+
+`--once` prints per-host/per-target outcomes plus totals and does not replace an
+existing worker. The loop retains its initial delay and two rounds 30 seconds
+apart per hourly cycle. SSH uses batch mode, a connection timeout, and server
+keepalives; a failed request does not skip other targets. Those SSH settings do
+not impose a deadline on an otherwise connected model request.
+
+Run the loop on **one machine only**, with unattended SSH access to all three
+aliases. Stop any old per-machine workers before deploying a central worker;
+starting one does not stop workers on other machines. Restart the central worker
+after updating its script. Logs live at `~/dotfiles/scripts/keepwarm.log` on
+that central machine, with host/target labels and round totals. The log is not
+an external failure notification, and a sleeping/unreachable host cannot have
+its auth refreshed.
 
 ## Capabilities and limits
 

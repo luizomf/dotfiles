@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
-# keepwarm — pings Codex and Pi on the host and in Sannux persistent homes.
+# keepwarm — one worker pings five independent logins on each fleet host via SSH.
+# Run without arguments for the hourly loop, or --once for a foreground check.
 #
 # Each environment uses its own login; this script never copies credentials.
 # Normal agent calls may refresh OAuth tokens and persist them in that home.
@@ -18,19 +19,26 @@ INTERVAL="1h"        # Default: 1h  — time between pings
 INITIAL_RUN=1        # Default: 1   — 1 = ping once shortly after starting
 INITIAL_DELAY="10s"  # Default: 10s — wait before the first ping
 
-# Match older workers, never this launcher or its calling shell. Unlike macOS,
-# Linux procps includes ancestors unless explicitly excluded with -A.
-if [[ "$(uname -s)" == "Linux" ]]; then
-  pkill -A -9 -f "[k]eepwarm" >/dev/null 2>&1 || true
-else
-  pkill -9 -f "[k]eepwarm" >/dev/null 2>&1 || true
+hosts=(m132 m4128 fedoraair)
+once=0
+if (( $# > 1 )); then
+  printf 'Usage: %s [--once]\n' "${0##*/}" >&2
+  exit 2
 fi
+case "${1:-}" in
+  '') ;;
+  --once) once=1 ;;
+  -h|--help) printf 'Usage: %s [--once]\n' "${0##*/}"; exit 0 ;;
+  *) printf 'Usage: %s [--once]\n' "${0##*/}" >&2; exit 2 ;;
+esac
 
 log() {
   printf '%s %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$1" >> "$LOG_FILE"
+  if (( once )); then printf '%s\n' "$1"; fi
 }
 
-trap 'log "TERM/INT received, exiting"; exit 0' TERM INT
+trap 'log "TERM received, exiting"; exit 143' TERM
+trap 'log "INT received, exiting"; exit 130' INT
 
 maybe_sleep() {
   [ -n "${1:-}" ] && sleep "$1"
@@ -51,34 +59,48 @@ run_ping() {
 
   # A failed ping does NOT kill the loop — just log it and retry next cycle.
   if [ "$rc" -eq 0 ]; then
+    (( cycle_successes += 1 ))
     log "$label ping ok: $(printf '%s' "$out" | tr '\n' ' ')"
   else
+    (( cycle_failures += 1 ))
     log "$label ping FAILED (rc=$rc): $(printf '%s' "$err" | tr '\n' ' ')"
   fi
 }
 
+remote_command() {
+  local host="$1" command
+  shift
+  # Each host loads its own PATH and PROJECTS_DIR. Never export caller auth.
+  printf -v command '%q ' "$@"
+  printf -v command 'zsh -l -i +m -c %q' "$command"
+  # Batch mode prevents unattended password prompts. Keep stdin for the ping.
+  ssh -T -o BatchMode=yes -o ConnectTimeout=10 \
+    -o ServerAliveInterval=15 -o ServerAliveCountMax=2 "$host" "$command"
+}
+
 ping_agents() {
-  # Temporarily disabled while Claude is not needed this month.
-  # run_ping claude sannux run \
-  #   claude-code -p - --model haiku --effort low --dangerously-skip-permissions
-  # sannux run claude-code auth status >/dev/null 2>&1 || true
+  local host
+  cycle_successes=0
+  cycle_failures=0
+  for host in "${hosts[@]}"; do
+    # Preserve the maintenance model unless the owner overrides it.
+    run_ping "$host/codex-host" remote_command "$host" \
+      codex exec --skip-git-repo-check - --ephemeral --model "${KEEPWARM_CODEX_MODEL:-gpt-6-luna}" -c model_reasoning_effort=low --color never
 
-  # Preserve the maintenance model unless the owner overrides it.
-  # Host and container calls resolve credentials from their respective homes.
-  run_ping codex-host \
-    codex exec --skip-git-repo-check - --ephemeral --model "${KEEPWARM_CODEX_MODEL:-gpt-6-luna}" -c model_reasoning_effort=low --color never
+    run_ping "$host/pi-host" remote_command "$host" \
+      pi -p --no-session --model openai-codex/gpt-6-luna:low
 
-  run_ping pi-host \
-    pi -p --no-session --model openai-codex/gpt-6-luna:low
+    run_ping "$host/codex-sannux" remote_command "$host" sannux run \
+      codex exec --skip-git-repo-check - --ephemeral --model "${KEEPWARM_CODEX_MODEL:-gpt-6-luna}" -c model_reasoning_effort=low --color never
 
-  run_ping codex-sannux sannux run \
-    codex exec --skip-git-repo-check - --ephemeral --model "${KEEPWARM_CODEX_MODEL:-gpt-6-luna}" -c model_reasoning_effort=low --color never
+    run_ping "$host/pi-sannux" remote_command "$host" sannux run \
+      pi -p --no-session --model openai-codex/gpt-6-luna:low
 
-  run_ping pi-sannux sannux run \
-    pi -p --no-session --model openai-codex/gpt-6-luna:low
-
-  run_ping codex-in-pi sannux compose pi run --rm -T --entrypoint codex agent \
-    exec --skip-git-repo-check - --ephemeral --model "${KEEPWARM_CODEX_MODEL:-gpt-6-luna}" -c model_reasoning_effort=low --color never
+    run_ping "$host/codex-in-pi" remote_command "$host" sannux compose pi run --rm -T --entrypoint codex agent \
+      exec --skip-git-repo-check - --ephemeral --model "${KEEPWARM_CODEX_MODEL:-gpt-6-luna}" -c model_reasoning_effort=low --color never
+  done
+  log "keepwarm round: $cycle_successes successful, $cycle_failures failed."
+  (( cycle_failures == 0 ))
 }
 
 reload_loop() {
@@ -99,6 +121,18 @@ reload_loop() {
   done
 }
 
-log "keepwarm started (interval=$INTERVAL, initial_run=$INITIAL_RUN, initial_delay=$INITIAL_DELAY)"
-reload_loop &
+if (( once )); then
+  ping_agents
+  exit $?
+fi
+
+# Replace workers only on the central machine, never on any remote target.
+# Unlike macOS, Linux procps includes ancestors unless excluded with -A.
+if [[ "$(uname -s)" == "Linux" ]]; then
+  pkill -A -9 -f "[k]eepwarm" >/dev/null 2>&1 || true
+else
+  pkill -9 -f "[k]eepwarm" >/dev/null 2>&1 || true
+fi
+log "keepwarm started (hosts=${hosts[*]}, interval=$INTERVAL, initial_run=$INITIAL_RUN, initial_delay=$INITIAL_DELAY)"
+reload_loop </dev/null >/dev/null 2>&1 &
 disown

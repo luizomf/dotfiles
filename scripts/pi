@@ -23,10 +23,13 @@ declare -a pi_cmd=(
   "$real_pi" --no-skills --skill "${HOME}/.pi/agent/skills"
 )
 
+# Titles are cosmetic and require a terminal. Never block headless/SSH calls
+# (or Pi itself) because the terminal does not support this feature.
+if [[ -t 1 ]]; then
+  title "${t:-$(basename "$(pwd)")}" || true
+fi
 if [[ -n "$t" ]]; then
-  title "$t"
   exec "${pi_cmd[@]}" --name "$t" "$@"
 else
-  title "$(basename "$(pwd)")"
   exec "${pi_cmd[@]}" "$@"
 fi
