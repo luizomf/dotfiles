@@ -21,9 +21,13 @@ untouched.
 Saved structure includes sessions, windows, panes, layouts, titles, working
 directories, active locations, and zoom state. It does not include process
 commands or process state. Grouped sessions and linked windows are unsupported.
-Names and working directories containing tabs or newlines are rejected. A
-missing working directory prevents activation instead of silently falling back
-to the home directory.
+Layouts from tmux 3.8's JSON format are converted to the legacy layout format
+when saving, so snapshots remain usable on both older and newer tmux servers.
+Floating-pane layouts cannot be represented in that portable format: saving
+those layouts fails without replacing the previous snapshot. Names and working
+directories containing tabs or newlines are rejected. A missing working
+directory prevents activation instead of silently falling back to the home
+directory.
 
 ## Terminal capabilities
 

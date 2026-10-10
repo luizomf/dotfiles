@@ -222,6 +222,59 @@ def validate_pane(value: object) -> PaneRecord:
   return {"cwd": cwd, "title": title, "active": active}
 
 
+def legacy_layout_cell(value: object) -> str:
+  """Encode a tmux 3.8 tiled cell in the portable pre-3.8 format."""
+  if not is_object_mapping(value):
+    message = "Invalid saved layout cell"
+    raise ValueError(message)
+  for key in ("w", "h", "x", "y"):
+    number = value.get(key)
+    minimum = 1 if key in ("w", "h") else 0
+    if not isinstance(number, int) or isinstance(number, bool) or number < minimum:
+      message = "Invalid saved layout geometry"
+      raise ValueError(message)
+  geometry = f"{value['w']}x{value['h']},{value['x']},{value['y']}"
+  kind = value.get("t")
+  if kind == "p":
+    pane = value.get("I")
+    if not isinstance(pane, str) or not re.fullmatch(r"%[0-9]+", pane):
+      message = "Invalid saved layout pane ID"
+      raise ValueError(message)
+    return f"{geometry},{pane[1:]}"
+  children = value.get("c")
+  if kind not in ("h", "v") or not is_object_list(children) or not children:
+    message = "Invalid saved layout split"
+    raise ValueError(message)
+  opening, closing = ("{", "}") if kind == "h" else ("[", "]")
+  return geometry + opening + ",".join(map(legacy_layout_cell, children)) + closing
+
+
+def normalize_layout(value: object) -> str:
+  """Keep snapshots readable by both old and JSON-layout tmux servers."""
+  if not isinstance(value, str):
+    message = "Invalid saved layout"
+    # Snapshot validation consistently reports malformed fields as ValueError.
+    raise ValueError(message)  # noqa: TRY004
+  if not value or re.fullmatch(r"[0-9a-f]+,[0-9x,{}\[\]]+", value):
+    return value
+  layout: object = json.loads(value)
+  if not is_object_mapping(layout) or layout.get("V") != 2:  # noqa: PLR2004
+    message = "Invalid saved layout version"
+    raise ValueError(message)
+  if set(layout) != {"V", "L"}:
+    message = (
+      "Non-tiled layouts cannot be saved for older tmux servers; "
+      "previous snapshot left intact"
+    )
+    raise ValueError(message)
+  body = legacy_layout_cell(layout["L"])
+  checksum = 0
+  for byte in body.encode("ascii"):
+    checksum = ((checksum >> 1) | ((checksum & 1) << 15)) + byte
+    checksum &= 0xFFFF
+  return f"{checksum:04x},{body}"
+
+
 def validate_window(
   value: object, identities: set[str], indices: set[int]
 ) -> WindowRecord:
@@ -246,12 +299,7 @@ def validate_window(
     message = "Invalid window index or empty window"
     raise ValueError(message)
   indices.add(index)
-  layout = value["layout"]
-  if not isinstance(layout, str) or (
-    layout and not re.fullmatch(r"[0-9a-f]+,[0-9x,{}\[\]]+", layout)
-  ):
-    message = "Invalid saved layout"
-    raise ValueError(message)
+  layout = normalize_layout(value["layout"])
   return {
     "uid": uid,
     "index": index,

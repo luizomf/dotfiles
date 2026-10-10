@@ -752,7 +752,8 @@ class LazyTmuxTests(TmuxTestCase):
         tmux("select-window", "-t", "project:2")
         tmux("wait-for", "lazy-visit-complete")
         self.assertEqual(
-          tmux("list-panes", "-t", "project:2", "-F", "#{pane_pid}"), "0\n0"
+          tmux("list-panes", "-t", "project:2", "-F", "#{?pane_pid,#{pane_pid},0}"),
+          "0\n0",
         )
         pane_ids = tmux(
           "list-panes", "-t", "project:2", "-F", "#{pane_id}"
@@ -771,7 +772,8 @@ class LazyTmuxTests(TmuxTestCase):
         tmux("select-window", "-t", "project:2")
         tmux("wait-for", "lazy-visit-complete")
         self.assertEqual(
-          tmux("list-panes", "-t", "project:2", "-F", "#{pane_pid}"), "0\n0"
+          tmux("list-panes", "-t", "project:2", "-F", "#{?pane_pid,#{pane_pid},0}"),
+          "0\n0",
         )
         cli("save", "--quiet", success=False)
         self.assertEqual(snapshot.read_bytes(), checkpoint)
@@ -787,6 +789,9 @@ class LazyTmuxTests(TmuxTestCase):
         tmux("wait-for", "lazy-visit-complete")
         cli("save", "--quiet")
         saved = json.loads(snapshot.read_text())
+        # Even JSON-layout servers must publish snapshots older tmux can read.
+        for window in saved["sessions"][0]["windows"]:
+          self.assertRegex(window["layout"], r"^[0-9a-f]{4},[0-9x,{}\[\]]+$")
         self.assertTrue(saved["sessions"][0]["windows"][0]["zoom"])
         self.assertTrue(saved["sessions"][0]["windows"][0]["panes"][1]["active"])
         original_cwd = saved["sessions"][0]["windows"][0]["panes"][0]["cwd"]
@@ -816,7 +821,8 @@ class LazyTmuxTests(TmuxTestCase):
         cli("visit", wid, sid, old_generation, home=homes[1])
         self.assertEqual((directory / "focus.json").read_bytes(), before)
         self.assertEqual(
-          tmux("list-panes", "-t", "project:2", "-F", "#{pane_pid}"), "0\n0"
+          tmux("list-panes", "-t", "project:2", "-F", "#{?pane_pid,#{pane_pid},0}"),
+          "0\n0",
         )
         cli("save", "--quiet", home=homes[1])
         again = json.loads(snapshot.read_text())
@@ -1100,7 +1106,7 @@ class SleepNavigationTests(TmuxTestCase):
       locations, {first: "beta:5", second: "beta:5", unrelated: "gamma:1"}
     )
     self.assertEqual(
-      self.tmux("list-panes", "-t", destination, "-F", "#{pane_pid}"),
+      self.tmux("list-panes", "-t", destination, "-F", "#{?pane_pid,#{pane_pid},0}"),
       destination_pid + "\n0",
     )
     # Replaying a visit queued before sleep must not revive the source, even
@@ -1234,9 +1240,11 @@ class SleepNavigationTests(TmuxTestCase):
     self.lazy("save", "--quiet")
     self.lazy("stop", "--yes", "--quiet")
     self.lazy("boot")
-    self.assertEqual(self.tmux("list-panes", "-t", "alpha:1", "-F", "#{pane_pid}"), "0")
+    self.assertEqual(
+      self.tmux("list-panes", "-t", "alpha:1", "-F", "#{?pane_pid,#{pane_pid},0}"), "0"
+    )
     self.assertNotEqual(
-      self.tmux("list-panes", "-t", "beta:3", "-F", "#{pane_pid}"), "0"
+      self.tmux("list-panes", "-t", "beta:3", "-F", "#{?pane_pid,#{pane_pid},0}"), "0"
     )
     self.assertEqual(json.loads(self.lazy("status").stdout)["pending_panes"], 4)
 
