@@ -70,8 +70,8 @@ class ZshEnvironmentTests(unittest.TestCase):
             paths[0:3],
             [
               str(home / "dotfiles/scripts"),
-              str(home / ".local/bin"),
               str(node.parent),
+              str(home / ".local/bin"),
             ],
           )
           self.assertLess(

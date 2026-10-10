@@ -14,12 +14,12 @@
     done
   fi
 
-  path=("$HOME/.cargo/bin" "$HOME/.docker/bin" "${path[@]}")
-  # Keep an active/inherited nvm Node ahead of Homebrew and system Node.
+  path=("$HOME/.local/bin" "$HOME/.cargo/bin" "$HOME/.docker/bin" "${path[@]}")
+  # Keep an active/inherited nvm Node ahead of local, Homebrew and system Node.
   if [[ -n ${NVM_BIN:-} && -x "$NVM_BIN/node" ]]; then
     path=("$NVM_BIN" "${path[@]}")
   fi
-  path=("$HOME/dotfiles/scripts" "$HOME/.local/bin" "${path[@]}" "${fallbacks[@]}")
+  path=("$HOME/dotfiles/scripts" "${path[@]}" "${fallbacks[@]}")
   # Keep the first occurrence; repeated sourcing must not grow PATH.
   typeset -gU path
   export PATH

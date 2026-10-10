@@ -20,10 +20,12 @@ files.
   binaries, Cargo, Docker, and an active/inherited nvm Node. It is sourced from
   `.zshenv`, `.zprofile`, and the end of interactive toolchain setup in
   `config/exports`. Reapplication restores priority without duplicate entries.
-  Dotfiles scripts and local binaries precede nvm; nvm precedes Cargo/Docker and
-  inherited paths. The initial `.zshenv` call moves system fallback directories
-  to the end, preserving its previous behavior for inherited virtualenv/custom
-  paths. Later calls preserve toolchain ordering and append missing fallbacks.
+  Dotfiles scripts precede an active/inherited nvm; nvm precedes local binaries,
+  Cargo/Docker and inherited paths. This keeps application-bundled Node links in
+  `~/.local/bin` from shadowing the selected nvm runtime while preserving
+  wrappers. The initial `.zshenv` call moves system fallback directories to the
+  end, preserving its previous behavior for inherited virtualenv/custom paths.
+  Later calls preserve toolchain ordering and append missing fallbacks.
 - **`zsh/config/env`**: public defaults needed by non-interactive Zsh too, such
   as `OLLAMA_*` and `LOCAL_MODEL`. Loaded by `.zshenv`; no credential lookup or
   toolchain initialization belongs here. Existing overrides remain supported;
