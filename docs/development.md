@@ -10,7 +10,9 @@ it.
 The installer syncs the checkout's ignored `.venv` from the lockfile. Set
 `OM_INSTALL_SKIP_TOOLCHAINS=1` to skip that step. Alpine uses its native
 `/usr/bin/python3` with managed Python downloads disabled, rather than pyenv;
-see the [Alpine installation policy](installation.md#alpine).
+see the [Alpine installation policy](installation.md#alpine). LFS also keeps
+`/usr/bin/python3` and disables managed downloads; missing development CLI tools
+come from Homebrew rather than pyenv or `uv tool install`.
 
 Python setup is recoverable: if pyenv, uv, tool installation, or sync fails, the
 installer continues independent configuration and reports an incomplete

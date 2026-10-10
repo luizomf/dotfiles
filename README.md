@@ -18,15 +18,17 @@ tested from a clean installation yet. Traditional Fedora and plain Arch are
 accepted; plain Arch and x86_64 Omarchy have not had clean-install tests. Debian
 is also accepted (Debian 13 ARM64 packages checked, full install not yet
 tested). Alpine has a native `apk` path (Alpine 3.24 ARM64 components tested;
-full installer and repeat full install not yet verified). Atomic or OSTree
-variants and other Linux distributions are rejected by the installer.
+full installer and repeat full install not yet verified). LFS has a native-first
+Homebrew path; see its [base requirements](docs/installation.md#lfs). Atomic or
+OSTree variants and other Linux distributions are rejected by the installer.
 
 Package selections live in [`config/packages.list`](config/packages.list),
 shared by all supported systems and the macOS Brewfile. See
 [installer maintenance](docs/installation.md) for adding packages and the
-Debian/Arch/Omarchy/Alpine policies. Supported distro IDs and package managers
-live in [`config/install-platforms.list`](config/install-platforms.list); adding
-a distro with an existing package manager no longer requires new dispatch
+Debian/Arch/Omarchy/Alpine/LFS policies. Supported distro IDs and package
+managers live in
+[`config/install-platforms.list`](config/install-platforms.list); adding a
+distro with an existing package manager no longer requires new dispatch
 branches.
 
 No major problems have shown up so far. That is not a promise that the installer

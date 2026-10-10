@@ -208,6 +208,36 @@ class InstallPlatformTests(unittest.TestCase):
         else:
           self.assertEqual(result.stdout, "")
 
+  def test_lfs_uses_brew_node_tools_and_preserves_native_python(self):
+    source = (ROOT / "install.sh").read_text()
+    node_setup = (
+      source.split('loginfo "Instalando Lazy.nvim..."', 1)[1]
+      .split("\nfi\n", 1)[1]
+      .split("\nif configure_install_python;", 1)[0]
+    )
+    result = self.shell(
+      """
+      set -Eeuo pipefail
+      OP_SYSTEM=lfs
+      export HOME=/nonexistent-dotfiles-test-home
+      loginfo() { :; }
+      require_new_toolchain_dir() { return 99; }
+      run_remote_script() { printf 'UNEXPECTED_DOWNLOAD\\n'; return 99; }
+      npm() { printf 'UNEXPECTED_NPM\\n'; return 99; }
+      """
+      + node_setup
+      + """
+      source "$2"
+      uv() { printf 'uv'; printf ' <%s>' "$@"; printf '\\n'; }
+      configure_install_python
+      """,
+      str(ROOT / "scripts/lib/install-python.sh"),
+    )
+    self.assertEqual(result.returncode, 0, result.stderr)
+    self.assertNotIn("UNEXPECTED", result.stdout)
+    self.assertIn("<--python> </usr/bin/python3>", result.stdout)
+    self.assertIn("<--no-python-downloads>", result.stdout)
+
   def test_alpine_python_sync_uses_system_python_without_managed_downloads(self):
     for skip, failure in (("0", "0"), ("0", "29"), ("1", "0")):
       with self.subTest(skip=skip, failure=failure):
@@ -361,6 +391,89 @@ class InstallPlatformTests(unittest.TestCase):
     self.assertIn("Installation incomplete", result.stderr)
     self.assertIn("Install Python 3.14.7 (exit 42)", result.stderr)
 
+  def test_lfs_preserves_native_tools_and_installs_missing_tools_with_brew(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      root = Path(tmp)
+      (root / "config").mkdir()
+      (root / "config/install-platforms.list").write_text("lfs lfs,lebasix linuxbrew\n")
+      (root / "config/packages.list").write_text(
+        "lfs brew bash\nlfs brew missing-formula missing-command\n"
+        "darwin cask forbidden\n"
+      )
+      (root / "missing-command").write_text("#!/bin/sh\nexit 0\n")
+      (root / "missing-command").chmod(0o755)
+      result = self.shell(
+        """
+        set -Eeuo pipefail
+        REPO_DIR=$2
+        export PATH="$2:$PATH"
+        loginfo() { printf '%s\\n' "$*"; }
+        install_homebrew() { printf 'LOAD_BREW\\n'; }
+        brew() { printf 'brew'; printf ' <%s>' "$@"; printf '\\n'; }
+        sudo() { printf 'UNEXPECTED_SUDO\\n'; return 99; }
+        detect_install_platform Linux lebasix 0
+        install_platform_packages lfs
+        """,
+        tmp,
+      )
+      self.assertEqual(result.returncode, 0, result.stderr)
+      self.assertIn("lfs\n", result.stdout)
+      self.assertIn("Keeping native bash", result.stdout)
+      self.assertIn("brew <install> <missing-formula>", result.stdout)
+      self.assertNotIn("<bash>", result.stdout)
+      self.assertNotIn("bundle", result.stdout)
+      self.assertNotIn("UNEXPECTED", result.stdout)
+
+  def test_lfs_all_native_selection_avoids_an_empty_brew_install(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      root = Path(tmp)
+      (root / "config").mkdir()
+      (root / "config/install-platforms.list").write_text("lfs lfs linuxbrew\n")
+      (root / "config/packages.list").write_text("lfs brew bash")
+      result = self.shell(
+        """
+        set -Eeuo pipefail
+        REPO_DIR=$2
+        loginfo() { :; }
+        install_homebrew() { printf 'LOAD_BREW\\n'; }
+        brew() { printf 'UNEXPECTED_BREW_INSTALL\\n'; return 99; }
+        install_platform_packages lfs
+        """,
+        tmp,
+      )
+      self.assertEqual(result.returncode, 0, result.stderr)
+      self.assertEqual(result.stdout, "LOAD_BREW\n")
+
+  def test_lfs_brew_loading_keeps_native_python_first(self):
+    source = (ROOT / "install.sh").read_text()
+    loader = (
+      "load_brew() {"
+      + source.split("load_brew() {", 1)[1].split("\ninstall_homebrew()", 1)[0]
+    )
+    result = self.shell(
+      """
+      set -Eeuo pipefail
+      OP_SYSTEM=lfs
+      brew() { printf 'export PATH=/fixture/brew/bin:$PATH\\n'; }
+      """
+      + loader
+      + '\nload_brew\nprintf "%s\\n" "$PATH"\n'
+    )
+    self.assertEqual(result.returncode, 0, result.stderr)
+    paths = result.stdout.strip().split(":")
+    self.assertLess(paths.index("/usr/bin"), paths.index("/fixture/brew/bin"))
+
+  def test_lfs_brew_failure_is_propagated(self):
+    result = self.shell("""
+      set -Eeuo pipefail
+      loginfo() { :; }
+      install_homebrew() { return 23; }
+      brew() { printf 'UNEXPECTED_INSTALL\\n'; }
+      if install_platform_packages lfs; then exit 99; else exit $?; fi
+    """)
+    self.assertEqual(result.returncode, 23)
+    self.assertNotIn("UNEXPECTED", result.stdout)
+
   def test_supported_platforms(self):
     for kernel, distro, expected in (
       ("Darwin", "", "darwin"),
@@ -371,6 +484,8 @@ class InstallPlatformTests(unittest.TestCase):
       ("Linux", "omarchy", "arch"),
       ("Linux", "arch", "arch"),
       ("Linux", "alpine", "alpine"),
+      ("Linux", "lfs", "lfs"),
+      ("Linux", "lebasix", "lfs"),
     ):
       with self.subTest(distro=distro or kernel):
         result = self.shell('detect_install_platform "$2" "$3" 0', kernel, distro)
@@ -687,6 +802,7 @@ class InstallPlatformTests(unittest.TestCase):
       "arch": {"native", "brew"},
       "alpine": {"native"},
       "apk": {"native"},
+      "lfs": {"brew"},
     }
     for number, line in enumerate(
       (ROOT / "config/packages.list").read_text().splitlines(), start=1
@@ -702,7 +818,9 @@ class InstallPlatformTests(unittest.TestCase):
           self.assertIn(provider, providers[platform])
           self.assertNotIn((platform, provider, package), seen)
           seen.add((platform, provider, package))
-        if options:
+        if options and platforms == "lfs":
+          self.assertRegex(options[0], r"^[a-zA-Z0-9_-]+$")
+        elif options:
           self.assertEqual(platforms, "darwin")
           self.assertIn(
             (provider, options[0]), (("brew", "unlinked"), ("tap", "trusted"))

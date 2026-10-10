@@ -15,7 +15,7 @@ platforms provider package [option]
 ```
 
 - Selectors: platform names from `config/install-platforms.list` (`darwin`,
-  `ubuntu`, `debian`, `fedora`, `arch`, `alpine`) or their Linux package
+  `ubuntu`, `debian`, `fedora`, `arch`, `alpine`, `lfs`) or their Linux package
   managers (`apt`, `dnf`, `pacman`, `apk`). Combine selectors with commas,
   without spaces. A row is selected once when either the platform or its manager
   matches. `apt` shares both native and Brew selections between Debian and
@@ -27,7 +27,8 @@ platforms provider package [option]
 - `brew`: Homebrew formula/tool on the selected platforms.
 - `cask`, `tap`, `uv`: macOS Bundle declarations only. `uv` keeps the existing
   Brewfile's Python-tool selections; it does not configure the Python runtime.
-- Optional fourth field: `unlinked` for a macOS formula, or `trusted` for a tap.
+- Optional fourth field: `unlinked` for a macOS formula, `trusted` for a tap, or
+  the executable to probe on an LFS-only Brew row (for example, `neovim nvim`).
 - Use whole-line `#` comments, not inline comments or shell/Ruby expressions.
 
 For example, bat needs just one declaration:
@@ -154,8 +155,8 @@ retains the existing incomplete-installation reporting and does not prevent
 independent configuration steps. `OM_INSTALL_SKIP_TOOLCHAINS=1` skips npm tools
 and the development-environment sync, not the native package selection.
 
-The tmux Python popup uses `/usr/bin/python3` on Alpine; other systems retain
-their existing pyenv command.
+The tmux Python popup uses `/usr/bin/python3` on Alpine and LFS; other systems
+retain their existing pyenv command.
 
 Neovim uses native Ruff, Taplo, Lua Language Server, Rust Analyzer and StyLua,
 while Mason supplies the remaining language servers. On Alpine, native PATH
@@ -181,6 +182,63 @@ components passed without Homebrew or managed runtimes. The tmux popup binding
 was checked on Alpine and macOS. Those checks are not a completed full-installer
 or repeat full-install test. Other Alpine versions and architectures are
 unverified.
+
+## LFS
+
+The `lfs` platform accepts exact `ID=lfs` and `ID=lebasix` values. Its
+`linuxbrew` backend is distinct from the macOS Bundle backend: it selects only
+LFS formula rows, never macOS casks or taps.
+
+Start with a working glibc LFS base, Bash, Git, curl with working HTTPS, build
+tools, `/usr/bin/python3` (3.14 or newer for all personal scripts), and sudo
+access. Network, certificates, locales, boot, services and the base system are
+owned by the host, not this installer. This is not a BLFS bootstrapper or a
+promise of compatibility with arbitrary LFS builds.
+
+Before requesting formulas, the installer checks each command in host paths:
+`/usr/local/sbin`, `/usr/local/bin`, `/usr/sbin`, `/usr/bin`, `/sbin`, `/bin`.
+Existing executables are kept and their direct formula requests are skipped.
+This is presence detection, not a general version or feature compatibility
+solver; the host must supply usable native tools. Inherited Homebrew, nvm, pyenv
+and user-tool PATH entries do not count as native. Missing commands come from
+Homebrew, installed at its normal Linux prefix if absent. Homebrew still owns
+transitive dependencies and may install its own version of a native tool or
+library as a dependency. The installer does not unlink those dependencies or
+force Homebrew to link against LFS libraries. During installation and in LFS Zsh
+startup (`/etc/lfs-release`), host paths precede Brew paths so dependencies do
+not shadow the native Python or other base tools. Explicit user-tool paths still
+retain their normal priority.
+
+Node and development CLI tools (Prettier, Pyright, Ruff, uv and Pi) follow the
+same native-first formula policy. There is no nvm installation, pyenv build, or
+privileged npm installation. Python setup uses `/usr/bin/python3` to sync the
+checkout's locked `.venv`, with managed interpreter downloads disabled.
+`OM_PYTHON_VERSION` does not replace the native Python.
+`OM_INSTALL_SKIP_TOOLCHAINS=1` skips that sync, not the formula selection.
+
+Zsh is registered in `/etc/shells` if necessary before changing the user's login
+shell. Existing configuration targets, including `.vimrc`, are backed up before
+linking. Bash configuration is not changed. The tmux Python popup uses system
+Python. Vim/Neovim plugins, Mason tools and Tree-sitter parsers retain the
+normal editor bootstrap; they are not distro packages. No desktop, terminal
+binary, SSH configuration, sudo policy or network configuration is installed or
+rewritten. Pi settings and credentials remain outside this repo.
+
+A full install from a clean LFS ARM64 13.0 systemd base (without Homebrew) and a
+repeat install completed successfully. The native-first PATH correction was
+exercised on the repeat run, not a second snapshot reset. Fresh Zsh resolved
+native Python 3.14, Vim, tmux and fzf; native executable and Bash-config hashes
+were unchanged. The Vim-config backup survived, and the repeat created no extra
+backup or duplicate shell registration. The Python popup binding, locked Python
+environment, 14 Mason packages, all 34 configured parser names and Pyright
+initialization were checked. Tree-sitter's install task reported 38 languages
+including related parsers. Other LFS versions and architectures remain
+unverified.
+
+The existing editor bootstrap rewrote Lazy's own lockfile pin during this test;
+that separate behavior is tracked in
+[issue #11](https://github.com/luizomf/dotfiles/issues/11), not changed by this
+platform support.
 
 ## Verification
 

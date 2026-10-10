@@ -114,6 +114,39 @@ class ZshEnvironmentTests(unittest.TestCase):
               paths.index("/opt/homebrew/bin"), paths.index("/example/venv/bin")
             )
 
+  def test_lfs_exports_keep_native_tools_ahead_of_brew_dependencies(self):
+    with tempfile.TemporaryDirectory() as temporary:
+      home = Path(temporary)
+      (home / "dotfiles").symlink_to(REPO, target_is_directory=True)
+      result = subprocess.run(  # noqa: S603
+        [
+          str(ZSH),
+          "-dfc",
+          """
+          typeset -A ZSH_HIGHLIGHT_STYLES
+          OSTYPE=linux-test
+          uname() { print Test; }
+          pyenv() { return 0; }
+          test() {
+            if [[ "$*" == '-r /etc/lfs-release' ]]; then return 0; fi
+            builtin test "$@"
+          }
+          source "$HOME/dotfiles/zsh/config/exports"
+          print -l -- $path
+          """,
+        ],
+        env={
+          "HOME": str(home),
+          "PATH": "/fixture/brew/bin:/usr/bin:/bin",
+        },
+        capture_output=True,
+        text=True,
+        check=True,
+      )
+      paths = result.stdout.splitlines()
+      self.assertLess(paths.index("/usr/bin"), paths.index("/fixture/brew/bin"))
+      self.assertEqual(paths[0], str(home / "dotfiles/scripts"))
+
   def test_path_can_be_reapplied_without_duplicates(self):
     # The sourced path is the repository-owned config, not external input.
     result = subprocess.run(  # noqa: S603

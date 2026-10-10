@@ -65,6 +65,10 @@ load_brew() {
   fi
 
   eval "$("$brew_path" shellenv)"
+  if [[ "${OP_SYSTEM:-}" == lfs ]]; then
+    # Brew dependencies may provide their own Python and other native tools.
+    export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
+  fi
 }
 
 install_homebrew() {
@@ -171,6 +175,9 @@ fi
 
 if [[ "$OP_SYSTEM" != "darwin" ]]; then
   zsh_path=$(command -v zsh)
+  if [[ "$OP_SYSTEM" == lfs ]] && ! grep -Fxq "$zsh_path" /etc/shells; then
+    printf '%s\n' "$zsh_path" | run_install_privileged "$OP_SYSTEM" tee -a /etc/shells > /dev/null
+  fi
   if [[ "$(getent passwd "$(id -un)" | cut -d: -f7)" != "$zsh_path" ]]; then
     run_install_privileged "$OP_SYSTEM" chsh -s "$zsh_path" "$(id -un)"
   fi
@@ -206,7 +213,9 @@ if [[ ! -d "$LAZY_PATH" ]]; then
     --filter=blob:none --branch=stable "$LAZY_PATH"
 fi
 
-if [[ "${OP_SYSTEM:-}" == alpine ]]; then
+if [[ "${OP_SYSTEM:-}" == lfs ]]; then
+  loginfo "LFS: keeping native tools and using Homebrew for missing tools; no nvm or pyenv."
+elif [[ "${OP_SYSTEM:-}" == alpine ]]; then
   loginfo "Alpine: using apk Node/Python and native musl tools; no Homebrew or nvm."
   if [[ "${OM_INSTALL_SKIP_TOOLCHAINS:-0}" != "1" ]]; then
     npm install --global --prefix "$HOME/.local" \
@@ -339,7 +348,7 @@ if [[ "${OM_INSTALL_SKIP_TOOLCHAINS:-0}" != "1" ]]; then
 fi
 if [[ "${OM_INSTALL_SKIP_TOOLCHAINS:-0}" != "1" && -z "$python_failure" ]]; then
   required_commands+=(uv pyright ruff)
-  if [[ "$OP_SYSTEM" != alpine ]]; then
+  if [[ "$OP_SYSTEM" != alpine && "$OP_SYSTEM" != lfs ]]; then
     required_commands+=(pyenv python)
   fi
   for development_tool in python pyright ruff; do

@@ -80,6 +80,28 @@ install_platform_packages() {
       brew bundle --file="$REPO_DIR/homebrew/Brewfile"
       return
       ;;
+    linuxbrew)
+      # Inspect only host-managed paths, never an inherited Homebrew/toolchain PATH.
+      # Formula dependencies remain Homebrew's responsibility.
+      while read -r platforms provider package _option || [[ -n "$platforms" ]]; do
+        [[ -n "$platforms" && "$platforms" != \#* && "$provider" == brew ]] || continue
+        case ",$platforms," in
+          *",$platform,"*)
+            if PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+              type -P "${_option:-$package}" > /dev/null; then
+              loginfo "Keeping native ${_option:-$package} (skipping $package)."
+            else
+              brew_packages+=("$package")
+            fi
+            ;;
+        esac
+      done < "$REPO_DIR/config/packages.list"
+      install_homebrew || return $?
+      if (( ${#brew_packages[@]} )); then
+        brew install "${brew_packages[@]}" || return $?
+      fi
+      return 0
+      ;;
     apt|dnf|pacman|apk) ;;
     *) printf 'Unsupported package manager: %s\n' "$manager" >&2; return 1 ;;
   esac

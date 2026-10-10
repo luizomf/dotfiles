@@ -2,7 +2,8 @@
 # Selectors: platform or package manager from install-platforms.list.
 # apt shares packages between Debian and Ubuntu.
 # Providers: native (apt/dnf/pacman/apk), brew, cask, tap, uv.
-# Options: unlinked for brew; trusted for tap. No inline comments.
+# Options: unlinked for macOS brew; trusted for tap; command for LFS probes.
+# No inline comments.
 # Keep shared packages on one row; distro-specific names need separate rows.
 # Consumed by install.sh and homebrew/Brewfile. See docs/installation.md.
 
@@ -133,6 +134,62 @@ alpine native wget
 alpine native wl-clipboard
 alpine native xclip
 alpine native zsh
+
+# LFS: skip direct formula requests when the command exists in host paths.
+# Keep these rows separate: their optional fourth field is a command probe,
+# not a macOS Bundle option. Homebrew still owns transitive dependencies.
+lfs brew aria2 aria2c
+lfs brew autoconf
+lfs brew automake
+lfs brew bash
+lfs brew bat
+lfs brew btop
+lfs brew cmake
+lfs brew curl
+lfs brew fastfetch
+lfs brew fd
+lfs brew ffmpeg
+lfs brew fzf
+lfs brew gcc
+lfs brew gettext
+lfs brew gh
+lfs brew git
+lfs brew glow
+lfs brew hf
+lfs brew htop
+lfs brew imagemagick magick
+lfs brew just
+lfs brew lazygit
+lfs brew llvm clang
+lfs brew lua
+lfs brew luarocks
+lfs brew make
+lfs brew nano
+lfs brew neovim nvim
+lfs brew ninja
+lfs brew node
+lfs brew pandoc
+lfs brew patch
+lfs brew pi-coding-agent pi
+lfs brew pkgconf pkg-config
+lfs brew prettier
+lfs brew pyright
+lfs brew ripgrep rg
+lfs brew rsync
+lfs brew rtk
+lfs brew ruff
+lfs brew shellcheck
+lfs brew tmux
+lfs brew trash-cli trash-put
+lfs brew tree
+lfs brew tree-sitter-cli tree-sitter
+lfs brew unzip
+lfs brew uv
+lfs brew vim
+lfs brew watch
+lfs brew wget
+lfs brew woff2 woff2_compress
+lfs brew zsh
 
 # tap
 darwin tap docker/tap trusted
