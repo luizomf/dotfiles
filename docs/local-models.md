@@ -114,18 +114,34 @@ keepwarm         # Replace the worker on this machine and start the hourly loop
 ```
 
 `--once` prints per-host/per-target outcomes plus totals and does not replace an
-existing worker. The loop retains its initial delay and two rounds 30 seconds
-apart per hourly cycle. SSH uses batch mode, a connection timeout, and server
-keepalives; a failed request does not skip other targets. Those SSH settings do
-not impose a deadline on an otherwise connected model request.
+existing worker or touch its ownership record. Loop launches atomically publish
+an opaque ownership token in `~/.cache/keepwarm/current`; only the worker with
+that token continues. No process-name matching or PID signaling is used, so
+editors, observers, and calling shells are not replacement targets. Concurrent
+launches are last-publication-wins. A superseded worker exits within the next
+one-second sleep check, or after its in-flight request finishes, before starting
+another request. An old request can therefore overlap the replacement's first
+request; a hung request is not forcibly cancelled. A stale token is harmless on
+restart, and workers never delete a newer launch's record.
+
+The loop retains its initial delay and two rounds 30 seconds apart per hourly
+cycle. SSH uses batch mode, a connection timeout, and server keepalives; a
+failed request does not skip other targets. Those SSH settings do not impose a
+deadline on an otherwise connected model request.
 
 Run the loop on **one machine only**, with unattended SSH access to all three
 aliases. Stop any old per-machine workers before deploying a central worker;
 starting one does not stop workers on other machines. Restart the central worker
-after updating its script. Logs live at `~/dotfiles/scripts/keepwarm.log` on
-that central machine, with host/target labels and round totals. The log is not
-an external failure notification, and a sleeping/unreachable host cannot have
-its auth refreshed.
+after updating its script. **One-time migration:** workers started by the old
+process-name-killing version do not check ownership tokens. Identify and stop
+those exact workers manually before starting the updated script; the new version
+deliberately does not discover or kill them. Do not use broad
+`pkill -f keepwarm` commands. No migration or operational restart is performed
+by the tests.
+
+Logs live at `~/dotfiles/scripts/keepwarm.log` on that central machine, with
+host/target labels and round totals. The log is not an external failure
+notification, and a sleeping/unreachable host cannot have its auth refreshed.
 
 ## Capabilities and limits
 

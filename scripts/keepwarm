@@ -15,9 +15,9 @@ set -uo pipefail
 
 LOG_FILE="$HOME/dotfiles/scripts/keepwarm.log"
 
-INTERVAL="1h"        # Default: 1h  — time between pings
-INITIAL_RUN=1        # Default: 1   — 1 = ping once shortly after starting
-INITIAL_DELAY="10s"  # Default: 10s — wait before the first ping
+INTERVAL=3600        # Seconds between ping pairs
+INITIAL_RUN=1        # 1 = ping once shortly after starting
+INITIAL_DELAY=10     # Seconds before the first ping
 
 hosts=(m132 m4128 fedoraair)
 once=0
@@ -40,13 +40,29 @@ log() {
 trap 'log "TERM received, exiting"; exit 143' TERM
 trap 'log "INT received, exiting"; exit 130' INT
 
+check_ownership() {
+  (( once )) && return
+  local current
+  if ! read -r current 2>/dev/null < "$STATE_FILE" || [[ "$current" != "$worker_token" ]]; then
+    log "worker replaced, exiting"
+    exit 0
+  fi
+}
+
 maybe_sleep() {
-  [ -n "${1:-}" ] && sleep "$1"
+  local remaining="$1"
+  while (( remaining > 0 )); do
+    check_ownership
+    sleep 1
+    (( remaining -= 1 ))
+  done
+  check_ownership
 }
 
 run_ping() {
   # $1 = label for the log; remaining args = the command to pipe the prompt to.
   local label="$1"; shift
+  check_ownership
   local out err rc errfile
   # Keep stdout (the agent's answer) and stderr (banners, progress, container
   # noise) apart: codex dumps a verbose, ANSI-colored banner on stderr that
@@ -108,7 +124,7 @@ reload_loop() {
     maybe_sleep "$INITIAL_DELAY"
 
     ping_agents
-    sleep 30
+    maybe_sleep 30
     ping_agents
   fi
 
@@ -116,7 +132,7 @@ reload_loop() {
     maybe_sleep "$INTERVAL"
 
     ping_agents
-    sleep 30
+    maybe_sleep 30
     ping_agents
   done
 }
@@ -126,12 +142,19 @@ if (( once )); then
   exit $?
 fi
 
-# Replace workers only on the central machine, never on any remote target.
-# Unlike macOS, Linux procps includes ancestors unless excluded with -A.
-if [[ "$(uname -s)" == "Linux" ]]; then
-  pkill -A -9 -f "[k]eepwarm" >/dev/null 2>&1 || true
-else
-  pkill -9 -f "[k]eepwarm" >/dev/null 2>&1 || true
+# Publish a unique generation atomically. Workers retire themselves; never
+# signal a PID from a stale record or match unrelated process command lines.
+# Concurrent launchers are last-publication-wins. Keep the record on exit so
+# an older worker cannot erase a newer worker's ownership.
+umask 077
+state_dir="$HOME/.cache/keepwarm"
+STATE_FILE="$state_dir/current"
+mkdir -p "$state_dir" || exit 1
+[[ ! -d "$STATE_FILE" ]] || exit 1
+worker_token="$(mktemp "$state_dir/worker.XXXXXXXXXX")" || exit 1
+if ! printf '%s\n' "$worker_token" > "$worker_token" || ! mv -f "$worker_token" "$STATE_FILE"; then
+  rm -f "$worker_token"
+  exit 1
 fi
 log "keepwarm started (hosts=${hosts[*]}, interval=$INTERVAL, initial_run=$INITIAL_RUN, initial_delay=$INITIAL_DELAY)"
 reload_loop </dev/null >/dev/null 2>&1 &
