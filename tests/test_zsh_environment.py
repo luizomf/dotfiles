@@ -78,6 +78,67 @@ class ZshEnvironmentTests(unittest.TestCase):
             paths.index(str(home / ".docker/bin")), paths.index("/usr/bin")
           )
 
+  def test_missing_locale_gets_utf8_in_every_startup_mode(self):
+    available = subprocess.run(
+      ["locale", "-a"],  # noqa: S607 - resolved through the isolated system PATH
+      env={"PATH": "/usr/bin:/bin", "LC_ALL": "C"},
+      text=True,
+      capture_output=True,
+      check=True,
+    ).stdout.splitlines()
+    if not set(available).intersection(
+      {"C.UTF-8", "C.utf8", "en_US.UTF-8", "en_US.utf8"}
+    ):
+      self.skipTest("No supported UTF-8 fallback is installed")
+    for mode in ("-dc", "-dic", "-dlc", "-dlic"):
+      with self.subTest(mode=mode), tempfile.TemporaryDirectory() as temporary:
+        home = Path(temporary)
+        (home / "dotfiles").symlink_to(REPO, target_is_directory=True)
+        (home / ".zshenv").write_text('source "$HOME/dotfiles/zsh/.zshenv"\n')
+        result = subprocess.run(  # noqa: S603
+          [str(ZSH), mode, 'locale charmap; s="é"; print -- ${#s}:${LC_ALL-unset}'],
+          env={"HOME": str(home), "PATH": "/usr/bin:/bin", "TERM": "dumb"},
+          text=True,
+          capture_output=True,
+          check=True,
+        )
+        self.assertEqual(result.stdout.splitlines(), ["UTF-8", "1:unset"])
+
+  def test_locale_fallback_preserves_choices_and_requires_installed_locale(self):
+    cases: tuple[tuple[dict[str, str], str, str], ...] = (
+      ({}, "C\\nen_US.utf8\\nC.utf8", "C.utf8||"),
+      ({}, "C\\nen_US.UTF-8", "en_US.UTF-8||"),
+      ({}, "C\\nPOSIX", "||"),
+      ({"LANG": "C"}, "C\\nC.utf8", "C||"),
+      ({"LANG": "pt_BR.UTF-8"}, "C\\nC.utf8", "pt_BR.UTF-8||"),
+      ({"LC_ALL": "C"}, "C\\nC.utf8", "|C|"),
+      ({"LC_CTYPE": "UTF-8"}, "C\\nC.utf8", "||UTF-8"),
+      ({"LANG": "", "LC_ALL": ""}, "C\\nC.utf8", "C.utf8||"),
+    )
+    for overrides, available, expected in cases:
+      with self.subTest(overrides=overrides, available=available):
+        result = subprocess.run(  # noqa: S603
+          [
+            str(ZSH),
+            "-dfc",
+            (
+              'locale() { [[ "$1" == -a ]] && printf "%b\\n" "$AVAILABLE"; }; '
+              f'source "{REPO}/zsh/config/env"; '
+              'print -r -- "$LANG|$LC_ALL|$LC_CTYPE"'
+            ),
+          ],
+          env={
+            "HOME": str(REPO.parent),
+            "PATH": "/usr/bin:/bin",
+            "AVAILABLE": available,
+            **overrides,
+          },
+          capture_output=True,
+          text=True,
+          check=True,
+        )
+        self.assertEqual(result.stdout.strip(), expected)
+
   def test_initial_fallback_demotion_preserves_inherited_custom_paths(self):
     for phase in ("--initial", "--refresh"):
       for platform in ("darwin-test", "linux-test"):

@@ -78,9 +78,9 @@ For a distro using an existing backend (`apt`, `dnf`, `pacman`):
 
 Ubuntu's locale setup remains an explicit Ubuntu-only exception in `install.sh`;
 the `fd`/`bat` command-name compatibility links apply to APT hosts. New distros
-otherwise keep their locale. Ghostty is neither installed nor required on Linux;
-its configuration is still linked for users who install it separately. The macOS
-cask is unchanged.
+otherwise keep their system locale. Ghostty is neither installed nor required on
+Linux; its configuration is still linked for users who install it separately.
+The macOS cask is unchanged.
 
 ## Debian
 
@@ -215,6 +215,21 @@ privileged npm installation. Python setup uses `/usr/bin/python3` to sync the
 checkout's locked `.venv`, with managed interpreter downloads disabled.
 `OM_PYTHON_VERSION` does not replace the native Python.
 `OM_INSTALL_SKIP_TOOLCHAINS=1` skips that sync, not the formula selection.
+
+The LFS formula list includes `jq` for Homebrew completion, with the same
+native-first policy. Existing installations can run `brew install jq` if
+missing; there is no need to rerun the full installer.
+
+On every platform, `zsh/config/env` supplies a UTF-8 `LANG` only when `LANG`,
+`LC_ALL` and `LC_CTYPE` are all empty or unset. It selects an installed
+`C.UTF-8`/`C.utf8`, then `en_US.UTF-8`/`en_US.utf8`, as reported by `locale -a`;
+if none exists, it leaves the environment unchanged. Explicit choices (including
+`C`) and other `LC_*` categories are preserved; `LC_ALL` is never set. This runs
+from `.zshenv` for login, interactive and non-interactive SSH command sessions,
+without sourcing `/etc/profile` or changing system files. After updating an
+existing checkout, open a new Zsh session and check `locale charmap` for
+`UTF-8`. An explicitly invalid inherited locale must still be corrected at its
+source.
 
 Zsh is registered in `/etc/shells` if necessary before changing the user's login
 shell. Existing configuration targets, including `.vimrc`, are backed up before

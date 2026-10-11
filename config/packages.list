@@ -158,6 +158,7 @@ lfs brew glow
 lfs brew hf
 lfs brew htop
 lfs brew imagemagick magick
+lfs brew jq
 lfs brew just
 lfs brew lazygit
 lfs brew llvm clang
