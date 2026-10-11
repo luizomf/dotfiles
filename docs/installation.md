@@ -1,5 +1,38 @@
 # Installer maintenance
 
+## GitHub access on a fresh machine
+
+The public clone URL in the root README uses HTTPS and does not require GitHub
+SSH host trust or a personal SSH key. An existing checkout may instead have an
+SSH origin. In that case, `Host key verification failed` during `git pull` means
+SSH could not establish trusted server identity; it is not evidence that the
+repository files or installer are broken. The exact cause can be a missing trust
+entry or a conflicting key, so do not assume every failure is first use.
+
+For SSH, verify the offered fingerprint against GitHub's independently trusted
+[published host-key fingerprints](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints)
+before accepting or provisioning the host key. Then test the connection with
+`ssh -T git@github.com`. Account authentication is separate: a
+`Permission denied (publickey)` result needs the appropriate account key/access,
+not a host-verification bypass. The installer does not provision either trust or
+private keys. Never disable `StrictHostKeyChecking`, blindly append
+`ssh-keyscan` output, or remove a conflicting trust entry without verification.
+
+For this public repository, a one-off HTTPS update is an alternative. First
+confirm that `~/dotfiles` is a clean checkout on `main` (`git status --short`
+should be empty); preserve local changes or branch work before proceeding:
+
+```sh
+cd ~/dotfiles
+git fetch https://github.com/luizomf/dotfiles.git main
+git merge --ff-only FETCH_HEAD
+```
+
+This does not change `origin`, SSH trust, or credentials. Later plain pulls
+still use the configured origin and may need SSH setup. A diverged branch is not
+reset by `--ff-only`; investigate instead of adding `--force` or discarding
+local work. Fetching/updating dotfiles does not require rerunning `install.sh`.
+
 ## One package catalog
 
 Edit [`config/packages.list`](../config/packages.list) for native and Homebrew

@@ -56,7 +56,8 @@ The repository must live at `~/dotfiles`. If you already cloned it, **do not
 clone again**: use `cd ~/dotfiles && ./install.sh`. Run the installer as your
 normal user, **not** with `sudo ./install.sh`; it requests elevated permissions
 for individual system operations. Start a new login shell when installation
-finishes.
+finishes. For an existing SSH-based checkout on a fresh machine, see
+[GitHub host trust and the public HTTPS update alternative](docs/installation.md#github-access-on-a-fresh-machine).
 
 Python setup failures preserve the original error and do not stop independent
 configuration steps. The installer skips the remaining Python setup and its
