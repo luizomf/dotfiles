@@ -278,19 +278,21 @@ The installer and editor bootstrap a missing Lazy checkout using the Git
 reference `stable` at `stdpath("data")/lazy/lazy.nvim`. The installer asks a
 clean, headless Neovim for that data directory instead of duplicating its path
 rules; Neovim is installed before this step. The query does not load user
-configuration, user plugins or ShaDa. Existing Lazy directories are reused, not
-migrated or updated.
+configuration, user plugins or ShaDa. Bootstrap reuses existing Lazy directories
+without updating them. The installer's separate locked restoration then applies
+the tracked commits, including the manager.
 
 This data-path lookup respects `XDG_DATA_HOME` and `NVIM_APPNAME`, but does not
 make the rest of the installer support arbitrary configuration layouts: its
 Neovim configuration link still targets `~/.config/nvim`. Bootstrap reference
-selection is separate from the subsequent `Lazy! restore`. Restore uses the
-lockfile available at that point, but automatic missing-plugin installation can
-rewrite the manager entry during startup before restore runs. Restore also
-rewrites JSON formatting even when commits are unchanged. See the
-[bootstrap limitation](nvim-updates.md#lazy-bootstrap-and-lockfile-limitation).
-The lockfile's `main` branch metadata is not an instruction for the initial
-clone, and no plugin pins were changed by the bootstrap alignment.
+selection is separate from the subsequent explicit locked restore. The installer
+runs `nvim --clean --headless -i NONE -l "$REPO_DIR/nvim/restore.lua"` so the
+lock snapshot is protected before automatic missing-plugin installation can
+rewrite it. See [locked restoration](nvim-updates.md#locked-plugin-restoration)
+for maintenance, failure handling and its isolated regression test. The lockfile
+uses Lazy-native formatting and is excluded from Prettier. Its `main` branch
+metadata is not an instruction for the initial clone; no plugin pins were
+changed by the bootstrap alignment or locked-restore correction.
 
 When the editor's initial Lazy clone fails, `nvim/init.lua` reports the target
 path, Git exit status and captured output instead of proceeding into plugin

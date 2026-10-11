@@ -326,7 +326,7 @@ if [[ "${OM_INSTALL_SKIP_PLUGINS:-0}" != "1" ]]; then
     -c 'PlugInstall --sync' -c 'qa'
 
   loginfo "Instalando plugins do Neovim..."
-  nvim --headless '+Lazy! restore' +qa
+  nvim --clean --headless -i NONE -l "$REPO_DIR/nvim/restore.lua"
 
   loginfo "Instalando ferramentas do Mason e parsers do Treesitter..."
   nvim --headless \

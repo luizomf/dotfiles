@@ -250,10 +250,13 @@ initialization were checked. Tree-sitter's install task reported 38 languages
 including related parsers. Other LFS versions and architectures remain
 unverified.
 
-The existing editor bootstrap rewrote Lazy's own lockfile pin during this test;
-that separate behavior is tracked in
-[issue #11](https://github.com/luizomf/dotfiles/issues/11), not changed by this
-platform support.
+The editor bootstrap rewrote Lazy's own lockfile pin during that historical test
+([issue #11](https://github.com/luizomf/dotfiles/issues/11)). The installer now
+uses the separate
+[locked restore command](nvim-updates.md#locked-plugin-restoration), which
+protects the input lock before missing-plugin setup and verifies the installed
+commits. Clean/partial and repeat restoration were checked with isolated local
+Git fixtures, not a new full LFS installer run.
 
 ## Verification
 
