@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+# Clean rebuildable Linux caches without uninstalling tools or touching user data.
+set -euo pipefail
+
+usage() {
+  printf '%s\n' \
+    'Usage: clean_linux [--apply] [--system] [--trim]' \
+    'Default: show the plan only. Run as the normal user, not with sudo.' \
+    '  --apply   Remove listed caches and run Homebrew cleanup if available.' \
+    '  --system  Also clean aged system temporaries and archived journals' \
+    '            (7 days / 8 MiB); requires passwordless sudo when applying.' \
+    '  --trim    Also discard unused blocks on supported mounts (sudo fstrim -av).'  \
+    'Close package managers, builds and editors before applying.'
+}
+
+apply=false
+system=false
+trim=false
+for argument in "$@"; do
+  case "$argument" in
+    --apply) apply=true ;;
+    --system) system=true ;;
+    --trim) trim=true ;;
+    -h|--help) usage; exit 0 ;;
+    *) usage >&2; exit 2 ;;
+  esac
+done
+
+[[ $(uname -s) == Linux ]] || { printf 'Linux only.\n' >&2; exit 1; }
+[[ $(id -u) != 0 ]] || { printf 'Run as the normal user, not root.\n' >&2; exit 1; }
+[[ -n ${HOME:-} && -d $HOME ]] || { printf 'HOME must be an existing directory.\n' >&2; exit 1; }
+home=$(cd -- "$HOME" && pwd -P)
+[[ $home != / ]] || { printf 'Refusing HOME=/.\n' >&2; exit 1; }
+cache=${XDG_CACHE_HOME:-$home/.cache}
+# Deliberately do not follow an external XDG cache root or symlinked cache paths.
+[[ $cache == "$HOME/.cache" ]] && cache="$home/.cache"
+if [[ $cache != "$home/.cache" ]]; then
+  printf 'Skipping non-default XDG_CACHE_HOME; only HOME/.cache is supported.\n'
+  cache=''
+fi
+
+run() {
+  printf '+'
+  printf ' %q' "$@"
+  printf '\n'
+  if [[ $apply == true ]]; then "$@"; fi
+}
+
+if [[ $apply == false ]]; then printf 'DRY RUN: nothing will be changed.\n'; fi
+# Fail before removing user caches if requested privilege/tools are unavailable.
+if [[ $system == true || $trim == true ]]; then
+  command -v sudo >/dev/null
+  if [[ $apply == true ]]; then sudo -n true; fi
+fi
+if [[ $system == true ]]; then
+  command -v systemd-tmpfiles >/dev/null
+  command -v journalctl >/dev/null
+fi
+if [[ $trim == true ]]; then
+  # sbin is not necessarily present in a non-interactive user's PATH.
+  trim_command=$(command -v fstrim || true)
+  [[ -n $trim_command ]] || trim_command=/usr/sbin/fstrim
+  [[ -x $trim_command ]] || { printf 'fstrim not found.\n' >&2; exit 1; }
+fi
+
+# Read the complete mount table before any cleanup. A cache subtree can contain
+# a same-filesystem bind mount, which rm --one-file-system does not protect.
+if ! mount_table=$(findmnt --raw --noheadings --output TARGET); then
+  printf 'Cannot inspect mounts; refusing cleanup.\n' >&2
+  exit 1
+fi
+[[ -n $mount_table ]] || { printf 'Empty mount table; refusing cleanup.\n' >&2; exit 1; }
+mounts=()
+while IFS= read -r encoded_mount; do
+  # findmnt --raw hex-escapes whitespace and backslashes in mount paths.
+  printf -v decoded_mount '%b' "$encoded_mount"
+  [[ $decoded_mount == /* ]] || { printf 'Invalid mount table.\n' >&2; exit 1; }
+  mounts+=("$decoded_mount")
+done <<< "$mount_table"
+
+cache_is_safe() {
+  local target=$1 actual mounted
+  [[ -e $target || -L $target ]] || return 1
+  if [[ ! -d $target || -L $target ]]; then
+    printf 'Skipping non-directory or symlinked cache: %s\n' "$target"
+    return 1
+  fi
+  if ! actual=$(cd -- "$target" && pwd -P); then
+    printf 'Cannot inspect cache: %s\n' "$target" >&2
+    return 1
+  fi
+  if [[ $actual != "$target" ]]; then
+    printf 'Skipping symlinked cache ancestor: %s\n' "$target"
+    return 1
+  fi
+  for mounted in "${mounts[@]}"; do
+    if [[ $mounted == "$target" || $mounted == "$target/"* ]]; then
+      printf 'Skipping cache containing a mount: %s\n' "$target"
+      return 1
+    fi
+  done
+  return 0
+}
+
+brew_command=$(command -v brew || true)
+if [[ -z $brew_command && -x /home/linuxbrew/.linuxbrew/bin/brew ]]; then
+  brew_command=/home/linuxbrew/.linuxbrew/bin/brew
+fi
+if [[ -n $brew_command ]]; then
+  # Brew must use the same inspected cache, not a separate XDG/env override.
+  if [[ -n $cache && ${HOMEBREW_CACHE:-$cache/Homebrew} == "$cache/Homebrew" ]] &&
+    cache_is_safe "$cache/Homebrew"; then
+    run env HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ANALYTICS=1 \
+      HOMEBREW_NO_AUTOREMOVE=1 HOMEBREW_CACHE="$cache/Homebrew" \
+      "$brew_command" cleanup --prune=all
+  else
+    printf 'Skipping Homebrew cleanup: cache missing, external or unsafe.\n'
+  fi
+fi
+
+candidates=("$home/.npm/_cacache" "$home/.npm/_logs")
+if [[ -n $cache ]]; then
+  for name in Homebrew uv pip nvim; do candidates+=("$cache/$name"); done
+fi
+for target in "${candidates[@]}"; do
+  cache_is_safe "$target" || continue
+  # GNU rm does not follow nested symlinks and skips different filesystems.
+  # Never remove all of ~/.cache: applications may keep ownership state there.
+  du -sk -- "$target"
+  run rm -rf --one-file-system -- "$target"
+done
+
+if [[ $system == true ]]; then
+  run sudo -n systemd-tmpfiles --clean
+  run sudo -n journalctl --rotate --vacuum-time=7d --vacuum-size=8M
+fi
+if [[ $trim == true ]]; then run sudo -n "$trim_command" -av; fi
+printf 'Done. Installed tools, configs, histories, backups and unknown caches were preserved.\n'
