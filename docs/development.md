@@ -284,9 +284,13 @@ migrated or updated.
 This data-path lookup respects `XDG_DATA_HOME` and `NVIM_APPNAME`, but does not
 make the rest of the installer support arbitrary configuration layouts: its
 Neovim configuration link still targets `~/.config/nvim`. Bootstrap reference
-selection is separate from the subsequent `Lazy! restore`, which uses locked
-commits. The lockfile's `main` branch metadata is not an instruction for the
-initial clone, and no plugin pins were changed by this alignment.
+selection is separate from the subsequent `Lazy! restore`. Restore uses the
+lockfile available at that point, but automatic missing-plugin installation can
+rewrite the manager entry during startup before restore runs. Restore also
+rewrites JSON formatting even when commits are unchanged. See the
+[bootstrap limitation](nvim-updates.md#lazy-bootstrap-and-lockfile-limitation).
+The lockfile's `main` branch metadata is not an instruction for the initial
+clone, and no plugin pins were changed by the bootstrap alignment.
 
 When the editor's initial Lazy clone fails, `nvim/init.lua` reports the target
 path, Git exit status and captured output instead of proceeding into plugin
