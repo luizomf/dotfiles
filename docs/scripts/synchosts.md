@@ -263,9 +263,11 @@ python3 -m unittest tests.test_synchosts
 ```
 
 Tests use synthetic private files, fake remote commands and local rsync
-fixtures. They cover main-fleet merging, receive-only additional hosts
-(including newer/equal-mtime settings and isolated history), promotion through
-the main array, rejection of non-main callers, whole-directory transfer,
-preserved relative links, shared exclusions, auth publication with a selected
-rsync despite an older PATH candidate, host Codex isolation, failure handling
-and tmux behavior.
+fixtures. Both the shell hostname command and Python's hostname lookup use the
+fixture caller identity; neither may select history peers using the test
+machine's real hostname. They cover main-fleet merging, receive-only additional
+hosts (including newer/equal-mtime settings and isolated history from every
+main-fleet caller), promotion through the main array, rejection of non-main
+callers, whole-directory transfer, preserved relative links, shared exclusions,
+auth publication with a selected rsync despite an older PATH candidate, host
+Codex isolation, failure handling and tmux behavior.

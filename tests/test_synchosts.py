@@ -46,6 +46,14 @@ class SyncHostsTests(unittest.TestCase):
     )
     self.assertEqual(replacements, 1)
     runner.write_text(runner_text)
+    # The merger uses Python's hostname API, not the fake hostname executable.
+    # Give both the same fixture identity without changing the production API.
+    history = scripts / "zsh_history_sync.py"
+    history_text = history.read_text()
+    self.assertEqual(history_text.count("socket.gethostname()"), 1)
+    history.write_text(
+      history_text.replace("socket.gethostname()", 'os.environ["FAKE_HOST"]')
+    )
     for host in ["m132", "m4128", "fedoraair", "extra"]:
       home = self.root / "homes" / host
       for directory in [
@@ -164,6 +172,7 @@ class SyncHostsTests(unittest.TestCase):
       "TMPDIR": str(self.root / "tmp"),
       "PATH": f"{self.bin}{os.pathsep}{os.environ['PATH']}",
       "FIXTURE_ROOT": str(self.root),
+      "FAKE_HOST": "m132",
       "COMMAND_LOG": str(self.log),
       "PROJECTS_DIR": "",
       "REAL_RSYNC": self.real_rsync,
@@ -541,21 +550,26 @@ class SyncHostsTests(unittest.TestCase):
     self.assertEqual(history_reads, [])
 
   def test_additional_host_receives_merged_history_but_never_contributes_entries(self):
-    entries: dict[str, str] = {}
-    for index, host in enumerate(("m132", "m4128", "fedoraair", "extra"), start=1):
-      entries[host] = f": {index * 100}:0;echo {host}\n"
-      (self.root / "homes" / host / ".zsh_history").write_text(entries[host])
-    expected = entries["m132"] + entries["m4128"] + entries["fedoraair"]
-    result = self.run_sync("--additional-hosts", "extra")
-    self.assertEqual(result.returncode, 0, result.stderr)
-    self.assertEqual((self.home / ".zsh_history").read_text(), expected)
-    self.assertEqual((self.root / "homes/extra/.zsh_history").read_text(), expected)
-    self.assertFalse(
-      any(
-        c[0] == "ssh" and c[-2] == "extra" and ".zsh_history" in c[-1]
-        for c in self.commands()
-      )
-    )
+    main_hosts = ("m132", "m4128", "fedoraair")
+    for caller in main_hosts:
+      with self.subTest(caller=caller):
+        self.home = self.root / "homes" / caller
+        self.log.unlink(missing_ok=True)
+        entries: dict[str, str] = {}
+        for index, host in enumerate((*main_hosts, "extra"), start=1):
+          entries[host] = f": {index * 100}:0;echo {host}\n"
+          (self.root / "homes" / host / ".zsh_history").write_text(entries[host])
+        expected = entries["m132"] + entries["m4128"] + entries["fedoraair"]
+        result = self.run_sync(
+          "--additional-hosts", "extra", extra_env={"FAKE_HOST": caller}
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.home / ".zsh_history").read_text(), expected)
+        self.assertEqual((self.root / "homes/extra/.zsh_history").read_text(), expected)
+        history_reads = [
+          c[-2] for c in self.commands() if c[0] == "ssh" and ".zsh_history" in c[-1]
+        ]
+        self.assertCountEqual(history_reads, [h for h in main_hosts if h != caller])
 
   def test_additional_destination_is_corrected_even_with_identical_size_and_mtime(self):
     for host in ("m132", "m4128", "fedoraair", "extra"):
