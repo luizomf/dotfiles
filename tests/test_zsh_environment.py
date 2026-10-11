@@ -1,6 +1,7 @@
 # Copyright (c) 2026 Otávio Miranda
 """Isolated Zsh startup checks; no private env or toolchain startup files."""
 
+import os
 import shutil
 import subprocess
 import tempfile
@@ -138,6 +139,56 @@ class ZshEnvironmentTests(unittest.TestCase):
           check=True,
         )
         self.assertEqual(result.stdout.strip(), expected)
+
+  def test_startup_title_requires_interactive_terminal_input_and_output(self):
+    for interactive, input_tty, output_tty in (
+      (True, False, False),
+      (True, True, False),
+      (True, False, True),
+      (True, True, True),
+      (False, True, True),
+    ):
+      with (
+        self.subTest(interactive=interactive, input=input_tty, output=output_tty),
+        tempfile.TemporaryDirectory() as temporary,
+      ):
+        home = Path(temporary)
+        config = home / "dotfiles/zsh/config"
+        config.mkdir(parents=True)
+        for name in ("config", "functions", "exports", "aliases", "keybinds"):
+          (config / name).write_text("LOADED_CONFIG=yes\n")
+        (home / ".env").write_text("LOADED_ENV=yes\n")
+        title = home / "dotfiles/scripts/title"
+        title.parent.mkdir()
+        title.write_text('#!/bin/sh\nprintf called > "$HOME/title-called"\n')
+        title.chmod(0o700)
+        master, slave = os.openpty()
+        try:
+          result = subprocess.run(  # noqa: S603
+            [
+              str(ZSH),
+              "-dfi" if interactive else "-df",
+              "+m",
+              "-c",
+              (
+                f'source "{REPO}/zsh/config/use_this_to_load"; '
+                "[[ $LOADED_CONFIG == yes && $LOADED_ENV == yes ]]"
+              ),
+            ],
+            env={"HOME": str(home), "PATH": "/usr/bin:/bin", "TERM": "xterm"},
+            stdin=slave if input_tty else subprocess.DEVNULL,
+            stdout=slave if output_tty else subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+          )
+          self.assertEqual(result.returncode, 0, result.stderr)
+          self.assertEqual(result.stderr, b"")
+          self.assertEqual(
+            (home / "title-called").exists(), interactive and input_tty and output_tty
+          )
+        finally:
+          os.close(slave)
+          os.close(master)
 
   def test_initial_fallback_demotion_preserves_inherited_custom_paths(self):
     for phase in ("--initial", "--refresh"):

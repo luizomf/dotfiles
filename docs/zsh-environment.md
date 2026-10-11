@@ -50,6 +50,15 @@ services or containers. Existing shells keep their environment until reloaded;
 open a new shell to exercise the complete startup order. No login or credential
 reset is required by this reorganization.
 
+## Startup titles
+
+The interactive loader calls `scripts/title` only for an interactive shell with
+both stdin and stdout attached to a terminal. Forced-interactive SSH commands
+with pipes still load their environment and config, but do not request a title
+update. Terminal-backed tmux shells retain the asynchronous title request;
+manual `title` invocations retain their existing diagnostics. This guard does
+not change third-party plugin or ZLE initialization.
+
 ## Checks
 
 `python3 -m unittest tests.test_zsh_environment` exercises non-interactive,
@@ -61,4 +70,7 @@ user toolchain startup files are not loaded. Interactive tool initialization
 uses a neutral `OSTYPE` and stub `uname`/`pyenv` functions, avoiding installed
 Homebrew/pyenv initialization. These tests do not validate installed toolchain
 behavior. A separate ordering regression covers fallback-first inherited PATHs
-on simulated macOS/Linux, both at initial startup and after toolchain setup.
+on simulated macOS/Linux, both at initial startup and after toolchain setup. A
+synthetic loader fixture with real PTY descriptors checks that startup titles
+require interactive terminal input and output, while environment/config loading
+continues for redirected sessions. It does not run a real title backend or tmux.

@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
-# vim: set filetype=sh :
+#!/usr/bin/env zsh
+# vim: set filetype=zsh :
 
 # Load local service configuration, including hidden .env.* files.
 load_local_env() {
@@ -55,7 +55,9 @@ for f in "${ZSH_CONFIG_FILES[@]}"; do
   fi
 done
 
-if [[ -f "${HOME}"/dotfiles/scripts/title ]]; then
+# Forced-interactive SSH commands can still have pipes instead of a terminal.
+# Keep environment/config loading above, but skip cosmetic terminal operations.
+if [[ -o interactive && -t 0 && -t 1 && -f "${HOME}"/dotfiles/scripts/title ]]; then
   if [[ -n ${TMUX:-} && -n ${TMUX_PANE:-} ]]; then
     # A busy restore must not hold the prompt waiting for a tmux title reply.
     # Manual invocations of scripts/title remain synchronous and report errors.
