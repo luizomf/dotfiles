@@ -246,7 +246,14 @@ local ok, err = xpcall(function()
     )
   end
 
-  for _, failure in ipairs({ "dirty", "unavailable", "malformed", "unpinned" }) do
+  for _, failure in ipairs({
+    "dirty",
+    "unavailable",
+    "malformed",
+    "unpinned",
+    "spec-error",
+    "reload-error",
+  }) do
     local config_path, data = fixture(failure, true)
     write(config_path .. "/restore.lua", read(repo .. "/nvim/restore.lua"))
     if failure == "dirty" then
@@ -259,6 +266,17 @@ local ok, err = xpcall(function()
       local broken = vim.deepcopy(lock)
       broken.missing = nil
       write(config_path .. "/lazy-lock.json", native_lock(broken))
+    elseif failure == "spec-error" then
+      write(
+        config_path .. "/lua/plugins/init.lua",
+        'error("synthetic spec import failure")'
+      )
+    elseif failure == "reload-error" then
+      local specfile = config_path .. "/lua/plugins/init.lua"
+      write(specfile, [[
+        _G.fixture_imports = (_G.fixture_imports or 0) + 1
+        if _G.fixture_imports > 1 then error("synthetic spec import failure on reload") end
+      ]] .. read(specfile))
     else
       write(config_path .. "/lazy-lock.json", "not JSON\n")
     end
@@ -292,6 +310,19 @@ local ok, err = xpcall(function()
         vim.fn.isdirectory(data .. "/missing") == 0,
         "Unpinned plugin was installed\n" .. output
       )
+    end
+    if failure == "spec-error" or failure == "reload-error" then
+      assert(output:find("synthetic spec import failure", 1, true), output)
+      assert(
+        not output:find("Locked plugin restore completed", 1, true),
+        output
+      )
+      if failure == "spec-error" then
+        assert(
+          vim.fn.isdirectory(data .. "/missing") == 0,
+          "Failed spec import installed plugins"
+        )
+      end
     end
     print("PASS: " .. failure .. " fails without lockfile changes")
   end

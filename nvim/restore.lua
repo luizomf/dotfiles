@@ -27,11 +27,20 @@ local update = Lock.update
 Lock.update = function() end
 
 -- Lazy emits this after resolving specs/state and before installing anything.
--- Refuse unpinned Git plugins rather than let a locked operation select HEAD.
+-- Reject failed imports and unpinned Git plugins before selecting any revisions.
 local guard = vim.api.nvim_create_autocmd("User", {
   pattern = "LazyPlugins",
   callback = function()
-    for name, plugin in pairs(require("lazy.core.config").plugins) do
+    local Config = require("lazy.core.config")
+    for _, diagnostic in ipairs(Config.spec.notifs) do
+      if diagnostic.level >= vim.log.levels.ERROR then
+        io.stderr:write(
+          "Lazy spec resolution failed: " .. diagnostic.msg .. "\n"
+        )
+        vim.cmd("cquit 1")
+      end
+    end
+    for name, plugin in pairs(Config.plugins) do
       if plugin.url and not plugin._.is_local and not pins[name] then
         -- Autocommand errors are reported but do not abort Lazy's caller.
         io.stderr:write("No lockfile pin for " .. name .. "\n")
