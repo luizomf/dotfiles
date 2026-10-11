@@ -5,7 +5,7 @@
   },
   "logo": {
     "type": "auto",
-    "source": "",
+    "source": "custom-distro",
     "color": {
       "1": "31",
       "2": "32",
