@@ -59,6 +59,23 @@ update. Terminal-backed tmux shells retain the asynchronous title request;
 manual `title` invocations retain their existing diagnostics. This guard does
 not change third-party plugin or ZLE initialization.
 
+## fzf terminal initialization
+
+`config/exports` sources `~/.fzf.zsh` only in interactive shells with both stdin
+and stdout attached to a terminal. Other environment/toolchain initialization
+continues unchanged, including Oh My Zsh and its configured plugins. Direct
+`fzf` commands are not disabled.
+
+With Zsh 5.9 and fzf 0.74.5, fzf's `completion.zsh` and `key-bindings.zsh` each
+save and restore the shell's option map. In a forced-interactive shell with
+neither stdin nor stdout on a TTY (`zsh -l -i +m -c`), each restoration attempts
+to enable ZLE and emits `(eval):1: can't change option: zle`. An isolated HOME
+reproduces both warnings without Oh My Zsh; loading Oh My Zsh twice without fzf
+does not reproduce them. The guard skips fzf's terminal widgets in redirected
+sessions rather than suppressing stderr or changing shell options globally.
+Normal terminal-backed startup still registers fzf widgets. Open a new shell to
+use the updated startup guard; no login/authentication reset is needed.
+
 ## Checks
 
 `python3 -m unittest tests.test_zsh_environment` exercises non-interactive,
@@ -74,3 +91,16 @@ on simulated macOS/Linux, both at initial startup and after toolchain setup. A
 synthetic loader fixture with real PTY descriptors checks that startup titles
 require interactive terminal input and output, while environment/config loading
 continues for redirected sessions. It does not run a real title backend or tmux.
+A synthetic `~/.fzf.zsh` reproduces fzf's option save/restore through the real
+`config/exports`, covering piped, mixed-TTY, terminal-backed and non-interactive
+sessions. It asserts clean stderr, terminal-only initialization and continued
+exports/PATH setup without requiring fzf to be installed.
+
+The fzf guard was also checked with installed fzf 0.74.5 scripts and Oh My Zsh
+in a temporary HOME/cache with updates disabled, repository config, synthetic
+local env and neutralized toolchain startup. The baseline emitted exactly two
+ZLE warnings for piped stdin/stdout; the guarded config emitted none. Terminal
+startup retained fzf, syntax-highlighting and autosuggestion functions, and the
+same history/beep preferences and PATH priority. This does not validate every
+plugin version or the original remote host, and no live SSH or private startup
+files were used.

@@ -70,7 +70,11 @@ if [[ "$(command -v pyenv)" ]]; then
 fi
 
 [[ -f "$HOME/.local/bin/env" ]] && . "$HOME/.local/bin/env"
-[ -f ~/.fzf.zsh ] && . "${HOME}/.fzf.zsh"
+# fzf's option restoration can try to enable ZLE in forced-interactive pipes.
+# Completion widgets need terminal input/output; keep other toolchains below.
+if [[ -o interactive && -t 0 && -t 1 && -f "$HOME/.fzf.zsh" ]]; then
+  . "$HOME/.fzf.zsh"
+fi
 
 if [[ "$(uname -s)" == "Linux" ]]; then
   [[ -r "/home/linuxbrew/.linuxbrew/etc/profile.d/bash_completion.sh" ]] \

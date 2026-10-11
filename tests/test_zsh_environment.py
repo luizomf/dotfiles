@@ -190,6 +190,62 @@ class ZshEnvironmentTests(unittest.TestCase):
           os.close(slave)
           os.close(master)
 
+  def test_fzf_startup_requires_interactive_terminal_input_and_output(self):
+    for interactive, input_tty, output_tty in (
+      (True, False, False),
+      (True, True, False),
+      (True, False, True),
+      (True, True, True),
+      (False, True, True),
+    ):
+      with (
+        self.subTest(interactive=interactive, input=input_tty, output=output_tty),
+        tempfile.TemporaryDirectory() as temporary,
+      ):
+        home = Path(temporary)
+        (home / "dotfiles").symlink_to(REPO, target_is_directory=True)
+        # Reproduce fzf's completion/key-binding option save/restore, without
+        # requiring an installed fzf or executing a real user startup file.
+        (home / ".fzf.zsh").write_text(
+          'print called > "$HOME/fzf-called"\n'
+          "zmodload zsh/parameter\n"
+          "for part in completion key_bindings; do\n"
+          '  saved_options="options=(${(j: :)${(kv)options[@]}})"\n'
+          "  builtin emulate zsh\n"
+          '  eval "$saved_options"\n'
+          "done\n"
+        )
+        master, slave = os.openpty()
+        try:
+          result = subprocess.run(  # noqa: S603
+            [
+              str(ZSH),
+              "-dfi" if interactive else "-df",
+              "+m",
+              "-c",
+              (
+                "typeset -A ZSH_HIGHLIGHT_STYLES; OSTYPE=test; "
+                "uname() { print Test; }; pyenv() { return 0; }; "
+                'source "$HOME/dotfiles/zsh/config/exports"; '
+                '[[ $EDITOR == nvim && $PNPM_HOME == "$HOME/Library/pnpm" '
+                '&& $path[1] == "$HOME/dotfiles/scripts" ]]'
+              ),
+            ],
+            env={"HOME": str(home), "PATH": "/usr/bin:/bin", "TERM": "xterm"},
+            stdin=slave if input_tty else subprocess.DEVNULL,
+            stdout=slave if output_tty else subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+          )
+          self.assertEqual(result.returncode, 0, result.stderr)
+          self.assertEqual(result.stderr, b"")
+          self.assertEqual(
+            (home / "fzf-called").exists(), interactive and input_tty and output_tty
+          )
+        finally:
+          os.close(slave)
+          os.close(master)
+
   def test_initial_fallback_demotion_preserves_inherited_custom_paths(self):
     for phase in ("--initial", "--refresh"):
       for platform in ("darwin-test", "linux-test"):
