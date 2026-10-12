@@ -5,9 +5,11 @@
 () {
   local directory
   local -a fallbacks=(/usr/local/bin)
+
   if [[ "$OSTYPE" == darwin* ]]; then
     fallbacks+=(/opt/homebrew/bin /opt/homebrew/sbin)
   fi
+
   if [[ ${1:-} == --initial ]]; then
     for directory in "${fallbacks[@]}"; do
       path=("${(@)path:#$directory}")
@@ -15,11 +17,14 @@
   fi
 
   path=("$HOME/.local/bin" "$HOME/.cargo/bin" "$HOME/.docker/bin" "${path[@]}")
+
   # Keep an active/inherited nvm Node ahead of local, Homebrew and system Node.
   if [[ -n ${NVM_BIN:-} && -x "$NVM_BIN/node" ]]; then
     path=("$NVM_BIN" "${path[@]}")
   fi
+
   path=("$HOME/dotfiles/scripts" "${path[@]}" "${fallbacks[@]}")
+
   # Keep the first occurrence; repeated sourcing must not grow PATH.
   typeset -gU path
   export PATH

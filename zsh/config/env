@@ -1,4 +1,5 @@
 #!/usr/bin/env zsh
+
 # Public defaults for every Zsh, including non-interactive SSH commands.
 # Keep private ~/.env files and credential lookups in the interactive loader.
 . "$HOME/dotfiles/config/paths.sh"
@@ -10,7 +11,9 @@ if [[ -z ${LANG:-} && -z ${LC_ALL:-} && -z ${LC_CTYPE:-} ]]; then
   () {
     local candidate
     local -a available
+
     available=("${(@f)$(locale -a 2>/dev/null)}")
+
     for candidate in C.UTF-8 C.utf8 en_US.UTF-8 en_US.utf8; do
       if (( ${available[(Ie)$candidate]} )); then
         export LANG=$candidate
@@ -19,6 +22,7 @@ if [[ -z ${LANG:-} && -z ${LC_ALL:-} && -z ${LC_CTYPE:-} ]]; then
     done
   }
 fi
+
 export OLLAMA_HOST="${OLLAMA_HOST:-192.168.0.109:11434}"
 export OLLAMA_TIMEOUT_MS="${OLLAMA_TIMEOUT_MS:-10000}"
 export OLLAMA_LOAD_TIMEOUT="${OLLAMA_LOAD_TIMEOUT:-10m}"
