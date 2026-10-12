@@ -50,6 +50,20 @@ services or containers. Existing shells keep their environment until reloaded;
 open a new shell to exercise the complete startup order. No login or credential
 reset is required by this reorganization.
 
+## History retention
+
+`zsh/config/config` owns `HISTSIZE` (entries retained in memory) and `SAVEHIST`
+(entries saved to disk), both set to 1,000,000. These are Zsh parameters; they
+do not need to be exported. Keep their assignments in one place.
+
+`scripts/zsh_history_sync.py` merges all parsed entries without a size cap; Zsh
+applies its own retention and duplicate-removal settings afterward. Existing
+shells retain their old limits: open new shells or set
+`HISTSIZE=1000000 SAVEHIST=1000000` in each running shell. Update the
+configuration on every synced machine so an older shell does not trim the merged
+history back to its previous limit. Raising the limit does not restore entries
+already lost.
+
 ## Startup titles
 
 The interactive loader calls `scripts/title` only for an interactive shell with
