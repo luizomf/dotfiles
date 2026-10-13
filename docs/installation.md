@@ -293,14 +293,21 @@ missing; there is no need to rerun the full installer.
 
 On every platform, `zsh/config/env` supplies a UTF-8 `LANG` only when `LANG`,
 `LC_ALL` and `LC_CTYPE` are all empty or unset. It selects an installed
-`C.UTF-8`/`C.utf8`, then `en_US.UTF-8`/`en_US.utf8`, as reported by `locale -a`;
-if none exists, it leaves the environment unchanged. Explicit choices (including
-`C`) and other `LC_*` categories are preserved; `LC_ALL` is never set. This runs
-from `.zshenv` for login, interactive and non-interactive SSH command sessions,
-without sourcing `/etc/profile` or changing system files. After updating an
-existing checkout, open a new Zsh session and check `locale charmap` for
-`UTF-8`. An explicitly invalid inherited locale must still be corrected at its
-source.
+`C.UTF-8`/`C.utf8`, then `en_US.UTF-8`/`en_US.utf8`, as reported by `locale -a`,
+and verifies that Zsh itself counts a UTF-8 character correctly with that
+choice. The native `locale` command and a packaged Zsh can use different libc
+locale data; an advertised name alone is insufficient. If none works, it leaves
+the environment unchanged. Explicit choices (including `C`) and other `LC_*`
+categories are preserved; `LC_ALL` is never set. This runs from `.zshenv` for
+login, interactive and non-interactive SSH command sessions, without sourcing
+`/etc/profile` or changing system files. After updating an existing checkout,
+open a new Zsh session and check `locale charmap` for `UTF-8` and Zsh's own
+`s='é'; print -- ${#s}` for `1`. An explicitly invalid inherited locale must
+still be corrected at its source. For an existing session with an unusable
+automatically selected locale, choose a verified working LANG (for example
+`export LANG=en_US.UTF-8`). Inside tmux, update future panes too with
+`tmux set-environment -g LANG en_US.UTF-8`; already running shells keep their
+own environment. Do not globally force `LC_ALL`.
 
 Zsh is registered in `/etc/shells` if necessary before changing the user's login
 shell. Existing configuration targets, including `.vimrc`, are backed up before

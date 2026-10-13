@@ -9,13 +9,16 @@
 # Never set LC_ALL: callers must remain able to override individual categories.
 if [[ -z ${LANG:-} && -z ${LC_ALL:-} && -z ${LC_CTYPE:-} ]]; then
   () {
-    local candidate
+    local candidate probe='❯'
     local -a available
 
     available=("${(@f)$(locale -a 2>/dev/null)}")
 
     for candidate in C.UTF-8 C.utf8 en_US.UTF-8 en_US.utf8; do
-      if (( ${available[(Ie)$candidate]} )); then
+      # A native locale command and a packaged Zsh may use different libc data.
+      # Accept only a locale that this shell can actually use for multibyte text.
+      if (( ${available[(Ie)$candidate]} )) &&
+        (export LANG=$candidate; [[ ${#probe} == 1 ]]); then
         export LANG=$candidate
         break
       fi

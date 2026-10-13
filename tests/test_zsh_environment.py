@@ -107,14 +107,13 @@ class ZshEnvironmentTests(unittest.TestCase):
 
   def test_locale_fallback_preserves_choices_and_requires_installed_locale(self):
     cases: tuple[tuple[dict[str, str], str, str], ...] = (
-      ({}, "C\\nen_US.utf8\\nC.utf8", "C.utf8||"),
       ({}, "C\\nen_US.UTF-8", "en_US.UTF-8||"),
       ({}, "C\\nPOSIX", "||"),
       ({"LANG": "C"}, "C\\nC.utf8", "C||"),
       ({"LANG": "pt_BR.UTF-8"}, "C\\nC.utf8", "pt_BR.UTF-8||"),
       ({"LC_ALL": "C"}, "C\\nC.utf8", "|C|"),
       ({"LC_CTYPE": "UTF-8"}, "C\\nC.utf8", "||UTF-8"),
-      ({"LANG": "", "LC_ALL": ""}, "C\\nC.utf8", "C.utf8||"),
+      ({"LANG": "", "LC_ALL": ""}, "C\\nen_US.UTF-8", "en_US.UTF-8||"),
     )
     for overrides, available, expected in cases:
       with self.subTest(overrides=overrides, available=available):
@@ -139,6 +138,60 @@ class ZshEnvironmentTests(unittest.TestCase):
           check=True,
         )
         self.assertEqual(result.stdout.strip(), expected)
+
+  def test_locale_preference_among_usable_candidates(self):
+    environment = {"HOME": str(REPO.parent), "PATH": "/usr/bin:/bin"}
+    usable = subprocess.run(  # noqa: S603
+      [
+        str(ZSH),
+        "-dfc",
+        (
+          "for candidate in C.UTF-8 C.utf8 en_US.UTF-8 en_US.utf8; do "
+          '(export LANG=$candidate; s="é"; [[ ${#s} == 1 ]]) && '
+          'print -r -- "$candidate"; done; true'
+        ),
+      ],
+      env=environment,
+      capture_output=True,
+      text=True,
+      check=True,
+    ).stdout.splitlines()
+    result = subprocess.run(  # noqa: S603
+      [
+        str(ZSH),
+        "-dfc",
+        # Reverse advertisement order: preference belongs to the fallback policy.
+        (
+          "locale() { print -l en_US.utf8 en_US.UTF-8 C.utf8 C.UTF-8; }; "
+          f'source "{REPO}/zsh/config/env"; print -r -- "$LANG"'
+        ),
+      ],
+      env=environment,
+      capture_output=True,
+      text=True,
+      check=True,
+    )
+    self.assertEqual(result.stdout.strip(), usable[0] if usable else "")
+
+  def test_advertised_locale_must_work_in_zsh_itself(self):
+    # The locale executable can use a different libc from Zsh. On systems where
+    # C.utf8 is unavailable to Zsh, the old list-only selection miscounts UTF-8.
+    result = subprocess.run(  # noqa: S603
+      [
+        str(ZSH),
+        "-dfc",
+        (
+          "locale() { print -l C C.utf8 en_US.UTF-8; }; "
+          f'source "{REPO}/zsh/config/env"; '
+          's="\u276f"; print -r -- "${#s}:${LC_ALL-unset}"'
+        ),
+      ],
+      env={"HOME": str(REPO.parent), "PATH": "/usr/bin:/bin"},
+      capture_output=True,
+      text=True,
+      check=True,
+    )
+    self.assertEqual(result.stdout.strip(), "1:unset")
 
   def test_startup_title_requires_interactive_terminal_input_and_output(self):
     for interactive, input_tty, output_tty in (
