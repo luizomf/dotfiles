@@ -228,6 +228,15 @@ access. Network, certificates, locales, boot, services and the base system are
 owned by the host, not this installer. This is not a BLFS bootstrapper or a
 promise of compatibility with arbitrary LFS builds.
 
+A runtime-only base without a native compiler and development files needs
+additional preparation. After installing Homebrew and before the full package
+installation, explicitly run `/home/linuxbrew/.linuxbrew/bin/brew install glibc`
+to provide Brew's development runtime. If GCC was already installed and its
+post-install failed looking for `/usr/bin/cc`, follow that with
+`/home/linuxbrew/.linuxbrew/bin/brew postinstall gcc`. This uses Brew's own
+prefix; it does not replace the operating system's libc. The installer does not
+perform this runtime-only-base preparation automatically.
+
 Before requesting formulas, the installer checks each command in host paths:
 `/usr/local/sbin`, `/usr/local/bin`, `/usr/sbin`, `/usr/bin`, `/sbin`, `/bin`.
 Existing executables are kept and their direct formula requests are skipped.
@@ -248,6 +257,11 @@ privileged npm installation. Python setup uses `/usr/bin/python3` to sync the
 checkout's locked `.venv`, with managed interpreter downloads disabled.
 `OM_PYTHON_VERSION` does not replace the native Python.
 `OM_INSTALL_SKIP_TOOLCHAINS=1` skips that sync, not the formula selection.
+
+GNU Patch uses the formula/command mapping `gpatch patch`: Homebrew names the
+formula `gpatch`, but on Linux it installs the `patch` executable. A native
+`patch` still skips that formula; its absence must not request a nonexistent
+formula named `patch`.
 
 The LFS formula list includes `jq` for Homebrew completion, with the same
 native-first policy. Existing installations can run `brew install jq` if

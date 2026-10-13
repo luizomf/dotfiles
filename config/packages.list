@@ -170,7 +170,7 @@ lfs brew neovim nvim
 lfs brew ninja
 lfs brew node
 lfs brew pandoc
-lfs brew patch
+lfs brew gpatch patch
 lfs brew pi-coding-agent pi
 lfs brew pkgconf pkg-config
 lfs brew prettier
