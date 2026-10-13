@@ -25,7 +25,7 @@ echo "Cleaning nvim echos..."
 cleanNeovimLogs
 
 echo "Synchronizing ZSH history to local computers..."
-pyenv exec "${HOME}/dotfiles/scripts/zsh_history_sync.py"
+python3 "${HOME}/dotfiles/scripts/zsh_history_sync.py"
 sleep 5
 
 echo "Running brew update"
