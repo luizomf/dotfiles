@@ -237,6 +237,12 @@ post-install failed looking for `/usr/bin/cc`, follow that with
 prefix; it does not replace the operating system's libc. The installer does not
 perform this runtime-only-base preparation automatically.
 
+Homebrew's GCC drivers are versioned. If the base has no `cc`, select the
+installed drivers explicitly for parser builds, for example
+`CC=gcc-16 CXX=g++-16 ./install.sh` with GCC 16 on PATH. Use the actual
+installed version; the same compiler selection is needed for later parser
+rebuilds.
+
 Before requesting formulas, the installer checks each command in host paths:
 `/usr/local/sbin`, `/usr/local/bin`, `/usr/sbin`, `/usr/bin`, `/sbin`, `/bin`.
 Existing executables are kept and their direct formula requests are skipped.
