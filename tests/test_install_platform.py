@@ -408,6 +408,7 @@ class InstallPlatformTests(unittest.TestCase):
         REPO_DIR=$2
         export PATH="$2:$PATH"
         loginfo() { printf '%s\\n' "$*"; }
+        type() { [[ "$*" == '-P cc' ]] || builtin type "$@"; }
         install_homebrew() { printf 'LOAD_BREW\\n'; }
         brew() { printf 'brew'; printf ' <%s>' "$@"; printf '\\n'; }
         sudo() { printf 'UNEXPECTED_SUDO\\n'; return 99; }
@@ -435,6 +436,7 @@ class InstallPlatformTests(unittest.TestCase):
         set -Eeuo pipefail
         REPO_DIR=$2
         loginfo() { :; }
+        type() { [[ "$*" == '-P cc' ]] || builtin type "$@"; }
         install_homebrew() { printf 'LOAD_BREW\\n'; }
         brew() { printf 'UNEXPECTED_BREW_INSTALL\\n'; return 99; }
         install_platform_packages lfs
@@ -443,6 +445,252 @@ class InstallPlatformTests(unittest.TestCase):
       )
       self.assertEqual(result.returncode, 0, result.stderr)
       self.assertEqual(result.stdout, "LOAD_BREW\n")
+
+  def test_lfs_runtime_bootstrap_orders_preparation_and_recovers_on_repeat(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      root = Path(tmp)
+      (root / "config").mkdir()
+      (root / "config/install-platforms.list").write_text("lfs lfs linuxbrew\n")
+      (root / "config/packages.list").write_text("lfs brew gcc\n")
+      result = self.shell(
+        """
+        set -Eeuo pipefail
+        REPO_DIR=$2
+        loginfo() { :; }
+        type() { return 1; }
+        install_homebrew() { printf 'LOAD\\n'; }
+        brew() { printf '%s\\n' "$*"; }
+        install_platform_packages lfs
+        install_platform_packages lfs
+        """,
+        tmp,
+      )
+      self.assertEqual(result.returncode, 0, result.stderr)
+      self.assertEqual(
+        result.stdout.splitlines(),
+        ["LOAD", "install glibc", "install gcc", "postinstall gcc"] * 2,
+      )
+
+  def test_lfs_runtime_bootstrap_propagates_each_failure(self):
+    for failure in ("install glibc", "install gcc", "postinstall gcc"):
+      with self.subTest(failure=failure), tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "config").mkdir()
+        (root / "config/install-platforms.list").write_text("lfs lfs linuxbrew\n")
+        (root / "config/packages.list").write_text("lfs brew gcc\n")
+        result = self.shell(
+          """
+          set -Eeuo pipefail
+          REPO_DIR=$2
+          failure=$3
+          loginfo() { :; }
+          type() { return 1; }
+          install_homebrew() { :; }
+          brew() { printf '%s\\n' "$*"; [[ "$*" != "$failure" ]] || return 37; }
+          if install_platform_packages lfs; then exit 99; else exit $?; fi
+          """,
+          tmp,
+          failure,
+        )
+        self.assertEqual(result.returncode, 37, result.stderr)
+        self.assertEqual(result.stdout.splitlines()[-1], failure)
+
+  def test_lfs_native_cc_avoids_runtime_preparation(self):
+    result = self.shell("""
+      set -Eeuo pipefail
+      loginfo() { :; }
+      type() {
+        expected_path=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+        [[ "$PATH" == "$expected_path" ]] || exit 99
+        [[ "$*" == '-P cc' ]]
+      }
+      install_homebrew() { :; }
+      brew() { printf '%s\\n' "$*"; }
+      install_platform_packages lfs
+    """)
+    self.assertEqual(result.returncode, 0, result.stderr)
+    self.assertIn("install aria2", result.stdout)
+    self.assertNotIn("glibc", result.stdout)
+    self.assertNotIn("postinstall", result.stdout)
+
+  def test_lfs_selects_highest_complete_versioned_compiler_pair(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      root = Path(tmp)
+      (root / "bin").mkdir()
+      for name in ("gcc-9", "g++-9", "gcc-16", "g++-16", "gcc-17"):
+        driver = root / "bin" / name
+        driver.write_text("#!/bin/sh\nexit 0\n")
+        driver.chmod(0o755)
+      result = self.shell(
+        """
+        set -Eeuo pipefail
+        unset CC CXX
+        type() { return 1; }
+        brew() {
+          [[ "$*" == '--prefix gcc' ]] || return 99
+          printf '%s\\n' "$fixture_prefix"
+        }
+        fixture_prefix=$2
+        configure_install_compilers lfs
+        /bin/bash -c 'printf "%s\\n%s\\n" "$CC" "$CXX"'
+        """,
+        tmp,
+      )
+      self.assertEqual(result.returncode, 0, result.stderr)
+      self.assertEqual(
+        result.stdout.splitlines(), [str(root / "bin/gcc-16"), str(root / "bin/g++-16")]
+      )
+
+  def test_lfs_rejects_unusable_explicit_compilers_without_fallback(self):
+    for variable in ("CC", "CXX"):
+      for choice in ("", "/missing/compiler", "/usr/bin/false", "cc --flag"):
+        with self.subTest(variable=variable, choice=choice):
+          result = self.shell(
+            """
+            set -Eeuo pipefail
+            CC=/usr/bin/true CXX=/usr/bin/true
+            export "$2=$3"
+            brew() { printf 'UNEXPECTED_BREW\\n'; return 99; }
+            if configure_install_compilers lfs; then exit 99; else exit $?; fi
+            """,
+            variable,
+            choice,
+          )
+          self.assertEqual(result.returncode, 1, result.stderr)
+          self.assertIn(variable, result.stderr)
+          self.assertIn("executable", result.stderr)
+          self.assertNotIn("UNEXPECTED", result.stdout)
+
+  def test_plugin_bootstrap_scopes_compilers_to_both_neovim_operations(self):
+    source = (ROOT / "install.sh").read_text()
+    block = source.split('if [[ "${OM_INSTALL_SKIP_PLUGINS:-0}" != "1" ]]; then', 1)[1]
+    block = (
+      'if [[ "${OM_INSTALL_SKIP_PLUGINS:-0}" != "1" ]]; then'
+      + block.split('loginfo "Verificando a instalação..."', 1)[0]
+    )
+    result = self.shell(
+      """
+      set -Eeuo pipefail
+      OP_SYSTEM=lfs
+      unset CC CXX
+      type() { printf '/usr/bin/true\\n'; }
+      brew() { printf 'UNEXPECTED_BREW\\n'; return 99; }
+      loginfo() { :; }
+      vim() { :; }
+      nvim() { /bin/bash -c 'printf "nvim %s %s\\n" "${CC-unset}" "${CXX-unset}"'; }
+      """
+      + block
+      + '\nprintf "parent %s %s\\n" "${CC-unset}" "${CXX-unset}"\n'
+    )
+    self.assertEqual(result.returncode, 0, result.stderr)
+    self.assertEqual(
+      result.stdout.splitlines(),
+      [
+        "nvim /usr/bin/true /usr/bin/true",
+        "nvim /usr/bin/true /usr/bin/true",
+        "parent unset unset",
+      ],
+    )
+
+  def test_lfs_preserves_compiler_overrides_and_selects_only_missing_defaults(self):
+    for override in ("CC", "CXX", "both"):
+      with self.subTest(override=override):
+        result = self.shell(
+          """
+          set -Eeuo pipefail
+          unset CC CXX
+          case "$2" in CC) CC=bash ;; CXX) CXX=bash ;; both) CC=bash CXX=bash ;; esac
+          type() {
+            host_path=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+            [[ "$PATH" == "$host_path" ]] || exit 99
+            case "$*" in
+              '-P gcc'|'-P g++') printf '/usr/bin/true\\n' ;;
+              *) return 1 ;;
+            esac
+          }
+          brew() { printf 'UNEXPECTED_BREW\\n'; return 99; }
+          configure_install_compilers lfs
+          /bin/bash -c 'printf "%s %s\\n" "$CC" "$CXX"'
+          """,
+          override,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        expected = {
+          "CC": "bash /usr/bin/true",
+          "CXX": "/usr/bin/true bash",
+          "both": "bash bash",
+        }
+        self.assertEqual(result.stdout.strip(), expected[override])
+
+  def test_lfs_compiler_discovery_reports_missing_pairs_and_brew_failure(self):
+    with tempfile.TemporaryDirectory() as tmp:
+      root = Path(tmp)
+      (root / "bin").mkdir()
+      driver = root / "bin/gcc-16"
+      driver.write_text("#!/bin/sh\nexit 0\n")
+      driver.chmod(0o755)
+      for brew_status in (0, 31):
+        with self.subTest(brew_status=brew_status):
+          result = self.shell(
+            """
+            set -Eeuo pipefail
+            unset CC CXX
+            type() { return 1; }
+            fixture_prefix=$2 brew_status=$3
+            brew() { printf '%s\\n' "$fixture_prefix"; return "$brew_status"; }
+            if configure_install_compilers lfs; then exit 99; else exit $?; fi
+            """,
+            tmp,
+            str(brew_status),
+          )
+          self.assertEqual(result.returncode, brew_status or 1, result.stderr)
+          if not brew_status:
+            self.assertIn("No complete Brew GCC driver pair", result.stderr)
+            self.assertIn("Install/repair", result.stderr)
+
+  def test_compiler_selection_does_not_affect_other_platforms(self):
+    for platform in ("darwin", "ubuntu", "fedora", "arch", "alpine"):
+      with self.subTest(platform=platform):
+        result = self.shell(
+          """
+          set -Eeuo pipefail
+          CC=/missing/explicit
+          unset CXX
+          brew() { printf 'UNEXPECTED_BREW\\n'; return 99; }
+          configure_install_compilers "$2"
+          printf '%s %s\\n' "$CC" "${CXX-unset}"
+          """,
+          platform,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), "/missing/explicit unset")
+
+  def test_plugin_bootstrap_skips_selection_or_stops_on_invalid_compiler(self):
+    source = (ROOT / "install.sh").read_text()
+    block = source.split('if [[ "${OM_INSTALL_SKIP_PLUGINS:-0}" != "1" ]]; then', 1)[1]
+    block = (
+      'if [[ "${OM_INSTALL_SKIP_PLUGINS:-0}" != "1" ]]; then'
+      + block.split('loginfo "Verificando a instalação..."', 1)[0]
+    )
+    for skip in ("0", "1"):
+      with self.subTest(skip=skip):
+        result = self.shell(
+          """
+          set -Eeuo pipefail
+          OP_SYSTEM=lfs OM_INSTALL_SKIP_PLUGINS=$2
+          CC=/missing/compiler CXX=/usr/bin/true
+          brew() { printf 'UNEXPECTED_BREW\\n'; return 99; }
+          loginfo() { :; }
+          vim() { printf 'UNEXPECTED_VIM\\n'; }
+          nvim() { printf 'UNEXPECTED_NVIM\\n'; }
+          """
+          + block,
+          skip,
+        )
+        self.assertEqual(result.returncode, 0 if skip == "1" else 1, result.stderr)
+        self.assertNotIn("UNEXPECTED", result.stdout)
+        if skip == "0":
+          self.assertIn("CC", result.stderr)
 
   def test_lfs_brew_loading_keeps_native_python_first(self):
     source = (ROOT / "install.sh").read_text()

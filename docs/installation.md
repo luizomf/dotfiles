@@ -222,26 +222,44 @@ The `lfs` platform accepts exact `ID=lfs` and `ID=lebasix` values. Its
 `linuxbrew` backend is distinct from the macOS Bundle backend: it selects only
 LFS formula rows, never macOS casks or taps.
 
-Start with a working glibc LFS base, Bash, Git, curl with working HTTPS, build
-tools, `/usr/bin/python3` (3.14 or newer for all personal scripts), and sudo
-access. Network, certificates, locales, boot, services and the base system are
-owned by the host, not this installer. This is not a BLFS bootstrapper or a
+Start with a working glibc base, Bash, Git (including submodule and transport
+helpers), curl with working HTTPS, `/usr/bin/python3` (3.14 or newer for all
+personal scripts), and sudo access. Homebrew's runtime prerequisites must
+already work, including `stty`, `flock`, `nice`, and the matching glibc
+compatibility libraries required by its portable runtime. Homebrew need not be
+preinstalled. Network, certificates, locales, boot, services and the base system
+are owned by the host, not this installer. This is not a BLFS bootstrapper or a
 promise of compatibility with arbitrary LFS builds.
 
-A runtime-only base without a native compiler and development files needs
-additional preparation. After installing Homebrew and before the full package
-installation, explicitly run `/home/linuxbrew/.linuxbrew/bin/brew install glibc`
-to provide Brew's development runtime. If GCC was already installed and its
-post-install failed looking for `/usr/bin/cc`, follow that with
-`/home/linuxbrew/.linuxbrew/bin/brew postinstall gcc`. This uses Brew's own
-prefix; it does not replace the operating system's libc. The installer does not
-perform this runtime-only-base preparation automatically.
+On a runtime-only base without `cc` in the host paths listed below, the
+installer loads or installs Homebrew, runs `brew install glibc` before the
+formula batch, and then runs `brew postinstall gcc`. The last step also repairs
+an already installed GCC whose earlier post-install failed. Failures stop
+installation; correct the reported problem and rerun without deleting the Brew
+prefix. This uses Brew's own development runtime, not a replacement for the
+operating system's libc. The `cc` presence check is deliberately narrow: it does
+not verify headers, startup objects, or partially installed native development
+tools.
 
-Homebrew's GCC drivers are versioned. If the base has no `cc`, select the
-installed drivers explicitly for parser builds, for example
-`CC=gcc-16 CXX=g++-16 ./install.sh` with GCC 16 on PATH. Use the actual
-installed version; the same compiler selection is needed for later parser
-rebuilds.
+Before plugin installation, LFS automatically selects C/C++ drivers: native
+`cc`/`gcc` and `c++`/`g++` first, otherwise the highest numeric complete
+`gcc-N`/`g++-N` pair under `brew --prefix gcc`. Explicit `CC` and `CXX` are
+preserved independently, including when only one is supplied. Each value must be
+one executable name or path, without flags, and successfully answer `--version`;
+unusable choices fail with a correction hint rather than silently falling back.
+This validates driver startup, not actual compilation/linking.
+
+Compiler defaults are confined to the plugin subprocess and cover both locked
+Neovim restoration and the subsequent tooling bootstrap. They do not affect Brew
+package installation or persist in the user's shell. Skipping plugins skips
+compiler selection. Later parser rebuilds outside `install.sh` still need usable
+compiler names or explicit `CC`/`CXX`, using the installed GCC version; no
+global compiler aliases or shell exports are created.
+
+The runtime-only ordering and compiler selection have isolated fixture coverage.
+A fresh compiler-free ARM64 base with no Brew, full installation, C/C++
+execution, and repeat full installation remain integration acceptance
+requirements.
 
 Before requesting formulas, the installer checks each command in host paths:
 `/usr/local/sbin`, `/usr/local/bin`, `/usr/sbin`, `/usr/bin`, `/sbin`, `/bin`.

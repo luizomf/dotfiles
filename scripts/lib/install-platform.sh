@@ -68,10 +68,63 @@ run_install_privileged() {
   fi
 }
 
+validate_install_compiler() {
+  local name=$1 value=$2 resolved
+  resolved=$(command -v "$value") || resolved=""
+  if [[ -z "$resolved" || ! -x "$resolved" ]] || ! "$value" --version > /dev/null 2>&1; then
+    printf '%s=%s is unusable. Set %s to one executable compiler name/path (no flags), or unset it for automatic selection.\n' \
+      "$name" "$value" "$name" >&2
+    return 1
+  fi
+}
+
+# Call inside the plugin subprocess, never the user's shell or Brew setup.
+configure_install_compilers() {
+  [[ "$1" == lfs ]] || return 0
+  local prefix driver version best=0 selected_cc="" selected_cxx=""
+  if [[ ${CC+x} ]]; then validate_install_compiler CC "$CC" || return $?; fi
+  if [[ ${CXX+x} ]]; then validate_install_compiler CXX "$CXX" || return $?; fi
+  if [[ ! ${CC+x} || ! ${CXX+x} ]]; then
+    if [[ ! ${CC+x} ]]; then
+      selected_cc=$(PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+        type -P cc || PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+        type -P gcc) || selected_cc=""
+    fi
+    if [[ ! ${CXX+x} ]]; then
+      selected_cxx=$(PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+        type -P c++ || PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+        type -P g++) || selected_cxx=""
+    fi
+    if [[ ( ! ${CC+x} && -z "$selected_cc" ) || ( ! ${CXX+x} && -z "$selected_cxx" ) ]]; then
+      prefix=$(brew --prefix gcc) || return $?
+      for driver in "$prefix"/bin/gcc-*; do
+        version=${driver##*/gcc-}
+        case "$version" in ''|*[!0-9]*) continue ;; esac
+        [[ -x "$driver" && -x "$prefix/bin/g++-$version" ]] || continue
+        if (( 10#$version > best )); then
+          best=$((10#$version))
+        fi
+      done
+      if (( best == 0 )); then
+        printf 'No complete Brew GCC driver pair in %s/bin. Install/repair Brew gcc or set CC and CXX to executable drivers.\n' "$prefix" >&2
+        return 1
+      fi
+      [[ -n "$selected_cc" ]] || selected_cc="$prefix/bin/gcc-$best"
+      [[ -n "$selected_cxx" ]] || selected_cxx="$prefix/bin/g++-$best"
+    fi
+    if [[ ! ${CC+x} ]]; then CC=$selected_cc; fi
+    if [[ ! ${CXX+x} ]]; then CXX=$selected_cxx; fi
+  fi
+  validate_install_compiler CC "$CC" || return $?
+  validate_install_compiler CXX "$CXX" || return $?
+  export CC CXX
+}
+
 install_platform_packages() {
   local platform=$1 platforms provider package _option manager
   manager=$(install_package_manager "$platform") || return $?
   local native_packages=() brew_packages=() pacman_options=(-S --needed)
+  local runtime_only=0
 
   case "$manager" in
     brew)
@@ -97,8 +150,18 @@ install_platform_packages() {
         esac
       done < "$REPO_DIR/config/packages.list"
       install_homebrew || return $?
+      if ! PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+        type -P cc > /dev/null; then
+        runtime_only=1
+        # GCC needs startup objects from Brew glibc on compiler-free bases.
+        brew install glibc || return $?
+      fi
       if (( ${#brew_packages[@]} )); then
         brew install "${brew_packages[@]}" || return $?
+      fi
+      if (( runtime_only )); then
+        # Also repair an installed GCC whose earlier post-install failed.
+        brew postinstall gcc || return $?
       fi
       return 0
       ;;

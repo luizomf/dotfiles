@@ -321,18 +321,21 @@ if [[ "$OP_SYSTEM" == "darwin" ]]; then
 fi
 
 if [[ "${OM_INSTALL_SKIP_PLUGINS:-0}" != "1" ]]; then
-  loginfo "Instalando plugins do Vim..."
-  vim -Nu "$HOME/.vimrc" -n -es -i NONE \
-    -c 'PlugInstall --sync' -c 'qa'
+  (
+    # Keep compiler defaults out of package installation and the parent environment.
+    configure_install_compilers "$OP_SYSTEM" || exit $?
+    loginfo "Instalando plugins do Vim..."
+    vim -Nu "$HOME/.vimrc" -n -es -i NONE \
+      -c 'PlugInstall --sync' -c 'qa'
 
-  loginfo "Instalando plugins do Neovim..."
-  nvim --clean --headless -i NONE -l "$REPO_DIR/nvim/restore.lua"
+    loginfo "Instalando plugins do Neovim..."
+    nvim --clean --headless -i NONE -l "$REPO_DIR/nvim/restore.lua"
 
-  loginfo "Instalando ferramentas do Mason e parsers do Treesitter..."
-  nvim --headless \
-    -c "lua require('settings.tooling').bootstrap()" \
-    -c 'qall'
-
+    loginfo "Instalando ferramentas do Mason e parsers do Treesitter..."
+    nvim --headless \
+      -c "lua require('settings.tooling').bootstrap()" \
+      -c 'qall'
+  )
 fi
 
 loginfo "Verificando a instalação..."
