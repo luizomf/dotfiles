@@ -20,7 +20,9 @@ class InstallPlatformTests(unittest.TestCase):
         "/bin/bash",
         "-c",
         'REPO_DIR=$(dirname "$(dirname "$(dirname "$1")")"); '
-        'source "$1" || exit; ' + script,
+        'source "$1" || exit; '
+        'command() { if [[ "$*" == "-v dnf" ]]; then return 1; '
+        'else builtin command "$@"; fi; }; ' + script,
         "test",
         str(MODULE),
         *args,
@@ -494,6 +496,40 @@ class InstallPlatformTests(unittest.TestCase):
       self.assertNotIn("<bash>", result.stdout)
       self.assertNotIn("bundle", result.stdout)
       self.assertNotIn("UNEXPECTED", result.stdout)
+
+  def test_lfs_installs_native_libatomic_when_dnf_is_available(self):
+    for failure in ("0", "27"):
+      with self.subTest(failure=failure):
+        result = self.shell(
+          """
+          set -Eeuo pipefail
+          failure=$2
+          command() { [[ "$*" == '-v dnf' ]] || builtin command "$@"; }
+          sudo() { printf 'SUDO %s\\n' "$*"; return "$failure"; }
+          loginfo() { :; }
+          type() { return 0; }
+          install_homebrew() { echo BREW_SETUP; }
+          brew() { echo UNEXPECTED_BREW; return 99; }
+          if install_platform_packages lfs; then
+            echo SUCCESS
+          else
+            printf 'FAILED %s\\n' "$?"
+          fi
+          """,
+          failure,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("SUDO dnf install -y libatomic", result.stdout)
+        self.assertNotIn("UNEXPECTED", result.stdout)
+        if failure == "0":
+          self.assertIn("SUCCESS", result.stdout)
+          self.assertIn("BREW_SETUP", result.stdout)
+        else:
+          self.assertIn("FAILED 27", result.stdout)
+          self.assertNotIn("BREW_SETUP", result.stdout)
+    self.assertIn(
+      "fedora native libatomic\n", (ROOT / "config/packages.list").read_text()
+    )
 
   def test_lfs_all_native_selection_avoids_an_empty_brew_install(self):
     with tempfile.TemporaryDirectory() as tmp:

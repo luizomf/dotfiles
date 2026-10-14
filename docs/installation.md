@@ -287,12 +287,14 @@ managed interpreter downloads disabled. `OM_PYTHON_VERSION` does not replace the
 native Python. `OM_INSTALL_SKIP_TOOLCHAINS=1` skips uv migration, tool
 installation and sync, not the remaining formula selection.
 
-For a Fedora-derived Lebasix rootfs, keep native runtime libraries available for
-third-party Linux binaries. In particular, Pyright's Python wrapper may download
-Node when Brew's Node is absent from PATH (for example, non-interactive SSH);
-that Node requires the native `libatomic` package
-(`sudo dnf install libatomic`). This does not require installing Fedora's
-compiler toolchain.
+For LFS/Lebasix roots with DNF available, the installer installs native
+`libatomic` before Homebrew setup. Fedora and Fedora Asahi also include it in
+their native package list. Pyright's Python wrapper may download Node when
+Brew's Node is absent from PATH (for example, non-interactive SSH); that binary
+requires the native library. This does not add Fedora's compiler toolchain to
+LFS/Lebasix. On LFS without DNF, native runtime libraries remain the host's
+responsibility. Existing Fedora-derived roots can repair this dependency with
+`sudo dnf install libatomic` without rerunning the installer.
 
 GNU Patch uses the formula/command mapping `gpatch patch`: Homebrew names the
 formula `gpatch`, but on Linux it installs the `patch` executable. A native

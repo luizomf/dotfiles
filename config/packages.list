@@ -35,6 +35,7 @@ apt,fedora,arch native git
 fedora native glibc-langpack-en
 apt,fedora,arch native htop
 fedora,arch native just
+fedora native libatomic
 apt native libbz2-dev
 debian native libexpat1-dev
 debian native libffi-dev

@@ -134,6 +134,11 @@ install_platform_packages() {
       return
       ;;
     linuxbrew)
+      # Fedora-derived minimal roots need this for downloaded Node binaries.
+      # Real LFS without DNF continues to supply its own native runtime libraries.
+      if command -v dnf > /dev/null 2>&1; then
+        sudo dnf install -y libatomic || return $?
+      fi
       # Inspect only host-managed paths, never an inherited Homebrew/toolchain PATH.
       # Formula dependencies remain Homebrew's responsibility.
       while read -r platforms provider package _option || [[ -n "$platforms" ]]; do
