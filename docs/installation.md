@@ -275,12 +275,17 @@ startup (`/etc/lfs-release`), host paths precede Brew paths so dependencies do
 not shadow the native Python or other base tools. Explicit user-tool paths still
 retain their normal priority.
 
-Node and development CLI tools (Prettier, Pyright, Ruff, uv and Pi) follow the
-same native-first formula policy. There is no nvm installation, pyenv build, or
-privileged npm installation. Python setup uses `/usr/bin/python3` to sync the
-checkout's locked `.venv`, with managed interpreter downloads disabled.
-`OM_PYTHON_VERSION` does not replace the native Python.
-`OM_INSTALL_SKIP_TOOLCHAINS=1` skips that sync, not the formula selection.
+Node, Prettier and Pi follow the same native-first formula policy. There is no
+nvm installation, pyenv build, or privileged npm installation. Python setup
+removes an existing Homebrew uv formula and installs standalone uv in
+`~/.local/bin` if absent, so `updateall` can use `uv self update`. Pyright, mypy
+and Ruff are installed with `uv tool install` when missing from its tool list;
+they are no longer requested as Homebrew formulas. Existing Brew Pyright/Ruff
+formulas are left installed, with `~/.local/bin` taking precedence. Tool
+installation and the checkout's locked `.venv` sync use `/usr/bin/python3`, with
+managed interpreter downloads disabled. `OM_PYTHON_VERSION` does not replace the
+native Python. `OM_INSTALL_SKIP_TOOLCHAINS=1` skips uv migration, tool
+installation and sync, not the remaining formula selection.
 
 GNU Patch uses the formula/command mapping `gpatch patch`: Homebrew names the
 formula `gpatch`, but on Linux it installs the `patch` executable. A native

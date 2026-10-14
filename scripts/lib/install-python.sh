@@ -12,6 +12,28 @@ configure_install_python() {
     PYTHON_SETUP_STEP="Use system Python"
     [[ "${OM_INSTALL_SKIP_TOOLCHAINS:-0}" != 1 ]] || return 0
     loginfo "$OP_SYSTEM: keeping system Python; OM_PYTHON_VERSION does not replace it."
+    if [[ "$OP_SYSTEM" == lfs ]]; then
+      # updateall uses uv self update, which requires the standalone installation.
+      PYTHON_SETUP_STEP="Remove Homebrew uv"
+      if brew list --formula uv > /dev/null 2>&1; then
+        brew uninstall uv || return $?
+      fi
+      export PATH="$HOME/.local/bin:$PATH"
+      PYTHON_SETUP_STEP="Install standalone uv"
+      if [[ ! -x "$HOME/.local/bin/uv" ]]; then
+        UV_INSTALL_DIR="$HOME/.local/bin" run_remote_script /bin/sh \
+          https://astral.sh/uv/install.sh || return $?
+      fi
+      PYTHON_SETUP_STEP="List uv tools"
+      installed_tools=$(uv tool list) || return $?
+      for tool in pyright mypy ruff; do
+        if ! grep -q "^$tool " <<< "$installed_tools"; then
+          PYTHON_SETUP_STEP="Install $tool with uv"
+          uv tool install "$tool" --python /usr/bin/python3 \
+            --no-python-downloads || return $?
+        fi
+      done
+    fi
     PYTHON_SETUP_STEP="Sync the dotfiles development environment"
     UV_PROJECT_ENVIRONMENT="$REPO_DIR/.venv" uv sync \
       --project "$REPO_DIR" --locked --python /usr/bin/python3 \

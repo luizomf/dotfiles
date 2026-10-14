@@ -174,18 +174,15 @@ lfs brew gpatch patch
 lfs brew pi-coding-agent pi
 lfs brew pkgconf pkg-config
 lfs brew prettier
-lfs brew pyright
 lfs brew ripgrep rg
 lfs brew rsync
 lfs brew rtk
-lfs brew ruff
 lfs brew shellcheck
 lfs brew tmux
 lfs brew trash-cli trash-put
 lfs brew tree
 lfs brew tree-sitter-cli tree-sitter
 lfs brew unzip
-lfs brew uv
 lfs brew vim
 lfs brew watch
 lfs brew wget

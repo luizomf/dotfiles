@@ -222,7 +222,14 @@ class InstallPlatformTests(unittest.TestCase):
       export HOME=/nonexistent-dotfiles-test-home
       loginfo() { :; }
       require_new_toolchain_dir() { return 99; }
-      run_remote_script() { printf 'UNEXPECTED_DOWNLOAD\\n'; return 99; }
+      run_remote_script() { printf 'INSTALL_UV %s\\n' "$*"; }
+      brew() {
+        case "$*" in
+          'list --formula uv') return 0 ;;
+          'uninstall uv') printf 'REMOVE_BREW_UV\\n' ;;
+          *) return 99 ;;
+        esac
+      }
       npm() { printf 'UNEXPECTED_NPM\\n'; return 99; }
       """
       + node_setup
@@ -237,6 +244,69 @@ class InstallPlatformTests(unittest.TestCase):
     self.assertNotIn("UNEXPECTED", result.stdout)
     self.assertIn("<--python> </usr/bin/python3>", result.stdout)
     self.assertIn("<--no-python-downloads>", result.stdout)
+    self.assertIn("REMOVE_BREW_UV", result.stdout)
+    self.assertIn("INSTALL_UV /bin/sh https://astral.sh/uv/install.sh", result.stdout)
+    for tool in ("pyright", "mypy", "ruff"):
+      self.assertIn(f"<tool> <install> <{tool}>", result.stdout)
+    packages = (ROOT / "config/packages.list").read_text()
+    for tool in ("uv", "pyright", "ruff"):
+      self.assertNotIn(f"lfs brew {tool}\n", packages)
+
+  def test_lfs_python_setup_repeat_skip_and_failures(self):
+    for scenario in ("repeat", "skip", "uninstall", "download", "tool"):
+      with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as home:
+        if scenario == "repeat":
+          executable = Path(home) / ".local/bin/uv"
+          executable.parent.mkdir(parents=True)
+          executable.write_text("#!/bin/sh\nexit 0\n")
+          executable.chmod(0o755)
+        result = self.shell(
+          """
+          set -Eeuo pipefail
+          source "$2"
+          export HOME=$3
+          scenario=$4 OP_SYSTEM=lfs
+          loginfo() { :; }
+          [[ "$scenario" != skip ]] || OM_INSTALL_SKIP_TOOLCHAINS=1
+          brew() {
+            [[ "$scenario" != skip ]] || { echo UNEXPECTED; return 99; }
+            [[ "$scenario" == uninstall ]] || return 1
+            [[ "$1" == list ]] && return 0
+            return 23
+          }
+          run_remote_script() {
+            echo DOWNLOAD
+            [[ "$scenario" != download ]] || return 23
+          }
+          uv() {
+            if [[ "$*" == 'tool list' && "$scenario" == repeat ]]; then
+              printf 'pyright v1\nmypy v1\nruff v1\n'
+              return 0
+            fi
+            echo "UV $*"
+            [[ "$scenario" != tool || "$*" != 'tool install '* ]] || return 23
+          }
+          if configure_install_python; then
+            echo SUCCESS
+          else
+            echo "FAILED $?: $PYTHON_SETUP_STEP"
+          fi
+          """,
+          str(ROOT / "scripts/lib/install-python.sh"),
+          home,
+          scenario,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        if scenario in ("repeat", "skip"):
+          self.assertIn("SUCCESS", result.stdout)
+          self.assertNotIn("DOWNLOAD", result.stdout)
+          self.assertNotIn("tool install", result.stdout)
+          self.assertNotIn("UNEXPECTED", result.stdout)
+          if scenario == "skip":
+            self.assertNotIn("UV", result.stdout)
+        else:
+          self.assertIn("FAILED 23:", result.stdout)
+          self.assertNotIn("UV sync", result.stdout)
 
   def test_alpine_python_sync_uses_system_python_without_managed_downloads(self):
     for skip, failure in (("0", "0"), ("0", "29"), ("1", "0")):
