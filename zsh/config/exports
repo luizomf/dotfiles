@@ -109,7 +109,10 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 # LFS owns the base tools; Brew's transitive dependencies must not shadow them.
-if [[ "$OSTYPE" == linux* ]] && test -r /etc/lfs-release; then
+if [[ "$OSTYPE" == linux* ]] && {
+  test -r /etc/lfs-release ||
+    grep -Eq "^ID=['\"]?(lfs|lebasix)['\"]?$" /etc/os-release 2>/dev/null
+}; then
   PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 fi
 

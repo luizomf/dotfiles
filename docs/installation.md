@@ -271,9 +271,9 @@ Homebrew, installed at its normal Linux prefix if absent. Homebrew still owns
 transitive dependencies and may install its own version of a native tool or
 library as a dependency. The installer does not unlink those dependencies or
 force Homebrew to link against LFS libraries. During installation and in LFS Zsh
-startup (`/etc/lfs-release`), host paths precede Brew paths so dependencies do
-not shadow the native Python or other base tools. Explicit user-tool paths still
-retain their normal priority.
+startup (`/etc/lfs-release` or `ID=lfs`/`ID=lebasix` in `/etc/os-release`), host
+paths precede Brew paths so dependencies do not shadow the native Python or
+other base tools. Explicit user-tool paths still retain their normal priority.
 
 Node, Prettier and Pi follow the same native-first formula policy. There is no
 nvm installation, pyenv build, or privileged npm installation. Python setup
@@ -286,6 +286,13 @@ installation and the checkout's locked `.venv` sync use `/usr/bin/python3`, with
 managed interpreter downloads disabled. `OM_PYTHON_VERSION` does not replace the
 native Python. `OM_INSTALL_SKIP_TOOLCHAINS=1` skips uv migration, tool
 installation and sync, not the remaining formula selection.
+
+For a Fedora-derived Lebasix rootfs, keep native runtime libraries available for
+third-party Linux binaries. In particular, Pyright's Python wrapper may download
+Node when Brew's Node is absent from PATH (for example, non-interactive SSH);
+that Node requires the native `libatomic` package
+(`sudo dnf install libatomic`). This does not require installing Fedora's
+compiler toolchain.
 
 GNU Patch uses the formula/command mapping `gpatch patch`: Homebrew names the
 formula `gpatch`, but on Linux it installs the `patch` executable. A native

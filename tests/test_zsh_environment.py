@@ -368,6 +368,36 @@ class ZshEnvironmentTests(unittest.TestCase):
       self.assertLess(paths.index("/usr/bin"), paths.index("/fixture/brew/bin"))
       self.assertEqual(paths[0], str(home / "dotfiles/scripts"))
 
+  def test_exports_recognize_lfs_os_release_without_marker(self):
+    for os_id in ("lfs", "lebasix", '"lebasix"', "'lebasix'", "fedora"):
+      with self.subTest(os_id=os_id), tempfile.TemporaryDirectory() as temporary:
+        home = Path(temporary)
+        (home / "dotfiles").symlink_to(REPO, target_is_directory=True)
+        release = home / "os-release"
+        release.write_text(f"ID={os_id}\n")
+        exports = (REPO / "zsh/config/exports").read_text()
+        exports = exports.replace("/etc/lfs-release", str(home / "missing-marker"))
+        exports = exports.replace("/etc/os-release", str(release))
+        result = subprocess.run(  # noqa: S603
+          [
+            str(ZSH),
+            "-dfc",
+            "typeset -A ZSH_HIGHLIGHT_STYLES; OSTYPE=linux-test; "
+            "uname() { print Test; }; pyenv() { return 0; };\n"
+            + exports
+            + "\nprint -l -- $path",
+          ],
+          env={"HOME": str(home), "PATH": "/fixture/brew/bin:/usr/bin:/bin"},
+          capture_output=True,
+          text=True,
+          check=True,
+        )
+        paths = result.stdout.splitlines()
+        if os_id == "fedora":
+          self.assertLess(paths.index("/fixture/brew/bin"), paths.index("/usr/bin"))
+        else:
+          self.assertLess(paths.index("/usr/bin"), paths.index("/fixture/brew/bin"))
+
   def test_path_can_be_reapplied_without_duplicates(self):
     # The sourced path is the repository-owned config, not external input.
     result = subprocess.run(  # noqa: S603
