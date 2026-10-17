@@ -2,20 +2,29 @@
 
 set -Eeuo pipefail
 
-report_error() {
-  local status="$1" command="$2"
-  printf 'tmuxnw: ERROR: command failed (exit %s): %s\n' "$status" "$command" >&2
-  exit "$status"
-}
-trap 'report_error "$?" "$BASH_COMMAND"' ERR
+_error_msg=
 
-WINDOW_NAME="tmp"
+check() {
+  local status=$?
+  [[ $status -eq 0 ]] && return 0
+  logerror "$_error_msg ($(basename "${BASH_SOURCE[1]}"):${BASH_LINENO[0]}, exit=$status)" >&2
+}
+
+trap 'check' ERR
+
+is_positive() {
+  local n="${1:-}"
+  _error_msg="Not a positive number: $n"
+  [[ "$n" =~ ^\+?[0-9]+$ ]]
+}
+
+_window_name="tmp"
 
 if (($# > 0)); then
-  WINDOW_NAME="${1:-new}"
+  _window_name="${1:-new}"
   shift
 fi
 
-SESSION_NAME="$(tmux display-message -p "#{session_name}")"
-WINDIR="${WINDIR:-$(pwd)}"
-tmux neww -t "$SESSION_NAME" -c "$WINDIR" -n "$WINDOW_NAME" -a "$@"
+_session_name="$(tmux display-message -p "#{session_name}")"
+_window_dir="${_window_dir:-$(pwd)}"
+tmux neww -t "$_session_name" -c "$_window_dir" -n "$_window_name" -a "$@"
