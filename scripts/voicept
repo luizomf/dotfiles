@@ -20,20 +20,21 @@ fi
 
 (
 cd "${PROJECTS_DIR}/omnivoicetts" || exit 1
+TEXT="$(cat | tr '\n' ' ')"
+
 # ./scripts/clear_cache
 # pkill -9 -f '[o]mnivoicetts' || true
-./scripts/female-pt \
-  --offline --player auto \
-  --num-step 16 --guidance-scale 2 --t-shift 0.1 \
-  --class-temperature 0 --position-temperature 5.0 --layer-penalty-factor 5.0 \
-  --chunk-len 80 --prebuffer-chunks 1 --sliding-window-chunks 1 \
-  --inter-chunk-silence-ms 250 --chunking kokoro \
+./scripts/male-pt \
+  --offline --player auto --guidance-scale 2 \
+  --num-step 16 --t-shift 0.1 --position-temperature 5.0 \
+  --class-temperature 0.1 --layer-penalty-factor 5.0 \
+  --chunk-len 80 --prebuffer-chunks 1 \
+  --sliding-window-chunks 2 --inter-chunk-silence-ms 250 --chunking kokoro \
   --split-on-newlines True --ensure-terminal-punctuation True \
-  --speed 1.0 --model-fade-ms 100 --model-pad-ms 100 \
-  --denoise False --preprocess-prompt True --postprocess-output True \
-  --chunk-cache-dir .cache/omnivoice-play/female-pt-br \
-  --ref-audio samples/female-pt-br.wav --language pt \
-  --instruct "female, middle-aged, moderate pitch, portuguese accent" \
-  "$@" > /tmp/voicept.log 2>&1
+   --speed 1 --model-fade-ms 200 --model-pad-ms 400 \
+  --denoise True --preprocess-prompt True --postprocess-output False --debug \
+  --chunk-cache-dir .cache/omnivoice-play/male-pt-br \
+  --ref-audio samples/male-pt-br.wav --language pt \
+  --instruct "male, middle-aged, low pitch, portuguese accent" \
+  "$@" > /tmp/voicept.log 2>&1 <<< "$TEXT"
 )
-
