@@ -279,7 +279,6 @@ darwin cask obs
 darwin cask utm
 darwin cask vlc
 darwin cask whatsapp
-darwin cask zoom
 
 # uv
 darwin uv langgraph-cli[inmem]
