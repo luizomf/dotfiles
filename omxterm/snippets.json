@@ -21,8 +21,8 @@
     },
     {
       "name": "Pi Update",
-      "body": " npx @earendil-works/pi-coding-agent update ; npx @earendil-works/pi-coding-agent update --all ; npx @earendil-works/pi-coding-agent update --models ;",
-      "description": "Uniform pi update for linux and macos",
+      "body": " \"$HOME/.pi/agent/bin/pi\" update --all && \"$HOME/.pi/agent/bin/pi\" update --models",
+      "description": "Update the official managed Pi installation, extensions, and model catalogs without the wrapper or npx.",
       "execute": true
     },
     {
