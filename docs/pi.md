@@ -1,8 +1,11 @@
 # Pi Coding Agent configuration
 
 Personal Pi configuration lives in `~/.pi/`, outside this public repository. The
-installer does not create or link Pi settings, instructions, or themes. The Pi
-package and utility wrappers remain part of the dotfiles tooling.
+installer does not install or update the Pi package, or create or link Pi
+settings, instructions, or themes. Install Pi separately using the official
+instructions at <https://pi.dev>; existing Pi utility wrappers remain part of
+the dotfiles tooling. Removing Pi from the package catalog does not uninstall
+copies already installed by Homebrew or npm.
 
 [`synchosts`](scripts/synchosts.md) transfers the existing Pi home between
 trusted hosts, including settings, instructions, themes, sessions, and

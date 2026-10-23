@@ -172,7 +172,6 @@ lfs brew ninja
 lfs brew node
 lfs brew pandoc
 lfs brew gpatch patch
-lfs brew pi-coding-agent pi
 lfs brew pkgconf pkg-config
 lfs brew prettier
 lfs brew ripgrep rg
@@ -230,7 +229,6 @@ darwin brew ollama
 darwin brew openssl@3
 darwin,apt brew p7zip
 darwin,apt brew pandoc
-apt,fedora,arch brew pi-coding-agent
 darwin,apt brew pipes-sh
 darwin brew pkgconf
 darwin brew popt unlinked

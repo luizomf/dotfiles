@@ -219,7 +219,7 @@ elif [[ "${OP_SYSTEM:-}" == alpine ]]; then
   loginfo "Alpine: using apk Node/Python and native musl tools; no Homebrew or nvm."
   if [[ "${OM_INSTALL_SKIP_TOOLCHAINS:-0}" != "1" ]]; then
     npm install --global --prefix "$HOME/.local" \
-      prettier pyright @earendil-works/pi-coding-agent
+      prettier pyright
   fi
 else
   # Match zsh/config/exports even when the desktop sets XDG_CONFIG_HOME.
@@ -346,7 +346,7 @@ fi
 if [[ "${OM_INSTALL_SKIP_TOOLCHAINS:-0}" != "1" ]]; then
   required_commands+=(node npm prettier)
   if [[ "$OP_SYSTEM" == alpine ]]; then
-    required_commands+=(pi pyright)
+    required_commands+=(pyright)
   fi
 fi
 if [[ "${OM_INSTALL_SKIP_TOOLCHAINS:-0}" != "1" && -z "$python_failure" ]]; then

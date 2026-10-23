@@ -179,14 +179,14 @@ layer, a different init system, containers, or a desktop. It does not upgrade
 the distro or rewrite its repositories. Existing non-Alpine package selections
 and toolchain setup are unchanged.
 
-With toolchain setup enabled, npm installs Prettier, Pyright and Pi into
-`~/.local`, without privileged npm or changing the global npm configuration.
-Python remains `/usr/bin/python3`; `OM_PYTHON_VERSION` does not replace it on
-Alpine. The checkout's development environment still uses `uv sync --locked`,
-with that interpreter and managed Python downloads disabled. A failed sync
-retains the existing incomplete-installation reporting and does not prevent
-independent configuration steps. `OM_INSTALL_SKIP_TOOLCHAINS=1` skips npm tools
-and the development-environment sync, not the native package selection.
+With toolchain setup enabled, npm installs Prettier and Pyright into `~/.local`,
+without privileged npm or changing the global npm configuration. Python remains
+`/usr/bin/python3`; `OM_PYTHON_VERSION` does not replace it on Alpine. The
+checkout's development environment still uses `uv sync --locked`, with that
+interpreter and managed Python downloads disabled. A failed sync retains the
+existing incomplete-installation reporting and does not prevent independent
+configuration steps. `OM_INSTALL_SKIP_TOOLCHAINS=1` skips npm tools and the
+development-environment sync, not the native package selection.
 
 The tmux Python popup uses `/usr/bin/python3` on Alpine and LFS; other systems
 retain their existing pyenv command.

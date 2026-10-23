@@ -205,10 +205,32 @@ class InstallPlatformTests(unittest.TestCase):
           self.assertIn(
             f"npm <install> <--global> <--prefix> <{tmp}/.local>", result.stdout
           )
-          for package in ("prettier", "pyright", "@earendil-works/pi-coding-agent"):
+          self.assertNotIn("pi-coding-agent", result.stdout)
+          for package in ("prettier", "pyright"):
             self.assertIn(f"<{package}>", result.stdout)
         else:
           self.assertEqual(result.stdout, "")
+
+  def test_final_command_checks_do_not_require_pi(self):
+    source = (ROOT / "install.sh").read_text()
+    validation = source.split('loginfo "Verificando a instalação..."', 1)[1].split(
+      "required_links=(", 1
+    )[0]
+    for platform in ("alpine", "lfs", "darwin", "ubuntu", "fedora", "arch"):
+      with self.subTest(platform=platform):
+        result = self.shell(
+          """
+          set -Eeuo pipefail
+          OP_SYSTEM="$2"
+          OM_INSTALL_SKIP_TOOLCHAINS=0
+          python_failure=fixture
+          logerror() { printf '%s\\n' "$*" >&2; }
+          command() { [[ "$*" != "-v pi" ]]; }
+          """
+          + validation,
+          platform,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
 
   def test_lfs_uses_brew_node_tools_and_preserves_native_python(self):
     source = (ROOT / "install.sh").read_text()
@@ -998,7 +1020,8 @@ class InstallPlatformTests(unittest.TestCase):
     for package in ("base-devel", "libffi", "openssl", "zlib", "zsh", "tmux"):
       self.assertIn(f"<{package}>", lines[0])
     self.assertEqual(lines[1], "load-homebrew")
-    for package in ("neovim", "rtk", "pi-coding-agent", "shellcheck"):
+    self.assertNotIn("pi-coding-agent", result.stdout)
+    for package in ("neovim", "rtk", "shellcheck"):
       self.assertIn(f"<{package}>", lines[2])
     for forbidden in ("yay", "-Sy", "systemctl", "chsh", "ghostty-ubuntu", "dnf"):
       self.assertNotIn(forbidden, result.stdout)
@@ -1068,7 +1091,7 @@ class InstallPlatformTests(unittest.TestCase):
         "darwin cask ghostty\n"
         "darwin uv mypy\n"
         "ubuntu,arch native git\n"
-        "fedora,arch brew pi-coding-agent\n"
+        "fedora,arch brew linux-only-test-package\n"
       )
       # Evaluate Bundle's DSL with inert package declarations, never Homebrew.
       result = subprocess.run(  # noqa: S603
