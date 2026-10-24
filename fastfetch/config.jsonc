@@ -285,5 +285,10 @@
       "key": "╰─",
       "keyColor": "blue",
     },
+    "break",
+    {
+      "type": "colors",
+      "paddingLeft": 2,
+    },
   ],
 }
