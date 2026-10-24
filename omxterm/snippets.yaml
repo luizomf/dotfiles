@@ -2,8 +2,7 @@ version: 1
 snippets:
   - name: Testing
     body: |+
-      #!/usr/bin/env bash
-
+      # A comment
       ls
         clear
 
