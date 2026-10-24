@@ -1,25 +1,5 @@
 version: 1
 snippets:
-  - name: Testing
-    body: |+
-      # A comment
-      ls
-        clear
-
-      echo "Sleeping for 2 secs"
-      sleep 2
-      echo "Done sleeping"
-
-      echo "Testing double quotes"
-      echo $'This is just \'a mess\', ain\'t it?'
-
-      for i in {0..10}; do
-        printf '%s\n' "The number is - ${i}"
-      done
-
-      printf '\e[31m%s\e[m\n' 'THE END'
-    description: This is just a test for omxterm snippets in YAML
-    execute: false
   - name: Daily Paper Status (SSH Watcher)
     body: |2-
        ssh -t fedoraair 'watch --color -n 1 python3 "$PROJECTS_DIR"/daily-paper/maintenance/daily-paper-status-prototype.py --color=always'
@@ -27,6 +7,7 @@ snippets:
       Watch the read-only Daily Paper dashboard on Fedora. Requires PROJECTS_DIR
       in the remote shell.
     execute: false
+
   - name: curl pandoc html to markdown
     body: |2-
        export URL="${URL:-CHANGE URL}" MDOUTPUT="${HOME}/Desktop/saved.md" ;
@@ -35,6 +16,7 @@ snippets:
     description:
       Use curl and pandoc to open HTML pages and try to save it as markdown.
     execute: false
+
   - name: Restart WireGuard All Hosts
     body: |2-
        run_all_hosts '. ~/.zshrc ; sudo wg-quick down wg0 || true' &&
@@ -59,6 +41,7 @@ snippets:
       echo '\n'
     description: Use ssh to restart WireGuard in all local hosts.
     execute: false
+
   - name: Pi Update
     body: |2-
        "$HOME/.pi/agent/bin/pi" update --all &&
@@ -67,6 +50,7 @@ snippets:
       Update the official managed Pi installation, extensions, and model
       catalogs without the wrapper or npx.
     execute: true
+
   - name: Test Sannux Ephemeral Models
     body: |2-
        test_models
@@ -74,6 +58,7 @@ snippets:
       Test local Sannux Ephemeral Models with sannux_ephemeral script for Codex,
       Codex Ollama, Pi and Agy
     execute: true
+
   - name: Clear Docker History, Volumes and Networks
     body: |2-
        docker stop `docker ps -q -a` ;
@@ -86,11 +71,13 @@ snippets:
       docker builder prune -f ;
     description: Clear Docker Bloat
     execute: true
+
   - name: Create TTS for daily briefings
     body: |2-
        bq --label daily_breafing_tts_clean --json --concurrency-key audio-playback zsh -lc '. ~/.zshrc ; llm_clean --model "${LOCAL_MODEL}" -c "$(cat ~/omnews_briefings/"$(date +%Y-%m-%d)".md)" -- --nowordwrap --think=max --hidethinking > ~/omnews_briefings/"$(date +%Y-%m-%d)"_tts.txt ; msg="Daily Paper Markdown Cleaner Finished." osalert'
     description: Create a TTS file for the current date on omnews briefing.
     execute: false
+
   - name: OMQueue Test Local (AUDIO)
     body: |-
       bq --label omqueue_test_snippet --json --cwd "$(pwd)" --concurrency-key audio-playback zsh -lc '. ~/.zshrc ; edgetts <<< "Attention. This is only a test of the O M Queue distributed emergency audio system. The end."'
@@ -98,6 +85,7 @@ snippets:
       Queue the OMQueue audio test locally. If you can hear the audio, it is
       working.
     execute: false
+
   - name: OMQueue Test Local (TEXT)
     body: |2-
        bq --label omqueue-test-text --cwd "${HOME}/Desktop" --json --concurrency-key one-shot bash -c 'for i in {1..5}; do echo -n "Linha: ${i}"; sleep 0.5; done' |
@@ -108,6 +96,7 @@ snippets:
       Queue the OMQueue text only test locally. If you can see the text, it is
       working.
     execute: false
+
   - name: Sannux Rebuild (only used)
     body: |2-
        for t in codex codex-ollama agy pi; do
@@ -119,6 +108,7 @@ snippets:
       test_models
     description: Rebuild selected Sannux Templates
     execute: false
+
   - name: Change tmux popup size (temp)
     body: |2-
        ((T=600 W=50% H=50%;
@@ -132,8 +122,27 @@ snippets:
       Set tmux width and height for popups and unset the variables after 10
       minutes
     execute: false
+
   - name: Reminder
     body: |2-
        bq --in 60m --label "bq-reminder" -- bash -lc -- "(osascript -e 'set volume output volume 100' > /dev/null 2>&1 & osalert > /dev/null 2>&1 & osascript -e \"display dialog \\\"TITLE\\n\\nBODY\\\"¬\" -e 'with title \"Alert\"¬' -e 'with icon stop¬' -e 'buttons {\"OK\"}¬' -e 'default button \"OK\"' > /dev/null 2>&1 &)"
     description: Set a simple reminder using omqueue.
+    execute: false
+
+  - name: Upgrade VPS Servers (KVMs)
+    body: |+
+      for server in kvm2 kvm4 kvm8; do
+        prline -c " "
+
+        loginfo "Server: $server"
+
+        ssh -T "$server" <<<'
+        sudo apt-get -y update
+        sudo apt-get -y upgrade
+        '
+
+        prline -c " "
+        prline
+      done
+    description: Simple upgrade for KVM servers
     execute: false
