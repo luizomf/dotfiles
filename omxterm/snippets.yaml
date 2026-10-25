@@ -146,3 +146,22 @@ snippets:
       done
     description: Simple upgrade for KVM servers
     execute: false
+
+  - name: Link OMXTerm config files (forced)
+    body: |+
+      (
+      cd ~/.config/omxterm || exit 1;
+
+      for file in 'config.json' 'snippets.yaml' 'themes'; do
+        if [[ -f "$file" || -d "$file" ]]; then
+          ln -sfn ../../dotfiles/omxterm/"$file" "$file"
+          echo "$file OK"
+          ls -lah "$file"
+        else
+          logerror "$file"
+        fi
+      done
+      )
+    description:
+      Link OMXTerm config files (forced) from dotfiles to ~/.config/omxterm
+    execute: false
