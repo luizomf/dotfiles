@@ -20,7 +20,8 @@ fi
 
 (
 cd "${PROJECTS_DIR}/omnivoicetts" || exit 1
-TEXT="$(cat | tr '\n' ' ')"
+# TEXT="$(cat | tr '\n' ' ')"
+TEXT="$(cat)"
 
 # ./scripts/clear_cache
 # pkill -9 -f '[o]mnivoicetts' || true
@@ -28,11 +29,11 @@ TEXT="$(cat | tr '\n' ' ')"
   --offline --player auto --guidance-scale 2 \
   --num-step 16 --t-shift 0.1 --position-temperature 5.0 \
   --class-temperature 0.1 --layer-penalty-factor 5.0 \
-  --chunk-len 80 --prebuffer-chunks 1 \
-  --sliding-window-chunks 2 --inter-chunk-silence-ms 250 --chunking kokoro \
+  --chunk-len 400 --prebuffer-chunks 1 \
+  --sliding-window-chunks 1 --inter-chunk-silence-ms 250 --chunking kokoro \
   --split-on-newlines True --ensure-terminal-punctuation True \
    --speed 1 --model-fade-ms 200 --model-pad-ms 400 \
-  --denoise True --preprocess-prompt True --postprocess-output False --debug \
+  --denoise False --preprocess-prompt False --postprocess-output False --debug \
   --chunk-cache-dir .cache/omnivoice-play/male-pt-br \
   --ref-audio samples/male-pt-br.wav --language pt \
   --instruct "male, middle-aged, low pitch, portuguese accent" \
