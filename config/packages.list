@@ -258,7 +258,6 @@ darwin brew xz
 darwin brew zlib
 
 # cask
-darwin cask aldente
 darwin cask alt-tab
 darwin cask capcut
 darwin cask codex
