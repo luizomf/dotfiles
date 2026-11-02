@@ -39,6 +39,21 @@ class ClearProjectsTests(unittest.TestCase):
       'exec /bin/rm "$@"\n',
     )
     guarded_rm.chmod(0o755)
+    # Never reach a host Docker daemon, even if Docker is on the system PATH.
+    docker = bin_dir / "docker"
+    docker.write_text(
+      "#!/bin/bash\n"
+      'printf "%s\\n" "$*" >> "$HOME/docker-calls"\n'
+      "[[ -z ${DOCKER_HOST-}${DOCKER_CONTEXT-}${BUILDX_BUILDER-} ]] || exit 88\n"
+      'case "$*" in\n'
+      '  *"context inspect"*) echo "${TEST_ENDPOINT:-unix:///fixture.sock}" ;;\n'
+      '  *"info"*) exit "${TEST_INFO_STATUS:-0}" ;;\n'
+      '  *"--help"*) echo "${TEST_HELP:---max-used-space}" ;;\n'
+      '  *"prune"*) exit "${TEST_PRUNE_STATUS:-0}" ;;\n'
+      "  *) exit 89 ;;\n"
+      "esac\n",
+    )
+    docker.chmod(0o755)
     self.env = {
       "PATH": str(bin_dir) + os.pathsep + os.defpath,
       "HOME": str(self.home),
@@ -109,6 +124,48 @@ class ClearProjectsTests(unittest.TestCase):
       self.assertTrue((self.projects / "two/.scratch").is_symlink())
       self.assertTrue((self.projects / "linked-project").is_symlink())
 
+  def test_docker_prunes_only_default_local_build_cache(self) -> None:
+    self.env.update(
+      DOCKER_HOST="tcp://remote:2375",
+      DOCKER_CONTEXT="remote",
+      BUILDX_BUILDER="remote",
+    )
+    result = self.cleanup_projects()
+    self.assertEqual(0, result.returncode, result.stderr)
+    calls = (self.home / "docker-calls").read_text()
+    self.assertIn(
+      "--context default buildx prune --builder default --all --force "
+      "--max-used-space 5GB\n",
+      calls,
+    )
+
+  def test_docker_skips_remote_unavailable_and_unsupported_daemons(self) -> None:
+    for overrides in (
+      {"TEST_ENDPOINT": "tcp://remote:2375"},
+      {"TEST_INFO_STATUS": "1"},
+      {"TEST_HELP": "old buildx"},
+    ):
+      with self.subTest(overrides=overrides):
+        self.env.update(overrides)
+        result = self.cleanup_projects()
+        self.assertEqual(0, result.returncode, result.stderr)
+        calls = self.home / "docker-calls"
+        self.assertNotIn("--force", calls.read_text())
+        calls.unlink()
+        for key in overrides:
+          del self.env[key]
+
+  def test_docker_failure_is_nonfatal(self) -> None:
+    self.env["TEST_PRUNE_STATUS"] = "1"
+    result = self.cleanup_projects()
+    self.assertEqual(0, result.returncode, result.stderr)
+    self.assertIn("cleanup failed", result.stderr)
+
+  def test_help_and_bad_arguments_never_call_docker(self) -> None:
+    for args in (("--help",), ("--bad",), ("--dry-run", "extra")):
+      self.cleanup_projects(*args)
+      self.assertFalse((self.home / "docker-calls").exists())
+
   def test_dry_run_preserves_all_contents(self) -> None:
     contents = [
       self.file("projects/one/.scratch/nested/.hidden"),
@@ -118,6 +175,8 @@ class ClearProjectsTests(unittest.TestCase):
     result = self.cleanup_projects("--dry-run")
     self.assertEqual(0, result.returncode, result.stderr)
     self.assertIn("Would remove:", result.stdout)
+    self.assertIn("Would prune", result.stdout)
+    self.assertFalse((self.home / "docker-calls").exists())
     for path in contents:
       self.assertTrue(path.is_file())
 
@@ -143,6 +202,7 @@ class ClearProjectsTests(unittest.TestCase):
         result = self.cleanup_projects()
         self.assertNotEqual(0, result.returncode)
         self.assertTrue(sentinel.is_file())
+        self.assertFalse((self.home / "docker-calls").exists())
 
   def test_empty_projects_and_missing_cleanup_directories_are_noops(self) -> None:
     result = self.cleanup_projects()
