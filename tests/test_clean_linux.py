@@ -38,6 +38,7 @@ class CleanLinuxTests(unittest.TestCase):
         binaries.mkdir()
         calls = root / "calls"
         fixtures = {
+          "docker": "exit 1\n",
           "uname": "printf 'Linux\\n'\n",
           "id": "printf '1000\\n'\n",
           "brew": (
@@ -182,6 +183,89 @@ class CleanLinuxTests(unittest.TestCase):
         )
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(marker.read_text(), "keep")
+
+  def test_docker_cache_is_local_bounded_and_apply_only(self):
+    prune = (
+      "buildx prune --builder default --max-used-space 5GB --reserved-space 5GB --force"
+    )
+    for applying, endpoint, available, supported, prune_status in (
+      (False, "unix:///var/run/docker.sock", True, True, 0),
+      (True, "unix:///var/run/docker.sock", True, True, 0),
+      (True, "ssh://remote", True, True, 0),
+      (True, "unix:///var/run/docker.sock", False, True, 0),
+      (True, "unix:///var/run/docker.sock", True, False, 0),
+      (True, "unix:///var/run/docker.sock", True, True, 7),
+    ):
+      with (
+        self.subTest(
+          applying=applying,
+          endpoint=endpoint,
+          available=available,
+          supported=supported,
+          prune_status=prune_status,
+        ),
+        tempfile.TemporaryDirectory() as temporary,
+      ):
+        home = Path(temporary)
+        binaries = home / "bin"
+        binaries.mkdir()
+        calls = home / "calls"
+        for name, body in {
+          "uname": "echo Linux",
+          "id": "echo 1000",
+          "findmnt": "echo /",
+          "brew": "exit 99",
+          "docker": (
+            'test -z "${DOCKER_HOST+x}${DOCKER_CONTEXT+x}'
+            '${BUILDX_BUILDER+x}" || exit 98\n'
+            'printf "%s\\n" "$*" >> "$CALLS"\n'
+            'test "$1 $2" = "--context default" || exit 97\n'
+            "shift 2\n"
+            'case "$*" in\n'
+            '  "context inspect default --format {{.Endpoints.docker.Host}}") '
+            f'echo "{endpoint}" ;;\n'
+            f'  "info") exit {0 if available else 1} ;;\n'
+            '  "buildx prune --help") '
+            f'echo "{"--max-used-space --reserved-space" if supported else "old"}"'
+            " ;;\n"
+            f'  "{prune}") '
+            f"exit {prune_status} ;;\n"
+            "  *) exit 96 ;;\n"
+            "esac\n"
+          ),
+        }.items():
+          executable = binaries / name
+          executable.write_text("#!/bin/sh\n" + body + "\n")
+          executable.chmod(0o700)
+        result = subprocess.run(  # noqa: S603
+          [
+            "/bin/bash",
+            str(REPO / "scripts/clean_linux"),
+            *(["--apply"] if applying else []),
+          ],
+          env={
+            "HOME": str(home),
+            "PATH": f"{binaries}:/usr/bin:/bin",
+            "CALLS": str(calls),
+            "DOCKER_HOST": "ssh://unexpected",
+            "DOCKER_CONTEXT": "remote",
+            "BUILDX_BUILDER": "remote-builder",
+          },
+          capture_output=True,
+          text=True,
+          check=False,
+        )
+        eligible = endpoint.startswith("unix://") and available and supported
+        self.assertEqual(
+          result.returncode, prune_status if applying and eligible else 0, result.stderr
+        )
+        recorded = calls.read_text() if calls.exists() else ""
+        self.assertEqual(prune in recorded, applying and eligible)
+        if eligible:
+          self.assertIn(prune, result.stdout)
+        self.assertNotIn("system prune", recorded)
+        self.assertNotIn("image prune", recorded)
+        self.assertNotIn("volume prune", recorded)
 
   def test_invalid_options_do_not_mutate(self):
     result = subprocess.run(  # noqa: S603

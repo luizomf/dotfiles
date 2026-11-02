@@ -6,7 +6,8 @@ usage() {
   printf '%s\n' \
     'Usage: clean_linux [--apply] [--system] [--trim]' \
     'Default: show the plan only. Run as the normal user, not with sudo.' \
-    '  --apply   Remove listed caches and run Homebrew cleanup if available.' \
+    '  --apply   Remove listed caches, clean Homebrew and local Docker build cache.' \
+    '            Docker keeps a 5 GB cache budget; images/containers/volumes stay.' \
     '  --system  Also clean aged system temporaries and archived journals' \
     '            (7 days / 8 MiB); requires passwordless sudo when applying.' \
     '  --trim    Also discard unused blocks on supported mounts (sudo fstrim -av).'  \
@@ -47,6 +48,8 @@ run() {
 }
 
 if [[ $apply == false ]]; then printf 'DRY RUN: nothing will be changed.\n'; fi
+printf '\nDisk space before cleanup:\n'
+df -h -- "$home"
 # Fail before removing user caches if requested privilege/tools are unavailable.
 if [[ $system == true || $trim == true ]]; then
   command -v sudo >/dev/null
@@ -102,6 +105,34 @@ cache_is_safe() {
   return 0
 }
 
+clean_docker_cache() {
+  command -v docker >/dev/null || { printf 'Skipping Docker: not installed.\n'; return; }
+  # Never inherit a remote context/daemon/builder from the interactive shell.
+  local endpoint help
+  local -a docker_command=(env -u DOCKER_HOST -u DOCKER_CONTEXT -u BUILDX_BUILDER docker --context default)
+  if ! endpoint=$("${docker_command[@]}" context inspect default --format '{{.Endpoints.docker.Host}}') ||
+    [[ $endpoint != unix:///* ]]; then
+    printf 'Skipping Docker: default endpoint is not a verified local Unix socket.\n'
+    return
+  fi
+  if ! "${docker_command[@]}" info >/dev/null 2>&1; then
+    printf 'Skipping Docker: local daemon unavailable to this user.\n'
+    return
+  fi
+  if ! help=$("${docker_command[@]}" buildx prune --help 2>/dev/null) ||
+    [[ $help != *--max-used-space* || $help != *--reserved-space* ]]; then
+    printf 'Skipping Docker: Buildx lacks bounded cache cleanup options.\n'
+    return
+  fi
+  printf 'Local Docker build cache only; preserve images, containers and volumes.\n'
+  # No age filter: repeated builds can fill the disk within a single day.
+  # Shared image layers/in-use records can keep total cache above this budget.
+  run "${docker_command[@]}" buildx prune --builder default \
+    --max-used-space 5GB --reserved-space 5GB --force
+}
+
+clean_docker_cache
+
 brew_command=$(command -v brew || true)
 if [[ -z $brew_command && -x /home/linuxbrew/.linuxbrew/bin/brew ]]; then
   brew_command=/home/linuxbrew/.linuxbrew/bin/brew
@@ -135,4 +166,6 @@ if [[ $system == true ]]; then
   run sudo -n journalctl --rotate --vacuum-time=7d --vacuum-size=8M
 fi
 if [[ $trim == true ]]; then run sudo -n "$trim_command" -av; fi
-printf 'Done. Installed tools, configs, histories, backups and unknown caches were preserved.\n'
+printf '\nDisk space after cleanup (unchanged by a dry run):\n'
+df -h -- "$home"
+printf 'Done. Installed tools, Docker images/containers/volumes, configs, histories, backups and unknown caches were preserved.\n'
