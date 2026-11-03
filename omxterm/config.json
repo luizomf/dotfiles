@@ -27,7 +27,7 @@
   "window": {
     "alwaysOnTop": false,
     "blur": true,
-    "transparency": 0.05,
+    "transparency": 0.2,
     "showTabBar": true,
     "showTitleBar": false,
     "auxiliaryPanelSide": "right"
@@ -75,8 +75,5 @@
     "toggleSshConnect": "Command+Control+O",
     "toggleAuxiliaryPanel": null,
     "commandPalette": "Command+Shift+P"
-  },
-  "theme": {
-    "path": "themes/shades-of-purple-super-dark.json"
   }
 }
