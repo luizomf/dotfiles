@@ -27,13 +27,10 @@
   "window": {
     "alwaysOnTop": false,
     "blur": true,
-    "transparency": 0.2,
+    "transparency": 0.05,
     "showTabBar": true,
     "showTitleBar": false,
     "auxiliaryPanelSide": "right"
-  },
-  "theme": {
-    "path": "./themes/omtheme.json"
   },
   "keybinds": {
     "quit": "Command+Q",
@@ -69,14 +66,17 @@
     "zoomOut": "Command+Shift+-",
     "actualSize": "Command+Shift+0",
     "toggleFullScreen": "Command+Enter",
-    "toggleSnippets": "Command+Control+S",
+    "toggleSnippets": "Command+Shift+S",
     "toggleTabBar": "Command+Shift+B",
     "toggleTitleBar": "Command+Shift+D",
     "reloadConfig": "Command+Shift+,",
     "closePane": "Command+Control+W",
     "toggleFiles": "Command+Control+F",
     "toggleSshConnect": "Command+Control+O",
-    "toggleAuxiliaryPanel": "Command+Shift+S",
+    "toggleAuxiliaryPanel": null,
     "commandPalette": "Command+Shift+P"
+  },
+  "theme": {
+    "path": "themes/shades-of-purple-super-dark.json"
   }
 }
