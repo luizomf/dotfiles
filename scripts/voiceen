@@ -25,11 +25,11 @@ cat | ./scripts/female-en \
   --chunk-len 180 --prebuffer-chunks 1 --sliding-window-chunks 1 \
   --inter-chunk-silence-ms 50 --chunking kokoro \
   --split-on-newlines True --ensure-terminal-punctuation True \
-  --speed 1.0 --model-fade-ms 50 --model-pad-ms 50 \
-  --denoise False --preprocess-prompt True --postprocess-output True \
-  --chunk-cache-dir .cache/omnivoice-play/female-en \
-  --ref-audio samples/female.wav --language en \
-  --instruct "female, middle-aged, moderate pitch, american accent" \
+  --speed 1 --model-fade-ms 200 --model-pad-ms 200 \
+  --denoise False --preprocess-prompt False --postprocess-output False \
+  --chunk-cache-dir .cache/omnivoice-play/hal \
+  --ref-audio samples/hal.wav --language en \
+  --instruct "male, middle-aged, moderate pitch, british accent" \
   "$@" > /tmp/voiceen.log 2>&1
 )
 
