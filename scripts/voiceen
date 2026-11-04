@@ -16,6 +16,8 @@ export UV_NO_SYNC=1
 
 (
 cd "${PROJECTS_DIR}/omnivoicetts" || exit 1
+# TEXT="$(cat | tr '\n' ' ')"
+TEXT="$(cat)"
 # ./scripts/clear_cache
 # pkill -9 -f '[o]mnivoicetts' || true
 cat | ./scripts/female-en \
@@ -30,6 +32,6 @@ cat | ./scripts/female-en \
   --chunk-cache-dir .cache/omnivoice-play/hal \
   --ref-audio samples/hal.wav --language en \
   --instruct "male, middle-aged, moderate pitch, british accent" \
-  "$@" > /tmp/voiceen.log 2>&1
+  "$@" > /tmp/voicept.log 2>&1 <<< "$TEXT"
 )
 
