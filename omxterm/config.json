@@ -16,7 +16,8 @@
       "right": 16,
       "bottom": 4,
       "left": 16
-    }
+    },
+    "contextMenuEnabled": true
   },
   "scrollback": {
     "lines": 30000
@@ -53,27 +54,28 @@
     "selectTab7": "Command+7",
     "selectTab8": "Command+8",
     "selectTab9": "Command+9",
-    "splitRight": "Command+D",
-    "splitDown": "Command+Shift+E",
+    "splitRight": "Command+R",
+    "splitDown": "Command+D",
     "focusNextPane": "Command+]",
     "focusPreviousPane": "Command+[",
     "focusPaneLeft": "Command+Control+H",
     "focusPaneRight": "Command+Control+L",
     "focusPaneUp": "Command+Control+K",
     "focusPaneDown": "Command+Control+J",
-    "equalizePanes": "Command+Control+=",
+    "equalizePanes": "Command+=",
     "zoomIn": "Command+Shift+=",
-    "zoomOut": "Command+Shift+-",
-    "actualSize": "Command+Shift+0",
+    "zoomOut": "Command+-",
+    "actualSize": "Command+0",
     "toggleFullScreen": "Command+Enter",
-    "toggleSnippets": "Command+Shift+S",
+    "toggleSnippets": "Command+Control+S",
     "toggleTabBar": "Command+Shift+B",
     "toggleTitleBar": "Command+Shift+D",
     "reloadConfig": "Command+Shift+,",
     "closePane": "Command+Control+W",
     "toggleFiles": "Command+Control+F",
     "toggleSshConnect": "Command+Control+O",
-    "toggleAuxiliaryPanel": null,
-    "commandPalette": "Command+Shift+P"
+    "toggleAuxiliaryPanel": "Command+Shift+S",
+    "commandPalette": "Command+Shift+P",
+    "moveAuxiliaryPanel": "Command+Shift+1"
   }
 }
