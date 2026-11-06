@@ -278,6 +278,7 @@ sync_data_home() {
       --include='/backups/**.sqlite'
       --include='/backups/**.sqlite3'
       "${excludes[@]}"
+      --exclude='/WIP/'
       --exclude='/agent-homes/*/.codex/auth.json'
       --exclude='/agent-homes/*/.pi/agent/auth.json'
     )

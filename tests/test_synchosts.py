@@ -491,6 +491,7 @@ class SyncHostsTests(unittest.TestCase):
       "Desktop/tutoriais_e_cursos/project/.pi/session.json",
       "sannux-data/workspaces/user-project/code",
       "sannux-data/worktrees/user-project/feature/code",
+      "sannux-data/WIP/project/notes.md",
       "Desktop/tutoriais_e_cursos/omxterm-issue-278/source.txt",
     ]
     for host in ["m132", "m4128", "fedoraair"]:

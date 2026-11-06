@@ -58,7 +58,7 @@ recovery.
 | `~/Desktop/tutoriais_e_cursos/` | Projects, with the project exclusions below                                                                                      |
 | `~/.agents/skills/`             | Whole directory, with shared exclusions                                                                                          |
 | `~/.pi/`                        | Whole directory, including settings, models, sessions, resources and new/unlisted files; known auth uses the separate flow below |
-| `~/sannux-data/`                | Whole directory except `workspaces/` and `worktrees/`, with shared exclusions and known auth rules                               |
+| `~/sannux-data/`                | Whole directory except `workspaces/`, `worktrees/`, and `WIP/`, with shared exclusions and known auth rules                      |
 | `~/.ollama/service/`            | Whole directory, including catalogs, docs/history, source, binaries and backups; shared exclusions still apply                   |
 | `~/.config/omxterm/`            | Whole directory: config, snippets, themes, assets and new files, with shared exclusions                                          |
 | `~/.codex/`                     | **Only `auth.json`, with `--sync-auth`**; never the whole host Codex home                                                        |
@@ -110,11 +110,11 @@ self-contained snapshots there, not live databases. The script does not detect
 whether a DB is open or create a consistent backup. Other DB locations retain
 the shared exclusions, including backups inside excluded `.omnews-data/`.
 
-`~/sannux-data/workspaces/` and `~/sannux-data/worktrees/` are excluded in both
-directions: worktrees there stay host-local and must be transferred manually
-when needed. Existing peer copies are not removed. Worktrees outside these
-directories still travel unless explicitly excluded; the script does not detect
-worktrees from Git metadata.
+`~/sannux-data/workspaces/`, `~/sannux-data/worktrees/`, and
+`~/sannux-data/WIP/` are excluded in both directions: their contents stay
+host-local and must be transferred manually when needed. Existing peer copies
+are not removed. Worktrees outside these directories still travel unless
+explicitly excluded; the script does not detect worktrees from Git metadata.
 
 Create new Git worktrees at `~/sannux-data/worktrees/<repo>/<worktree_name>`.
 Existing worktrees are not relocated automatically.
