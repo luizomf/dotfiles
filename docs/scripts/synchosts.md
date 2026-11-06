@@ -116,6 +116,12 @@ host-local and must be transferred manually when needed. Existing peer copies
 are not removed. Worktrees outside these directories still travel unless
 explicitly excluded; the script does not detect worktrees from Git metadata.
 
+`~/sannux-data/backups/fedora-network/` is also excluded in both directions: its
+original system backup can contain root-owned, unreadable private files.
+Portable private archives in the sibling `backups/fedora-network-archives/`
+directory travel normally. Archive creation is manual, not part of sync;
+existing peer copies of the excluded originals are not deleted.
+
 Create new Git worktrees at `~/sannux-data/worktrees/<repo>/<worktree_name>`.
 Existing worktrees are not relocated automatically.
 

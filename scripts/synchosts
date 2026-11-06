@@ -274,6 +274,7 @@ sync_data_home() {
     excludes=(
       --exclude='/workspaces/'
       --exclude='/worktrees/'
+      --exclude='/backups/fedora-network/'
       --include='/backups/**.db'
       --include='/backups/**.sqlite'
       --include='/backups/**.sqlite3'

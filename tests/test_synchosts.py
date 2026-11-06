@@ -492,6 +492,7 @@ class SyncHostsTests(unittest.TestCase):
       "sannux-data/workspaces/user-project/code",
       "sannux-data/worktrees/user-project/feature/code",
       "sannux-data/WIP/project/notes.md",
+      "sannux-data/backups/fedora-network/snapshot/system-connections/private.conf",
       "Desktop/tutoriais_e_cursos/omxterm-issue-278/source.txt",
     ]
     for host in ["m132", "m4128", "fedoraair"]:
@@ -520,6 +521,19 @@ class SyncHostsTests(unittest.TestCase):
     for host in ["m132", "m4128", "fedoraair"]:
       for rel in live:
         self.assertEqual((self.root / "homes" / host / rel).read_text(), host, rel)
+
+  def test_private_network_backup_archive_travels_without_opening_permissions(self):
+    relative = "sannux-data/backups/fedora-network-archives/snapshot.tar.gz"
+    source = self.root / "homes/fedoraair" / relative
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b"synthetic private archive")
+    source.chmod(0o600)
+    result = self.run_sync()
+    self.assertEqual(result.returncode, 0, result.stderr)
+    for host in ["m132", "m4128", "fedoraair"]:
+      target = self.root / "homes" / host / relative
+      self.assertEqual(target.read_bytes(), source.read_bytes())
+      self.assertEqual(target.stat().st_mode & 0o777, 0o600)
 
   def test_additional_host_receives_main_winner_without_contributing_newer_settings(
     self,
