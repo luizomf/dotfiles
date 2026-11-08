@@ -49,3 +49,7 @@ npm -g upgrade @google/gemini-cli npm prettier corepack
 
 echo "Sleeping for 1 sec..."
 sleep 1
+
+if command -v dnf >/dev/null; then
+  sudo dnf upgrade -y --refresh
+fi
