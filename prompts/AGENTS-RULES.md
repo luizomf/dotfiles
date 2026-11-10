@@ -14,10 +14,10 @@ needed. Reduce what must be understood and maintained, not just the line count.
 Preserve required behavior, security, and applicable checks; keep cleanup scoped
 to the task.
 
-- Prefer the shorter solution when both are equally clear and reliable. Add lines
-  for a concrete gain in readability, explicit control flow, removal of duplication,
-  or isolation of an actual dependency. Do not shorten by hiding behavior in dense
-  expressions or compressing formatting.
+- Prefer the shorter solution when both are equally clear and reliable. Add
+  lines for a concrete gain in readability, explicit control flow, removal of
+  duplication, or isolation of an actual dependency. Do not shorten by hiding
+  behavior in dense expressions or compressing formatting.
 - Use patterns and architecture to simplify a present difficulty in use or
   maintenance. Each new layer must identify the difficulty it removes. Prefer
   direct code over layers that only forward calls or rename concepts without
@@ -25,31 +25,34 @@ to the task.
 - Keep values the product already allows operators to change—such as contact
   addresses or selected targets—in configuration, not scattered implementation
   constants. Updating these values may edit configuration files, but should not
-  require implementation or schema changes. Do not make every literal configurable.
-  Preserve validation, authorization, and identity checks.
+  require implementation or schema changes. Do not make every literal
+  configurable. Preserve validation, authorization, and identity checks.
 - Keep domain and workflow rules independent of infrastructure details. Adapters
-  own external services, command execution, and storage mechanics; internal rules
-  own behavior and decisions. Persist required state without spreading database
-  layout or transport formats throughout the application.
-- Connect these responsibilities through small explicit interfaces at real change
-  boundaries. A function or concrete module may be enough. Do not give every class
-  an interface or introduce extension points for hypothetical features.
-- Test observable behavior with synthetic data and configuration. Verify external
-  service and persistence contracts at their boundaries; ordinary rule tests
-  should not require live infrastructure or mirror production configuration.
+  own external services, command execution, and storage mechanics; internal
+  rules own behavior and decisions. Persist required state without spreading
+  database layout or transport formats throughout the application.
+- Connect these responsibilities through small explicit interfaces at real
+  change boundaries. A function or concrete module may be enough. Do not give
+  every class an interface or introduce extension points for hypothetical
+  features.
+- Test observable behavior with synthetic data and configuration. Verify
+  external service and persistence contracts at their boundaries; ordinary rule
+  tests should not require live infrastructure or mirror production
+  configuration.
 - Make the smallest coherent change. Avoid parallel implementations, speculative
   extension points, unrelated cleanup, and new tooling without a concrete need.
-  Simplicity does not mean weakening correctness, security, or applicable checks.
+  Simplicity does not mean weakening correctness, security, or applicable
+  checks.
 - When a small feature requires changes across unrelated layers, identify the
   coupling and fix the narrow boundary when practical. Record larger cleanup
   separately rather than turning feature delivery into a system rewrite.
 
 ## Authority and scope
 
-- This file applies repository-wide. Use the most specific applicable `AGENTS.md`
-  for subtree details. Surface conflicts with repository-wide invariants or
-  higher-priority instructions rather than silently treating specificity as
-  permission to override them.
+- This file applies repository-wide. Use the most specific applicable
+  `AGENTS.md` for subtree details. Surface conflicts with repository-wide
+  invariants or higher-priority instructions rather than silently treating
+  specificity as permission to override them.
 - Identify the canonical sources for product behavior, domain language,
   architecture decisions, schemas, generated artifacts, and operations below.
   These sources have distinct roles; surface conflicts instead of silently
@@ -105,8 +108,9 @@ or a second command path without a concrete gap the existing setup cannot fill.
 For production and other long-lived projects, establish automated feedback
 before substantial implementation accumulates. During authorized project or
 quality-tooling setup, use tools appropriate to the language and stack and check
-their settings into the repository. Adopting this template documents the contract;
-it does not itself authorize installing missing tools during unrelated maintenance.
+their settings into the repository. Adopting this template documents the
+contract; it does not itself authorize installing missing tools during unrelated
+maintenance.
 
 Configure every applicable category:
 
@@ -117,7 +121,8 @@ Configure every applicable category:
   style rather than cosmetics already owned by the formatter;
 - a measurable complexity rule, including cyclomatic complexity where supported;
 - documentation checks or builds when documentation has executable structure,
-  links, schemas, generated references, or examples that can drift; and
+  links, schemas, generated references, or examples that can drift (formatting
+  and links, never the wording of prose); and
 - build or packaging validation for delivered artifacts.
 
 Gates must return a failing status for violations they own. New projects should
@@ -128,15 +133,17 @@ make a gate pass.
 
 Behavior changes, including bug fixes, require caller-visible tests covering the
 changed outcome and important failure paths. Report concrete obstacles to these
-checks without claiming unverified behavior is verified. Keep affected source-of-truth
-documentation, schemas, examples, generated references, and operational guidance
-synchronized with the same change.
+checks without claiming unverified behavior is verified. Keep affected
+source-of-truth documentation, schemas, examples, generated references, and
+operational guidance synchronized with the same change.
 
 ### Existing-project ratchet
 
 When strict repository-wide adoption would fail on legacy code:
 
-- do not weaken or remove a gate that already passes;
+- do not weaken or remove a gate that already passes, except a test that pins
+  prose, source text, or implementation details instead of behavior: delete or
+  rewrite it;
 - require new and materially changed code to meet the target standard;
 - use the tool's narrowest practical baseline, scoped configuration, or changed-
   code enforcement to isolate pre-existing violations without exempting new
@@ -154,10 +161,10 @@ production baseline before promoted code becomes maintained product code.
 
 - Before editing, read applicable instructions, canonical docs, configuration,
   relevant code and tests, and current worktree state. Preserve unrelated work.
-- Before reviewing, updating, or commenting on a pull request, verify its current
-  state. Treat merged or closed pull requests as read-only historical records:
-  do not modify or comment on them unless explicitly requested. Record follow-up
-  work in a new issue or pull request.
+- Before reviewing, updating, or commenting on a pull request, verify its
+  current state. Treat merged or closed pull requests as read-only historical
+  records: do not modify or comment on them unless explicitly requested. Record
+  follow-up work in a new issue or pull request.
 - Establish current behavior and the applicable verification path before making
   a behavior change. Reproduce reported defects when practical.
 - Prefer test-driven development for code changes: write a caller-visible test
