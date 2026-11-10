@@ -12,6 +12,7 @@ maintenance guidance.
 - [`synchosts`](scripts/synchosts.md)
 - [`clear_sannux_transients`](scripts/clear_sannux_transients.md)
 - [`stop_omnivoicetts`](scripts/stop_omnivoicetts.md)
+- [`genimage`](scripts/genimage.md)
 
 ## Other topics
 

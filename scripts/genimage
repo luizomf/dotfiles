@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+#
+# genimage — generate one image with a local open model through mflux.
+# Runs where mflux is installed (m4128); elsewhere it runs there over SSH and
+# copies the PNG back. Extra arguments after `--` go straight to mflux.
+
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: genimage [-m MODEL] [-o OUT.png] [--size WxH] [--seed N]
+                (-p PROMPT | -f FILE|-) [-- MFLUX_ARGS...]
+
+Models (all allow commercial use; check before adding others):
+  z-image  Z-Image Turbo, 6B, Apache 2.0 (default, fast)
+  qwen     Qwen-Image-2512, 20B, Apache 2.0 (slow, best text in image)
+  flux3    FLUX 3 Image Klein, 5.6B, FLUX Kommunity (free under US$5M/year)
+
+Defaults: --size 1280x720, output genimage-<time>-<model>.png.
+Remote host: GENIMAGE_HOST (default m4128).
+EOF
+}
+
+model=z-image
+out=""
+size=1280x720
+seed=""
+prompt=""
+prompt_file=""
+extra=()
+
+while (( $# > 0 )); do
+  case "$1" in
+    -m|--model) model="${2:?}"; shift 2 ;;
+    -o|--output) out="${2:?}"; shift 2 ;;
+    --size) size="${2:?}"; shift 2 ;;
+    --seed) seed="${2:?}"; shift 2 ;;
+    -p|--prompt) prompt="${2:?}"; shift 2 ;;
+    -f|--prompt-file) prompt_file="${2:?}"; shift 2 ;;
+    -h|--help) usage; exit 0 ;;
+    --) shift; extra=("$@"); break ;;
+    *) usage >&2; exit 2 ;;
+  esac
+done
+
+if [[ -n "$prompt_file" ]]; then
+  if [[ "$prompt_file" == - ]]; then prompt="$(cat)"; else prompt="$(cat -- "$prompt_file")"; fi
+fi
+[[ -n "${prompt//[[:space:]]/}" ]] || { usage >&2; exit 2; }
+[[ "$size" =~ ^([0-9]+)x([0-9]+)$ ]] || { echo "Bad --size: $size" >&2; exit 2; }
+width="${BASH_REMATCH[1]}"
+height="${BASH_REMATCH[2]}"
+
+case "$model" in
+  z-image) cmd=(mflux-generate-z-image-turbo) ;;
+  qwen) cmd=(mflux-generate-qwen --model qwen-image) ;;
+  flux3) cmd=(mflux-generate-flux3) ;;
+  *) echo "Unknown model: $model (use z-image, qwen or flux3)" >&2; exit 2 ;;
+esac
+
+out="${out:-genimage-$(date +%Y%m%d-%H%M%S)-$model.png}"
+
+if command -v "${cmd[0]}" >/dev/null 2>&1; then
+  tmp="$(mktemp)"
+  trap 'rm -f "$tmp"' EXIT
+  printf '%s\n' "$prompt" > "$tmp"
+  "${cmd[@]}" --prompt-file "$tmp" --width "$width" --height "$height" \
+    ${seed:+--seed "$seed"} --output "$out" ${extra[@]+"${extra[@]}"}
+  exit
+fi
+
+# No local mflux: run on the image host and copy the result back.
+host="${GENIMAGE_HOST:-m4128}"
+remote_out="/tmp/genimage-$$-$RANDOM.png"
+remote_args=(genimage -m "$model" --size "$size" -o "$remote_out" -f -)
+[[ -z "$seed" ]] || remote_args+=(--seed "$seed")
+(( ${#extra[@]} == 0 )) || remote_args+=(-- ${extra[@]+"${extra[@]}"})
+printf -v remote_cmd '%q ' "${remote_args[@]}"
+printf -v remote_cmd 'zsh -l -c %q' "$remote_cmd"
+
+printf '%s\n' "$prompt" | ssh -o BatchMode=yes "$host" "$remote_cmd"
+scp -q "$host:$remote_out" "$out"
+ssh -o BatchMode=yes "$host" "rm -f $(printf '%q' "$remote_out")"
+printf '%s\n' "$out"
