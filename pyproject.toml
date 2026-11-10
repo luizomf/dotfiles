@@ -31,6 +31,7 @@ include = [
   "scripts/binunicode",
   "scripts/bq",
   "scripts/clear_sannux_transients",
+  "scripts/genimage-server",
   "scripts/password_generator",
   "scripts/termbench",
 ]
@@ -74,6 +75,7 @@ include = [
   "scripts/binunicode",
   "scripts/bq",
   "scripts/clear_sannux_transients",
+  "scripts/genimage-server",
   "scripts/password_generator",
   "scripts/termbench",
 ]
