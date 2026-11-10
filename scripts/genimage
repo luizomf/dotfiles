@@ -12,16 +12,16 @@ Usage: genimage [-m MODEL] [-o OUT.png] [--size WxH] [--seed N]
                 (-p PROMPT | -f FILE|-) [-- MFLUX_ARGS...]
 
 Models (all allow commercial use; check before adding others):
-  z-image  Z-Image Turbo, 6B, Apache 2.0 (default, fast)
-  qwen     Qwen-Image-2512, 20B, Apache 2.0 (slow, best text in image)
-  flux3    FLUX 3 Image Klein, 5.6B, FLUX Kommunity (free under US$5M/year)
+  flux3    FLUX 3 Image Klein, 5.6B, FLUX Kommunity (default; free under US$5M/year)
+  z-image  Z-Image Turbo, 6B, Apache 2.0 (weaker text and logos)
+  qwen     Qwen-Image-2512, 20B, Apache 2.0 (slow, ~56 GB RAM)
 
 Defaults: --size 1280x720, output genimage-<time>-<model>.png.
 Remote host: GENIMAGE_HOST (default m4128).
 EOF
 }
 
-model=z-image
+model=flux3
 out=""
 size=1280x720
 seed=""

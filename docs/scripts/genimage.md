@@ -6,16 +6,17 @@
 and copies the PNG back. Set `GENIMAGE_HOST` to use another machine.
 
 ```sh
-genimage -p "a blue terminal on a desk"                 # Z-Image Turbo, 1280x720
+genimage -p "a blue terminal on a desk"                 # FLUX 3 Klein, 1280x720
 genimage -m qwen -f prompt.txt -o cover.png --seed 42   # Qwen-Image-2512
-genimage -m flux3 -f - < prompt.txt -- --steps 20       # extra args go to mflux
+genimage -f - < prompt.txt -- --steps 20                # extra args go to mflux
 ```
 
 Models are limited to licenses that allow commercial use: `z-image` (Z-Image
 Turbo, Apache 2.0), `qwen` (Qwen-Image-2512, Apache 2.0) and `flux3` (FLUX 3
-Image Klein, FLUX Kommunity, free under US$5M yearly revenue). Check the license
-before adding another model. Weights download to the Hugging Face cache on the
-first run of each model.
+Image Klein, FLUX Kommunity, free under US$5M yearly revenue; the default, with
+the best text and logos in our tests). Check the license before adding another
+model. Weights download to the Hugging Face cache on the first run of each
+model.
 
 ## `genimage-server`
 
