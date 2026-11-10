@@ -99,7 +99,7 @@ snippets:
 
   - name: Sannux Rebuild (only used)
     body: |2-
-       for t in codex codex-ollama agy pi; do
+       for t in codex codex-ollama agy pi claude-code; do
         sannux setup "$t";
         sannux rebuild "$t";
       done;

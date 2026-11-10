@@ -19,6 +19,7 @@ export CURDIR="$workspace"
 
 prompt='Testing. Reply with exactly OK. Do not modify files or run tools.'
 cloud_models=(gpt-6-astra gpt-6.1-sol gpt-6-luna)
+claude_models=(opus sonnet haiku)
 results=()
 failures=0
 refresh_ok=false
@@ -102,6 +103,15 @@ else
   results+=("FAIL: LOCAL_MODEL is unset; local-model checks skipped")
   failures=$((failures + 1))
 fi
+
+for model in "${claude_models[@]}"; do
+  check_model "Claude host / $model" \
+    claude -p --model "$model" --no-session-persistence
+  check_model "Claude ephemeral home / $model" \
+    sannux_ephemeral claude-code -p --model "$model" --no-session-persistence
+  check_model "Claude persistent home / $model" \
+    sannux run claude-code -p --model "$model" --no-session-persistence
+done
 
 check_model 'Antigravity ephemeral home / Gemini 3.8 Flash (High)' \
   sannux_agy_stdin --model 'Gemini 3.8 Flash (High)' --dangerously-skip-permissions

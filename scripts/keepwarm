@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# keepwarm — one worker pings five independent logins on each fleet host via SSH.
+# keepwarm — one worker pings the agent logins on each fleet host via SSH.
 # Run without arguments for the hourly loop, or --once for a foreground check.
 #
 # Each environment uses its own login; this script never copies credentials.
@@ -99,21 +99,28 @@ ping_agents() {
   cycle_successes=0
   cycle_failures=0
   for host in "${hosts[@]}"; do
-    # Preserve the maintenance model unless the owner overrides it.
-    run_ping "$host/codex-host" remote_command "$host" \
-      codex exec --skip-git-repo-check - --ephemeral --model "${KEEPWARM_CODEX_MODEL:-gpt-6-luna}" -c model_reasoning_effort=low --color never
+    run_ping "$host/claude-host" remote_command "$host" \
+      claude -p --model "${KEEPWARM_CLAUDE_MODEL:-haiku}" --no-session-persistence
 
-    run_ping "$host/pi-host" remote_command "$host" \
-      pi -p --no-session --model openai-codex/gpt-6-luna:low
+    run_ping "$host/claude-sannux" remote_command "$host" sannux run claude-code \
+      -p --model "${KEEPWARM_CLAUDE_MODEL:-haiku}" --no-session-persistence
 
-    run_ping "$host/codex-sannux" remote_command "$host" sannux run \
-      codex exec --skip-git-repo-check - --ephemeral --model "${KEEPWARM_CODEX_MODEL:-gpt-6-luna}" -c model_reasoning_effort=low --color never
-
-    run_ping "$host/pi-sannux" remote_command "$host" sannux run \
-      pi -p --no-session --model openai-codex/gpt-6-luna:low
-
-    run_ping "$host/codex-in-pi" remote_command "$host" sannux compose pi run --rm -T --entrypoint codex agent \
-      exec --skip-git-repo-check - --ephemeral --model "${KEEPWARM_CODEX_MODEL:-gpt-6-luna}" -c model_reasoning_effort=low --color never
+    # OpenAI logins paused on 2026-11-10 (back on Claude). Uncomment to resume.
+    # # Preserve the maintenance model unless the owner overrides it.
+    # run_ping "$host/codex-host" remote_command "$host" \
+    #   codex exec --skip-git-repo-check - --ephemeral --model "${KEEPWARM_CODEX_MODEL:-gpt-6-luna}" -c model_reasoning_effort=low --color never
+    #
+    # run_ping "$host/pi-host" remote_command "$host" \
+    #   pi -p --no-session --model openai-codex/gpt-6-luna:low
+    #
+    # run_ping "$host/codex-sannux" remote_command "$host" sannux run \
+    #   codex exec --skip-git-repo-check - --ephemeral --model "${KEEPWARM_CODEX_MODEL:-gpt-6-luna}" -c model_reasoning_effort=low --color never
+    #
+    # run_ping "$host/pi-sannux" remote_command "$host" sannux run \
+    #   pi -p --no-session --model openai-codex/gpt-6-luna:low
+    #
+    # run_ping "$host/codex-in-pi" remote_command "$host" sannux compose pi run --rm -T --entrypoint codex agent \
+    #   exec --skip-git-repo-check - --ephemeral --model "${KEEPWARM_CODEX_MODEL:-gpt-6-luna}" -c model_reasoning_effort=low --color never
   done
   log "keepwarm round: $cycle_successes successful, $cycle_failures failed."
   (( cycle_failures == 0 ))

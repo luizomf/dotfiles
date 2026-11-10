@@ -96,20 +96,24 @@ the persistent copy; refreshed credentials are discarded with the temporary
 home. This remains an accepted limitation, not a solved rotation problem.
 
 `test_models` now makes a real cloud-model request through nested Codex as well
-as the existing host/container checks; nested failures appear in the summary and
-produce a nonzero exit. Neither command performs login automatically. A login
-status alone does not prove a model request works.
+as the existing host/container checks, and checks Claude Code (`opus`, `sonnet`,
+`haiku`) on the host and in the `claude-code` Sannux home; nested failures
+appear in the summary and produce a nonzero exit. Neither command performs login
+automatically. A login status alone does not prove a model request works.
 
-`keepwarm` is a **single central worker**: every round calls all five targets on
+`keepwarm` is a **single central worker**: every round calls each target on
 `m132`, `m4128`, and `fedoraair` through SSH, even when the alias identifies the
 worker's own machine. Each remote login shell loads its own PATH and
-PROJECTS_DIR; credentials stay in their respective homes. The five targets are
-host Codex, host Pi, Sannux Codex, Sannux Pi, and Codex inside Sannux Pi. Update
-the `scripts/pi` wrapper on each host too: headless requests must skip terminal
-titles, and an unsupported cosmetic title must not prevent Pi from starting.
+PROJECTS_DIR; credentials stay in their respective homes. The active targets are
+host Claude Code and Sannux Claude Code (`haiku`, override with
+`KEEPWARM_CLAUDE_MODEL`). The five OpenAI targets (host Codex, host Pi, Sannux
+Codex, Sannux Pi, Codex inside Sannux Pi) are commented out in the script since
+2026-11-10; uncomment them to resume. Update the `scripts/pi` wrapper on each
+host too: headless requests must skip terminal titles, and an unsupported
+cosmetic title must not prevent Pi from starting.
 
 ```sh
-keepwarm --once  # Foreground 15-target round; nonzero if any request fails
+keepwarm --once  # Foreground round over all targets; nonzero if any request fails
 keepwarm         # Replace the worker on this machine and start the hourly loop
 ```
 
