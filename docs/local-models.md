@@ -105,12 +105,14 @@ automatically. A login status alone does not prove a model request works.
 `m132`, `m4128`, and `fedoraair` through SSH, even when the alias identifies the
 worker's own machine. Each remote login shell loads its own PATH and
 PROJECTS_DIR; credentials stay in their respective homes. The active targets are
-host Claude Code and Sannux Claude Code (`haiku`, override with
-`KEEPWARM_CLAUDE_MODEL`). The five OpenAI targets (host Codex, host Pi, Sannux
-Codex, Sannux Pi, Codex inside Sannux Pi) are commented out in the script since
-2026-11-10; uncomment them to resume. Update the `scripts/pi` wrapper on each
-host too: headless requests must skip terminal titles, and an unsupported
-cosmetic title must not prevent Pi from starting.
+host Claude Code (skipped on the daily driver, whose macOS Keychain login is
+unreachable over SSH), Sannux Claude Code (`haiku`, override with
+`KEEPWARM_CLAUDE_MODEL`) and Sannux Antigravity (`agy`, Gemini Flash). Local
+models have no login and need no ping. The five OpenAI targets (host Codex, host
+Pi, Sannux Codex, Sannux Pi, Codex inside Sannux Pi) are commented out in the
+script since 2026-11-10; uncomment them to resume. Update the `scripts/pi`
+wrapper on each host too: headless requests must skip terminal titles, and an
+unsupported cosmetic title must not prevent Pi from starting.
 
 ```sh
 keepwarm --once  # Foreground round over all targets; nonzero if any request fails

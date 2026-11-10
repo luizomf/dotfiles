@@ -20,6 +20,7 @@ INITIAL_RUN=1        # 1 = ping once shortly after starting
 INITIAL_DELAY=10     # Seconds before the first ping
 
 hosts=(m132 m4128 fedoraair)
+daily_driver=m132
 once=0
 if (( $# > 1 )); then
   printf 'Usage: %s [--once]\n' "${0##*/}" >&2
@@ -99,11 +100,19 @@ ping_agents() {
   cycle_successes=0
   cycle_failures=0
   for host in "${hosts[@]}"; do
-    run_ping "$host/claude-host" remote_command "$host" \
-      claude -p --model "${KEEPWARM_CLAUDE_MODEL:-haiku}" --no-session-persistence
+    # The daily driver keeps its host login fresh by use, and its macOS
+    # Keychain login is unreachable over SSH.
+    if [[ "$host" != "$daily_driver" ]]; then
+      run_ping "$host/claude-host" remote_command "$host" \
+        claude -p --model "${KEEPWARM_CLAUDE_MODEL:-haiku}" --no-session-persistence
+    fi
 
     run_ping "$host/claude-sannux" remote_command "$host" sannux run claude-code \
       -p --model "${KEEPWARM_CLAUDE_MODEL:-haiku}" --no-session-persistence
+
+    # sannux_agy_stdin mounts its working directory, so give it a scratch one.
+    run_ping "$host/agy-sannux" remote_command "$host" bash -c \
+      'mkdir -p ~/.cache/keepwarm-agy && cd ~/.cache/keepwarm-agy && exec sannux_agy_stdin --model "Gemini 3.8 Flash (High)" --dangerously-skip-permissions'
 
     # OpenAI logins paused on 2026-11-10 (back on Claude). Uncomment to resume.
     # # Preserve the maintenance model unless the owner overrides it.
