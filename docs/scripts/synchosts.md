@@ -53,16 +53,17 @@ recovery.
 
 ## What travels
 
-| Root                            | Scope                                                                                                                            |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `~/Desktop/tutoriais_e_cursos/` | Projects, with the project exclusions below                                                                                      |
-| `~/.agents/skills/`             | Whole directory, with shared exclusions                                                                                          |
-| `~/.pi/`                        | Whole directory, including settings, models, sessions, resources and new/unlisted files; known auth uses the separate flow below |
-| `~/sannux-data/`                | Whole directory except `workspaces/`, `worktrees/`, and `WIP/`, with shared exclusions and known auth rules                      |
-| `~/.ollama/service/`            | Whole directory, including catalogs, docs/history, source, binaries and backups; shared exclusions still apply                   |
-| `~/.config/omxterm/`            | Whole directory: config, snippets, themes, assets and new files, with shared exclusions                                          |
-| `~/.codex/`                     | **Only `auth.json`, with `--sync-auth`**; never the whole host Codex home                                                        |
-| `~/.local/share/tmux/lazy/`     | Only the caller's exported portable `state.json`; no broader `~/.local/` synchronization                                         |
+| Root                            | Scope                                                                                                                                                     |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `~/Desktop/tutoriais_e_cursos/` | Projects, with the project exclusions below                                                                                                               |
+| `~/.agents/skills/`             | Whole directory, with shared exclusions                                                                                                                   |
+| `~/.pi/`                        | Whole directory, including settings, models, sessions, resources and new/unlisted files; known auth uses the separate flow below                          |
+| `~/.claude/`                    | Claude Code settings, `CLAUDE.md`, skills, agents, commands and per-project `memory/` only; sessions, history, caches, plugins and credentials stay local |
+| `~/sannux-data/`                | Whole directory except `workspaces/`, `worktrees/`, and `WIP/`, with shared exclusions and known auth rules                                               |
+| `~/.ollama/service/`            | Whole directory, including catalogs, docs/history, source, binaries and backups; shared exclusions still apply                                            |
+| `~/.config/omxterm/`            | Whole directory: config, snippets, themes, assets and new files, with shared exclusions                                                                   |
+| `~/.codex/`                     | **Only `auth.json`, with `--sync-auth`**; never the whole host Codex home                                                                                 |
+| `~/.local/share/tmux/lazy/`     | Only the caller's exported portable `state.json`; no broader `~/.local/` synchronization                                                                  |
 
 The whole Sannux tree includes its nested agent homes and metadata; the
 host-only restriction on `~/.codex/` does not turn those homes into an

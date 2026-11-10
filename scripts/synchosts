@@ -195,7 +195,7 @@ tmux_directory='.local/share/tmux/lazy/'
 # Copy whole roots with the shared exclusions; only known auth uses its own flow.
 data_directories=(
   "$projects_directory" '.agents/skills/' '.ollama/service/'
-  '.pi/' 'sannux-data/' '.config/omxterm/'
+  '.pi/' '.claude/' 'sannux-data/' '.config/omxterm/'
 )
 
 # Export only validated portable state, never sockets, locks, focus or runtime files.
@@ -268,6 +268,17 @@ sync_data_home() {
     )
   elif [[ "$directory" == '.pi/' ]]; then
     excludes+=(--exclude='/agent/auth.json')
+  elif [[ "$directory" == '.claude/' ]]; then
+    # Share configuration, skills and per-project memory. Sessions, history,
+    # caches, plugins and Linux credentials stay with the host that made them.
+    excludes+=(
+      --include='/settings.json' --include='/keybindings.json'
+      --include='/CLAUDE.md'
+      --include='/skills/***' --include='/agents/***' --include='/commands/***'
+      --include='/projects/' --include='/projects/*/'
+      --include='/projects/*/memory/***'
+      --exclude='*'
+    )
   elif [[ "$directory" == 'sannux-data/' ]]; then
     # Completed DB backups travel; live DBs and sidecars keep the shared filters.
     # The operator keeps these snapshots and other sources idle during sync.

@@ -61,6 +61,7 @@ class SyncHostsTests(unittest.TestCase):
         "sannux-data/backups/omnews",
         ".pi/agent",
         ".agents/skills",
+        ".claude",
         ".ollama/service",
         ".config/omxterm",
         ".codex/automations",
@@ -322,6 +323,47 @@ class SyncHostsTests(unittest.TestCase):
       self.assertEqual((destination / link_path).readlink(), Path(relative_target))
       self.assertEqual((destination / link_path).read_text(), "synthetic fixture")
       for relative in portable:
+        self.assertTrue((destination / relative).is_file(), relative)
+      for relative in local_only:
+        self.assertFalse((destination / relative).exists(), relative)
+
+  def test_claude_shares_config_skills_and_memory_but_not_sessions_or_auth(self):
+    memory = ".claude/projects/-Users-luizotavio-Desktop-tutoriais-e-cursos-x/memory"
+    shared = [
+      ".claude/settings.json",
+      ".claude/keybindings.json",
+      ".claude/skills/local-skill/SKILL.md",
+      ".claude/agents/reviewer.md",
+      ".claude/commands/ship.md",
+      f"{memory}/MEMORY.md",
+      f"{memory}/project-note.md",
+    ]
+    local_only = [
+      ".claude/.credentials.json",
+      ".claude/history.jsonl",
+      ".claude/projects/-Users-luizotavio-Desktop-tutoriais-e-cursos-x/session.jsonl",
+      ".claude/sessions/active.json",
+      ".claude/file-history/abc/1",
+      ".claude/cache/changelog.md",
+      ".claude/plugins/installed_plugins.json",
+    ]
+    origin = self.root / "homes/m4128"
+    for relative in shared + local_only:
+      path = origin / relative
+      path.parent.mkdir(parents=True, exist_ok=True)
+      path.write_text("synthetic fixture")
+    instructions = Path(".claude/CLAUDE.md")
+    instructions_target = "../sannux-data/agents/AGENTS.md"
+    (origin / instructions).symlink_to(instructions_target)
+    result = self.run_sync()
+    self.assertEqual(result.returncode, 0, result.stderr)
+    for host in ["m132", "fedoraair"]:
+      destination = self.root / "homes" / host
+      self.assertTrue((destination / instructions).is_symlink())
+      self.assertEqual(
+        (destination / instructions).readlink(), Path(instructions_target)
+      )
+      for relative in shared:
         self.assertTrue((destination / relative).is_file(), relative)
       for relative in local_only:
         self.assertFalse((destination / relative).exists(), relative)
