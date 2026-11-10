@@ -346,6 +346,7 @@ class SyncHostsTests(unittest.TestCase):
       ".claude/file-history/abc/1",
       ".claude/cache/changelog.md",
       ".claude/plugins/installed_plugins.json",
+      ".claude/skills/synced/account-skill/SKILL.md",
     ]
     origin = self.root / "homes/m4128"
     for relative in shared + local_only:

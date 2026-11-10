@@ -270,10 +270,12 @@ sync_data_home() {
     excludes+=(--exclude='/agent/auth.json')
   elif [[ "$directory" == '.claude/' ]]; then
     # Share configuration, skills and per-project memory. Sessions, history,
-    # caches, plugins and Linux credentials stay with the host that made them.
+    # caches, plugins, Linux credentials and account-synced skills stay with
+    # the host that made them.
     excludes+=(
       --include='/settings.json' --include='/keybindings.json'
       --include='/CLAUDE.md'
+      --exclude='/skills/synced/' --exclude='/skills/.bucket-*'
       --include='/skills/***' --include='/agents/***' --include='/commands/***'
       --include='/projects/' --include='/projects/*/'
       --include='/projects/*/memory/***'
