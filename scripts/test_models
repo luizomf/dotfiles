@@ -18,7 +18,7 @@ cd "$workspace"
 export CURDIR="$workspace"
 
 prompt='Testing. Reply with exactly OK. Do not modify files or run tools.'
-cloud_models=(gpt-6-astra gpt-6.1-sol gpt-6-luna)
+# cloud_models=(gpt-6-astra gpt-6.1-sol gpt-6-luna)
 claude_models=(opus sonnet haiku)
 results=()
 failures=0
@@ -53,34 +53,35 @@ else
   failures=$((failures + 1))
 fi
 
-for model in "${cloud_models[@]}"; do
-  check_model "Codex host / $model" \
-    codex --model "$model" -c model_reasoning_effort=low \
-    exec --skip-git-repo-check --ephemeral
-  check_model "Codex ephemeral home / $model" \
-    sannux_ephemeral codex --model "$model" -c model_reasoning_effort=low \
-    exec --skip-git-repo-check --ephemeral
-  check_model "Codex persistent home / $model" \
-    sannux run codex --model "$model" -c model_reasoning_effort=low \
-    exec --skip-git-repo-check --ephemeral
-  # Nested Codex owns a separate login in the Pi home. Check it even if the
-  # resource refresh failed; neither login nor this binary depends on refresh.
-  check_model "Codex inside Pi persistent home / $model" \
-    sannux compose pi run --rm -T --entrypoint codex agent \
-    --model "$model" -c model_reasoning_effort=low \
-    exec --skip-git-repo-check --ephemeral
-
-  check_model "Pi host / $model" \
-    pi --provider openai-codex --model "$model" --thinking medium --no-session -p
-  if [[ "$refresh_ok" == true ]]; then
-    check_model "Pi ephemeral home / $model" \
-      sannux_ephemeral pi --provider openai-codex --model "$model" \
-      --thinking medium --no-session -p
-    check_model "Pi persistent home / $model" \
-      sannux run pi --provider openai-codex --model "$model" \
-      --thinking medium --no-session -p
-  fi
-done
+# Codex/GPT checks disabled while OpenAI quota is exhausted.
+# for model in "${cloud_models[@]}"; do
+#   check_model "Codex host / $model" \
+#     codex --model "$model" -c model_reasoning_effort=low \
+#     exec --skip-git-repo-check --ephemeral
+#   check_model "Codex ephemeral home / $model" \
+#     sannux_ephemeral codex --model "$model" -c model_reasoning_effort=low \
+#     exec --skip-git-repo-check --ephemeral
+#   check_model "Codex persistent home / $model" \
+#     sannux run codex --model "$model" -c model_reasoning_effort=low \
+#     exec --skip-git-repo-check --ephemeral
+#   # Nested Codex owns a separate login in the Pi home. Check it even if the
+#   # resource refresh failed; neither login nor this binary depends on refresh.
+#   check_model "Codex inside Pi persistent home / $model" \
+#     sannux compose pi run --rm -T --entrypoint codex agent \
+#     --model "$model" -c model_reasoning_effort=low \
+#     exec --skip-git-repo-check --ephemeral
+#
+#   check_model "Pi host / $model" \
+#     pi --provider openai-codex --model "$model" --thinking medium --no-session -p
+#   if [[ "$refresh_ok" == true ]]; then
+#     check_model "Pi ephemeral home / $model" \
+#       sannux_ephemeral pi --provider openai-codex --model "$model" \
+#       --thinking medium --no-session -p
+#     check_model "Pi persistent home / $model" \
+#       sannux run pi --provider openai-codex --model "$model" \
+#       --thinking medium --no-session -p
+#   fi
+# done
 
 if [[ -n "${LOCAL_MODEL:-}" ]]; then
   check_model "Codex Ollama ephemeral home / $LOCAL_MODEL" \
@@ -123,9 +124,10 @@ if [[ "$refresh_ok" == true ]]; then
   if [[ -n "${OM_PATHS_FILE:-}" || -f "$daily_paths" || "$(uname -s)" == Linux ]]; then
     daily_command=(env "OM_PATHS_FILE=$daily_paths" "$daily_runner")
   fi
-  check_model 'Daily Pi ephemeral home / gpt-6-astra' \
-    "${daily_command[@]}" --provider openai-codex --model gpt-6-astra \
-    --thinking medium --no-session -p
+  # Codex/GPT check disabled while OpenAI quota is exhausted.
+#   check_model 'Daily Pi ephemeral home / gpt-6-astra' \
+#     "${daily_command[@]}" --provider openai-codex --model gpt-6-astra \
+#     --thinking medium --no-session -p
   if [[ -n "${LOCAL_MODEL:-}" ]]; then
     check_model "Daily Pi ephemeral home / Ollama / $LOCAL_MODEL" \
       "${daily_command[@]}" --provider ollama --model "$LOCAL_MODEL" \
