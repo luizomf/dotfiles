@@ -9,6 +9,7 @@ import fcntl
 import hashlib
 import json
 import os
+import plistlib
 import pwd
 import re
 import shlex
@@ -16,6 +17,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
@@ -422,6 +424,10 @@ class LazyTmux:
       message = "tmux is required in PATH (prefer Homebrew)"
       raise RuntimeError(message)
     self.binary = binary
+    # macOS-only opt-in; elsewhere the variable is ignored.
+    self.launchd = (
+      sys.platform == "darwin" and os.environ.get("TMUX_LAZY_LAUNCHD") == "1"
+    )
     if not Path(shell).is_absolute() or not os.access(shell, os.X_OK):
       message = "Select an executable absolute shell path with --shell"
       raise ValueError(message)
@@ -634,31 +640,7 @@ class LazyTmux:
     state = self.load() if self.state_file.exists() else None
     started = False
     try:
-      # tmux reads -f only for a newly created server. A native creator may
-      # win between alive() and start-server; only our startup-only token
-      # proves that the bootstrap settings were applied to a server we made.
-      token = str(uuid.uuid4())
-      with tempfile.NamedTemporaryFile(
-        "w", prefix="startup-", suffix=".conf", dir=self.root
-      ) as config:
-        config.write(
-          "set-option -s exit-empty off\n"
-          f"set-option -g @lazy_boot_owner {token}\n"
-          f"set-option -g @lazy_state_dir {shlex.quote(str(self.root))}\n"
-          "set-option -g default-shell /bin/sh\n"
-          "set-option -g remain-on-exit on\n"
-          "set-option -g base-index 1\n"
-          "set-option -g pane-base-index 1\n"
-        )
-        config.flush()
-        self.tmux("start-server", configuration=config.name)
-      if self.tmux("show-option", "-gqv", "@lazy_boot_owner") != token:
-        message = (
-          "Another tmux server started concurrently; "
-          "left it unchanged. Attach or retry."
-        )
-        # The outer handler reports partial startup only after ownership is proven.
-        raise RuntimeError(message)  # noqa: TRY301
+      self.start_owned_server()
       started = True
       self.tmux(
         "new-session",
@@ -713,6 +695,128 @@ class LazyTmux:
           file=sys.stderr,
         )
       raise
+
+  def start_owned_server(self) -> None:
+    # tmux reads -f only for a newly created server. A native creator may
+    # win between alive() and start-server; only our startup-only token
+    # proves that the bootstrap settings were applied to a server we made.
+    token = str(uuid.uuid4())
+    startup = (
+      "set-option -s exit-empty off\n"
+      f"set-option -g @lazy_boot_owner {token}\n"
+      f"set-option -g @lazy_state_dir {shlex.quote(str(self.root))}\n"
+      "set-option -g default-shell /bin/sh\n"
+      "set-option -g remain-on-exit on\n"
+      "set-option -g base-index 1\n"
+      "set-option -g pane-base-index 1\n"
+    )
+    if self.launchd:
+      self.start_with_launchd(startup)
+    else:
+      with tempfile.NamedTemporaryFile(
+        "w", prefix="startup-", suffix=".conf", dir=self.root
+      ) as config:
+        config.write(startup)
+        config.flush()
+        self.tmux("start-server", configuration=config.name)
+    if self.tmux("show-option", "-gqv", "@lazy_boot_owner") != token:
+      # boot reports partial startup only after ownership is proven.
+      message = (
+        "Another tmux server started concurrently; left it unchanged. Attach or retry."
+      )
+      raise RuntimeError(message)
+    if self.launchd:
+      self.copy_environment()
+
+  def responds(self) -> bool:
+    try:
+      self.tmux("show-option", "-gqv", "@lazy_boot_owner")
+    except RuntimeError:
+      return False
+    return True
+
+  def start_with_launchd(self, startup: str) -> None:
+    """Create the server as a per-user launchd job instead of a terminal child.
+
+    macOS privacy (TCC) then treats the tmux binary, not the terminal app that
+    ran boot, as responsible for the server and everything inside it.
+    """
+    launchctl = shutil.which("launchctl")
+    if not launchctl:
+      message = "launchctl is required for TMUX_LAZY_LAUNCHD=1"
+      raise RuntimeError(message)
+    socket_hash = hashlib.sha256(os.fsencode(self.socket)).hexdigest()[:16]
+    label = f"local.tmux-lazy.{socket_hash}"
+    # Fixed per-socket paths: launchd must read the configuration after this
+    # call returns. A fresh token is written under the state lock on every boot.
+    configuration = self.root / f"{label}.conf"
+    configuration.write_text(startup)
+    mask = os.umask(0)
+    os.umask(mask)
+    job = plistlib.dumps(
+      {
+        "Label": label,
+        # -D keeps the server as the job's main process (launchd kills a
+        # daemonized child once its main process exits) and accepts no command.
+        # No KeepAlive or RunAtLoad: kill-server really ends the server, and
+        # only boot starts it again.
+        "ProgramArguments": [
+          self.binary,
+          "-D",
+          "-S",
+          str(self.socket),
+          "-f",
+          str(configuration),
+        ],
+        "ProcessType": "Interactive",
+        "Umask": mask,
+        "WorkingDirectory": str(self.home),
+      }
+    )
+    plist = self.root / f"{label}.plist"
+    changed = not plist.is_file() or plist.read_bytes() != job
+    if changed:
+      plist.write_bytes(job)
+    domain = f"gui/{os.getuid()}"
+    service = f"{domain}/{label}"
+
+    def launchctl_run(*args: str, check: bool = True) -> bool:
+      # Resolved launchctl with literal arguments; no shell.
+      result = subprocess.run(  # noqa: S603
+        [launchctl, *args], text=True, capture_output=True, timeout=30, check=False
+      )
+      if check and result.returncode:
+        message = f"launchctl {args[0]}: {result.stderr.strip() or result.returncode}"
+        raise RuntimeError(message)
+      return result.returncode == 0
+
+    # A stopped job stays registered after kill-server; only re-register it
+    # when its definition changed. alive() was false, so nothing is running.
+    loaded = launchctl_run("print", service, check=False)
+    if loaded and changed:
+      launchctl_run("bootout", service)
+    if changed or not loaded:
+      launchctl_run("bootstrap", domain, str(plist))
+    # Without -k, kickstart never restarts an instance that is already running.
+    launchctl_run("kickstart", service)
+    # Any answering server ends the wait; the caller then checks the token.
+    deadline = time.monotonic() + 10
+    while not self.responds():
+      if time.monotonic() > deadline:
+        message = f"launchd did not start tmux; inspect: launchctl print {service}"
+        raise RuntimeError(message)
+      time.sleep(0.05)
+
+  def copy_environment(self) -> None:
+    """Give panes and hooks the caller's environment, as a direct start would."""
+    # The launchd job starts with launchd's minimal environment.
+    for line in self.tmux("show-environment", "-g").splitlines():
+      name = line.split("=", 1)[0]
+      if not name.startswith("-") and name not in self.env:
+        self.tmux("set-environment", "-gu", name)
+    # One call per variable: tmux treats a trailing ';' as a command separator.
+    for name, value in self.env.items():
+      self.tmux("set-environment", "-g", name, value)
 
   def restore_structure(self, state: Snapshot) -> tuple[str, str]:
     targets: dict[tuple[object, object], tuple[str, str]] = {}

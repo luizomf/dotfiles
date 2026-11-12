@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import plistlib
 import pty
 import re
 import select
@@ -44,7 +45,15 @@ class TmuxTestCase(unittest.TestCase):
     # Error notifications otherwise inherit TMUX and can reach the user's server.
     # Shell startup files must not run from the caller's ENV/BASH_ENV either.
     environment = dict(os.environ)
-    for key in ("TMUX", "TMUX_PANE", "TMUX_LAZY_STATE_DIR", "ENV", "BASH_ENV"):
+    # An exported TMUX_LAZY_LAUNCHD must not send tests to the real launchd.
+    for key in (
+      "TMUX",
+      "TMUX_PANE",
+      "TMUX_LAZY_STATE_DIR",
+      "TMUX_LAZY_LAUNCHD",
+      "ENV",
+      "BASH_ENV",
+    ):
       environment.pop(key, None)
     cleanup = patch.dict(os.environ, environment, clear=True)
     cleanup.start()
@@ -1247,6 +1256,171 @@ class SleepNavigationTests(TmuxTestCase):
       self.tmux("list-panes", "-t", "beta:3", "-F", "#{?pane_pid,#{pane_pid},0}"), "0"
     )
     self.assertEqual(json.loads(self.lazy("status").stdout)["pending_panes"], 4)
+
+
+# Stands in for launchctl: keeps a registry of bootstrapped plists and, like
+# launchd, starts a kickstarted job detached with a minimal environment.
+FAKE_LAUNCHCTL = """
+import json, os, pathlib, plistlib, subprocess, sys
+root = pathlib.Path(os.environ["FAKE_LAUNCHD_DIR"])
+with (root / "calls.log").open("a") as log:
+  log.write(" ".join(sys.argv[1:3]) + "\\n")
+registry_path = root / "registry.json"
+registry = json.loads(registry_path.read_text()) if registry_path.exists() else {}
+action, target = sys.argv[1], sys.argv[-1]
+if action == "print":
+  sys.exit(0 if target in registry else 113)
+if action == "bootstrap":
+  job = plistlib.loads(pathlib.Path(target).read_bytes())
+  service = sys.argv[2] + "/" + job["Label"]
+  if service in registry:
+    sys.exit(5)
+  registry[service] = target
+elif action == "bootout":
+  registry.pop(target)
+elif action == "kickstart":
+  job = plistlib.loads(pathlib.Path(registry[target]).read_bytes())
+  if os.environ.get("FAKE_LAUNCHD_NATIVE_WINNER"):
+    socket = job["ProgramArguments"][3]
+    subprocess.run([job["ProgramArguments"][0], "-S", socket, "-f", "/dev/null",
+      "new-session", "-d", "-s", "native-winner", "/bin/sh"], check=True,
+      env={"PATH": "/usr/bin:/bin"})
+  subprocess.Popen(job["ProgramArguments"], cwd=job["WorkingDirectory"],
+    env={"PATH": "/usr/bin:/bin", "LAUNCHD_ONLY": "1"},
+    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL, start_new_session=True)
+registry_path.write_text(json.dumps(registry))
+"""
+
+
+class LaunchdBootTests(TmuxTestCase):
+  def setUp(self) -> None:
+    super().setUp()
+    temporary = tempfile.TemporaryDirectory(prefix="lazy-launchd-")
+    self.addCleanup(temporary.cleanup)
+    self.root = Path(temporary.name).resolve()
+    home = self.root / "home"
+    home.mkdir()
+    (home / "dotfiles").symlink_to(REPO, target_is_directory=True)
+    self.socket = self.root / "socket"
+    self.state = self.root / "state"
+    binary_dir = self.root / "bin"
+    binary_dir.mkdir()
+    launchctl = binary_dir / "launchctl"
+    launchctl.write_text(f"#!{sys.executable}\n{FAKE_LAUNCHCTL}")
+    launchctl.chmod(0o700)
+    self.env = {
+      **os.environ,
+      "PATH": str(binary_dir) + os.pathsep + os.environ["PATH"],
+      "FAKE_LAUNCHD_DIR": str(self.root),
+      "CALLER_ONLY": "kept",
+    }
+    self.cli = [
+      sys.executable,
+      str(SCRIPT),
+      "--socket",
+      str(self.socket),
+      "--state-dir",
+      str(self.state),
+      "--home",
+      str(home),
+      "--shell",
+      "/bin/sh",
+    ]
+    self.addCleanup(self.tmux, "kill-server", check=False)
+
+  def lazy(
+    self, *args: str, launchd: str = "1", **extra: str
+  ) -> subprocess.CompletedProcess[str]:
+    # The public CLI with the test-owned fake launchctl first on PATH.
+    return subprocess.run(  # noqa: S603
+      [*self.cli, *args],
+      env={**self.env, "TMUX_LAZY_LAUNCHD": launchd, **extra},
+      capture_output=True,
+      text=True,
+      check=False,
+      timeout=30,
+    )
+
+  def tmux(self, *args: str, check: bool = True) -> str:
+    # Literal arguments and the test's private socket only.
+    return subprocess.run(  # noqa: S603
+      [self.tmux_binary, "-S", str(self.socket), "-N", *args],
+      capture_output=True,
+      text=True,
+      check=check,
+      timeout=15,
+    ).stdout.strip()
+
+  def calls(self) -> list[str]:
+    log = self.root / "calls.log"
+    return log.read_text().splitlines() if log.exists() else []
+
+  @unittest.skipUnless(sys.platform == "darwin", "launchd is macOS-only")
+  def test_opt_in_boots_through_a_launchd_job_and_restarts_after_kill(self):
+    result = self.lazy("boot")
+    self.assertEqual(result.returncode, 0, result.stderr)
+    uid = os.getuid()
+    service = next(c for c in self.calls() if c.startswith("kickstart"))
+    self.assertEqual(
+      self.calls(), [f"print {service[10:]}", f"bootstrap gui/{uid}", service]
+    )
+    label = service.rsplit("/", 1)[1]
+    job = plistlib.loads((self.state / f"{label}.plist").read_bytes())
+    self.assertEqual(
+      job["ProgramArguments"],
+      [
+        self.tmux_binary,
+        "-D",
+        "-S",
+        str(self.socket),
+        "-f",
+        str(self.state / f"{label}.conf"),
+      ],
+    )
+    self.assertNotIn("KeepAlive", job)
+    self.assertNotIn("RunAtLoad", job)
+    # Normal lazy startup ran on the launchd-started server.
+    self.assertEqual(self.tmux("list-sessions", "-F", "#{session_name}"), "HOME")
+    self.assertEqual(self.tmux("show-option", "-sv", "exit-empty"), "on")
+    # Compare flags only: a failure must not print the caller's environment.
+    environment = self.tmux("show-environment", "-g").splitlines()
+    self.assertEqual(
+      ("CALLER_ONLY=kept" in environment, "LAUNCHD_ONLY=1" in environment),
+      (True, False),
+    )
+
+    # A running server is adopted without asking launchd for anything.
+    self.assertEqual(self.lazy("boot").returncode, 0)
+    self.assertEqual(len(self.calls()), 3)
+
+    # After kill-server the job stays registered and is only kickstarted again.
+    self.assertEqual(self.lazy("stop", "--yes").returncode, 0)
+    result = self.lazy("boot")
+    self.assertEqual(result.returncode, 0, result.stderr)
+    self.assertEqual(self.calls()[3:], [f"print {service[10:]}", service])
+    self.assertEqual(self.tmux("list-sessions", "-F", "#{session_name}"), "HOME")
+
+  @unittest.skipUnless(sys.platform == "darwin", "launchd is macOS-only")
+  def test_opt_in_leaves_a_native_server_winning_the_race_unchanged(self):
+    result = self.lazy("boot", FAKE_LAUNCHD_NATIVE_WINNER="1")
+    self.assertNotEqual(result.returncode, 0)
+    self.assertIn("concurrently", result.stderr)
+    self.assertEqual(
+      self.tmux("list-sessions", "-F", "#{session_name}"), "native-winner"
+    )
+    self.assertEqual(self.tmux("show-option", "-gqv", "@lazy_state_dir"), "")
+    environment = self.tmux("show-environment", "-g").splitlines()
+    self.assertFalse("CALLER_ONLY=kept" in environment)
+
+  def test_launchd_is_used_only_when_opted_in_on_macos(self):
+    switches = ["", "0"] if sys.platform == "darwin" else ["", "0", "1"]
+    for switch in switches:
+      with self.subTest(switch=switch):
+        result = self.lazy("boot", launchd=switch)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.calls(), [])
+        self.assertEqual(self.lazy("stop", "--yes").returncode, 0)
 
 
 if __name__ == "__main__":

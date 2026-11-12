@@ -268,6 +268,37 @@ unless explicitly overridden.
 already-configured server retains its own directory. Do not share one override
 across unrelated servers unless that is deliberate.
 
+## macOS: start the server through launchd
+
+Opt-in and macOS-only; the variable is ignored elsewhere. Export it in the
+environment of the shell that runs `tmux-lazy`:
+
+```sh
+export TMUX_LAZY_LAUNCHD=1
+```
+
+When boot has to create a server, it registers a per-user launchd job
+(`local.tmux-lazy.<socket-hash>`, plist and startup config in the state
+directory), kickstarts it, and continues the normal restore and attach. The job
+runs `tmux -D -S <socket> -f <config>` in the foreground, with no `KeepAlive` or
+`RunAtLoad`: `tmux kill-server` really ends it, and only the next boot starts it
+again. The job stays registered until logout. An already-running server is
+adopted as before, without touching launchd. The caller's environment is copied
+into the server's global environment, so panes and hooks see what a direct start
+would give them.
+
+Why: macOS privacy (TCC) attributes a server started from a terminal to that
+terminal app. When the app is updated or replaced, the running server can lose
+Local Network access until it restarts. Under launchd, the responsible program
+is the tmux binary instead.
+
+Trade-off: everything inside tmux then inherits TCC permissions (Local Network,
+files and folders, and so on) from the tmux binary, not from the terminal app.
+Prompts name tmux, and its grants are separate from the terminal's. They follow
+the tmux binary's code identity: a running server keeps its access across
+upgrades, but a server started from a rebuilt or upgraded binary may need a new
+grant, or be denied without a prompt. Check LAN access after a tmux upgrade.
+
 ## Migration and synchronization
 
 If the default server has no lazy JSON yet, its first cold start can import the
