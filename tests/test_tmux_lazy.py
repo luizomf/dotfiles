@@ -1314,6 +1314,7 @@ class LaunchdBootTests(TmuxTestCase):
       "PATH": str(binary_dir) + os.pathsep + os.environ["PATH"],
       "FAKE_LAUNCHD_DIR": str(self.root),
       "CALLER_ONLY": "kept",
+      "CALLER_SEMICOLON": "a;b\\;",
     }
     self.cli = [
       sys.executable,
@@ -1386,8 +1387,12 @@ class LaunchdBootTests(TmuxTestCase):
     # Compare flags only: a failure must not print the caller's environment.
     environment = self.tmux("show-environment", "-g").splitlines()
     self.assertEqual(
-      ("CALLER_ONLY=kept" in environment, "LAUNCHD_ONLY=1" in environment),
-      (True, False),
+      (
+        "CALLER_ONLY=kept" in environment,
+        "CALLER_SEMICOLON=a;b\\;" in environment,
+        "LAUNCHD_ONLY=1" in environment,
+      ),
+      (True, True, False),
     )
 
     # A running server is adopted without asking launchd for anything.

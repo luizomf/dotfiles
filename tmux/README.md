@@ -295,9 +295,11 @@ is the tmux binary instead.
 Trade-off: everything inside tmux then inherits TCC permissions (Local Network,
 files and folders, and so on) from the tmux binary, not from the terminal app.
 Prompts name tmux, and its grants are separate from the terminal's. They follow
-the tmux binary's code identity: a running server keeps its access across
-upgrades, but a server started from a rebuilt or upgraded binary may need a new
-grant, or be denied without a prompt. Check LAN access after a tmux upgrade.
+the tmux binary's code identity. A running server kept its access when the
+binary was replaced. A new server from a locally rebuilt tmux (same version,
+different signature identifier) was denied without a prompt until the original
+bottle was reinstalled. Check LAN access after reinstalling or upgrading tmux;
+unsetting the variable and booting from the terminal restores the default.
 
 ## Migration and synchronization
 

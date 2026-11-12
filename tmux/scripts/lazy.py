@@ -814,8 +814,11 @@ class LazyTmux:
       name = line.split("=", 1)[0]
       if not name.startswith("-") and name not in self.env:
         self.tmux("set-environment", "-gu", name)
-    # One call per variable: tmux treats a trailing ';' as a command separator.
     for name, value in self.env.items():
+      # tmux reads an argument's trailing ';' as a command separator; a final
+      # '\\;' keeps it literal.
+      if value.endswith(";"):
+        value = value[:-1] + "\\;"  # noqa: PLW2901
       self.tmux("set-environment", "-g", name, value)
 
   def restore_structure(self, state: Snapshot) -> tuple[str, str]:
