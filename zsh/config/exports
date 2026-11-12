@@ -52,6 +52,9 @@ export BAT_THEME="ansi"
 
 if [[ "$OSTYPE" == darwin* ]]; then
   PATH="/opt/homebrew/opt/curl/bin:/opt/homebrew/opt/mysql-client/bin:/opt/homebrew/opt/libpq/bin:${PATH}"
+  # Start the lazy tmux server through launchd so terminal-app updates don't
+  # cut its Local Network access (see tmux/README.md).
+  export TMUX_LAZY_LAUNCHD=1
 fi
 
 if [[ "$OSTYPE" == linux* && -x /home/linuxbrew/.linuxbrew/bin/brew ]]; then
