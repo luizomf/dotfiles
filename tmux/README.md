@@ -301,6 +301,25 @@ different signature identifier) was denied without a prompt until the original
 bottle was reinstalled. Check LAN access after reinstalling or upgrading tmux;
 unsetting the variable and booting from the terminal restores the default.
 
+Granting tmux its permissions (done on m132, 2026-11-12). Run each from a tmux
+pane and accept the prompt that names tmux:
+
+```sh
+ls ~/Desktop ~/Documents ~/Downloads /Volumes/*   # files and folders, volumes
+ping -c1 192.168.0.1                              # Local Network
+uv run -q --with pyobjc-framework-ApplicationServices --with pyobjc-framework-Quartz \
+  python -c "from ApplicationServices import *; from Quartz import *;
+print(AXIsProcessTrustedWithOptions({kAXTrustedCheckOptionPrompt: True}),
+      CGRequestListenEventAccess())"             # Accessibility, Input Monitoring
+```
+
+Accessibility shows up as "tmux" under Privacy & Security > Accessibility;
+keyboard tools such as pynput need it ("This process is not trusted!" means it's
+missing). Mail, Messages, Safari and other apps' containers stay closed without
+Full Disk Access, which doesn't prompt; nothing here needs it. After a tmux
+upgrade, rerun the commands above; if Accessibility still fails, toggle tmux off
+and on.
+
 ## Migration and synchronization
 
 If the default server has no lazy JSON yet, its first cold start can import the
