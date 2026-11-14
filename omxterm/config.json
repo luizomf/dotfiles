@@ -81,7 +81,8 @@
     "swapPaneLeft": "Command+Shift+[",
     "swapPaneRight": "Command+Shift+]",
     "swapPaneUp": "Command+Shift+\\",
-    "swapPaneDown": "Command+\\"
+    "swapPaneDown": "Command+\\",
+    "toggleAgentAccess": "Command+Shift+Y"
   },
   "notifications": {
     "sound": true
