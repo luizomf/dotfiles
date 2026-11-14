@@ -82,5 +82,8 @@
     "swapPaneRight": "Command+Shift+]",
     "swapPaneUp": "Command+Shift+\\",
     "swapPaneDown": "Command+\\"
+  },
+  "notifications": {
+    "sound": true
   }
 }
