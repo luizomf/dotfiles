@@ -77,6 +77,10 @@
     "toggleAuxiliaryPanel": "Command+Shift+S",
     "commandPalette": "Command+Shift+P",
     "moveAuxiliaryPanel": "Command+Shift+1",
-    "saveLayout": "Command+S"
+    "saveLayout": "Command+S",
+    "swapPaneLeft": "Command+Shift+[",
+    "swapPaneRight": "Command+Shift+]",
+    "swapPaneUp": "Command+Shift+\\",
+    "swapPaneDown": "Command+\\"
   }
 }
