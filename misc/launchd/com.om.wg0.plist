@@ -22,10 +22,12 @@
   <string>com.om.wg0</string>
   <key>ProgramArguments</key>
   <array>
-    <!-- wg-quick needs bash 4+; macOS /bin/bash is 3.2. -->
+    <!-- wg-quick needs bash 4+; macOS /bin/bash is 3.2. On macOS wg0 is a
+         utunN interface whose real name wg-quick stores in wg0.name, so
+         `wg show wg0` never matches. -->
     <string>/opt/homebrew/bin/bash</string>
     <string>-c</string>
-    <string>wg show wg0 &gt;/dev/null 2&gt;&amp;1 || exec wg-quick up wg0</string>
+    <string>n=$(cat /var/run/wireguard/wg0.name 2&gt;/dev/null) &amp;&amp; wg show "$n" &gt;/dev/null 2&gt;&amp;1 || exec wg-quick up wg0</string>
   </array>
   <key>EnvironmentVariables</key>
   <dict>
