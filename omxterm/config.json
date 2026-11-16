@@ -82,7 +82,9 @@
     "swapPaneRight": "Command+Shift+]",
     "swapPaneUp": "Command+Shift+\\",
     "swapPaneDown": "Command+\\",
-    "toggleAgentAccess": "Command+Shift+Y"
+    "toggleAgentAccess": "Command+Shift+Y",
+    "toggleMirrorTyping": "Command+Shift+M",
+    "togglePaneMarks": "Command+Control+M"
   },
   "notifications": {
     "sound": true
