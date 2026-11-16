@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Bring WireGuard wg0 up at boot on macOS, before any login (like
+  wg-quick@wg0 on Linux). The config stays in /etc/wireguard/wg0.conf.
+
+  It only starts wg0 when it is down, so scripts/restart_vpn keeps working.
+  A failed start (network not ready yet) retries every 30 seconds; once wg0
+  is up the job exits and launchd leaves it alone.
+
+  Install (per Mac):
+    sudo install -m 644 -o root -g wheel misc/launchd/com.om.wg0.plist /Library/LaunchDaemons/
+    sudo launchctl bootstrap system /Library/LaunchDaemons/com.om.wg0.plist
+  Remove:
+    sudo launchctl bootout system/com.om.wg0
+    sudo rm /Library/LaunchDaemons/com.om.wg0.plist
+  Log: /var/log/com.om.wg0.log
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.om.wg0</string>
+  <key>ProgramArguments</key>
+  <array>
+    <!-- wg-quick needs bash 4+; macOS /bin/bash is 3.2. -->
+    <string>/opt/homebrew/bin/bash</string>
+    <string>-c</string>
+    <string>wg show wg0 &gt;/dev/null 2&gt;&amp;1 || exec wg-quick up wg0</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+  <key>ThrottleInterval</key>
+  <integer>30</integer>
+  <key>StandardOutPath</key>
+  <string>/var/log/com.om.wg0.log</string>
+  <key>StandardErrorPath</key>
+  <string>/var/log/com.om.wg0.log</string>
+</dict>
+</plist>
