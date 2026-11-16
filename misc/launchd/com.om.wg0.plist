@@ -41,6 +41,11 @@
     <key>SuccessfulExit</key>
     <false/>
   </dict>
+  <!-- wireguard-go and the wg-quick route monitor stay in this job's process
+       group; without this launchd kills them (and the tunnel) when the job
+       exits or is unloaded. -->
+  <key>AbandonProcessGroup</key>
+  <true/>
   <key>ThrottleInterval</key>
   <integer>30</integer>
   <key>StandardOutPath</key>
