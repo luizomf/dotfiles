@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+#
+# sudo_for DURATION — passwordless sudo for the current user, for a while.
+#
+#   sudo_for 10m      grant (or extend) for 10 minutes (s, m or h; plain = s)
+#   sudo_for --status show the current grant
+#   sudo_for --revoke remove it now
+#
+# The grant is its own drop-in file, so other sudoers files stay untouched.
+# It is validated with visudo before going live. A background root timer
+# removes it; each grant carries a token, so an older timer never cuts a
+# newer grant short. If the machine reboots before expiry the timer is lost
+# and the grant stays: run `sudo_for --revoke`.
+
+set -euo pipefail
+
+dir="${SUDO_FOR_DIR:-/etc/sudoers.d}"
+owner="${SUDO_FOR_OWNER:-0:0}"
+user="${USER:-$(id -un)}"
+file="$dir/zz-sudo-for-$user"
+
+usage() {
+  sed -n '3,7p' "$0" | sed 's/^# \{0,1\}//' >&2
+  exit 2
+}
+
+case "${1:-}" in
+  --status)
+    if line="$(sudo cat "$file" 2>/dev/null | grep '^# expires ')"; then
+      printf 'Temporary grant for %s %s\n' "$user" "${line#\# }"
+    else
+      printf 'No temporary grant.\n'
+    fi
+    exit 0
+    ;;
+  --revoke)
+    sudo rm -f -- "$file"
+    printf 'Temporary grant revoked.\n'
+    exit 0
+    ;;
+  -h | --help) usage ;;
+esac
+
+[[ $# -eq 1 && "$1" =~ ^([1-9][0-9]*)([smh]?)$ ]] || usage
+amount="${BASH_REMATCH[1]}"
+case "${BASH_REMATCH[2]}" in
+  m) seconds=$((amount * 60)) ;;
+  h) seconds=$((amount * 3600)) ;;
+  *) seconds="$amount" ;;
+esac
+
+token="$(date +%s)-$$-$RANDOM"
+expires="$(date -r $(($(date +%s) + seconds)) '+%F %T' 2>/dev/null ||
+  date -d "@$(($(date +%s) + seconds))" '+%F %T')"
+tmp="$file.tmp-$token"
+
+printf '# expires %s token %s\n%s ALL=(ALL) NOPASSWD: ALL\n' \
+  "$expires" "$token" "$user" | sudo tee "$tmp" >/dev/null
+if ! sudo visudo -cf "$tmp" >/dev/null; then
+  sudo rm -f -- "$tmp"
+  printf 'sudo_for: validation failed; nothing installed.\n' >&2
+  exit 1
+fi
+sudo chmod 440 "$tmp"
+sudo chown "$owner" "$tmp"
+sudo mv -f -- "$tmp" "$file"
+
+# Remove only if the file still holds this grant's token.
+sudo nohup sh -c 'sleep "$1"; grep -q "token $2\$" "$3" 2>/dev/null && rm -f -- "$3"' \
+  sudo_for "$seconds" "$token" "$file" >/dev/null 2>&1 &
+
+printf 'Passwordless sudo for %s until %s. Revoke early: sudo_for --revoke\n' \
+  "$user" "$expires"
