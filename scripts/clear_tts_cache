@@ -13,6 +13,18 @@ OMNIVOICE_CLEAR_BIN="${OMNIVOICE_CLEAR_BIN:-$HOME/dotfiles/scripts/clear_omnivoi
 
 "$OMNIVOICE_CLEAR_BIN"
 
+# Daily Paper TTS worker jobs: the coordinator fetches each finished job, so a
+# job with its `completed` marker is a leftover. Unfinished jobs may be in use.
+# Keep the root itself; run-scoped-tts.py requires it to exist.
+DAILY_PAPER_TTS_WORK_ROOT="${DAILY_PAPER_TTS_WORK_ROOT:-$HOME/.local/state/daily-paper-tts}"
+if [[ -d "$DAILY_PAPER_TTS_WORK_ROOT" && ! -L "$DAILY_PAPER_TTS_WORK_ROOT" ]]; then
+  for job in "$DAILY_PAPER_TTS_WORK_ROOT"/*; do
+    if [[ -d "$job" && ! -L "$job" && -f "$job/completed" ]]; then
+      rm -rf -- "$job"
+    fi
+  done
+fi
+
 if [[ -d "$LOUDTERM_OUTPUT_DIR" ]]; then
   find "$LOUDTERM_OUTPUT_DIR" -maxdepth 1 -type f \
     \( -name '*_full.wav' -o -name '*_part*.wav' \) -delete
