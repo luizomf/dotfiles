@@ -122,8 +122,10 @@ ollama_update_models() {
   done
 }
 
+# Clear only this terminal: screen plus scrollback. ESC[3J also empties the
+# current tmux pane's history; an untargeted `tmux clear-history` run outside
+# a pane would wipe some other pane instead.
 clear () {
-  tmux clear-history
   printf '\e[H\e[2J\e[3J'
 }
 
