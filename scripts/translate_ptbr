@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-MODEL="${MODEL:?'Variable $MODEL not found'}"
+MODEL="${MODEL:?Variable MODEL not found}"
 
 main () {
   local prompt=''
@@ -30,11 +30,11 @@ main () {
   done
 
   if [[ -z  "${content}" ]]; then
-    printf "%s\n" "No content to clean"
+    printf "%s\n" "No content to translate"
     return 1
   fi
 
-  final_prompt="${prompt}\n\n<content>${content}</content>"
+  final_prompt="${prompt}"$'\n\n'"<content>${content}</content>"
   MODEL="$model" "${HOME}"/dotfiles/scripts/ask -p "${final_prompt}" -m "${model}" -- "$@"
 }
 
