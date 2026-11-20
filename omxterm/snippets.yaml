@@ -30,6 +30,7 @@ snippets:
         sleep 1;
       done &&
         run_all_hosts '. ~/.zshrc ; sudo wg-quick up wg0 || true';
+        ssh nas '/home/luizotavio/scripts/restart_vpn'
 
       ping -n -c 3 192.168.0.109;
       echo '\n';
