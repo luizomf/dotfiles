@@ -93,6 +93,11 @@ pull_repository() {
 
 # HOME is intentionally resolved per host; macOS and Linux use different paths.
 pull_repository "${HOME}/dotfiles" 1
+# The private environment wiki, pulled only on hosts that have its checkout.
+wiki="${HOME}/sannux-data/docs"
+if [[ -e "$wiki/.git" || -L "$wiki/.git" ]]; then
+  pull_repository "$wiki"
+fi
 
 if ! repositories_file=$(mktemp "${TMPDIR:-/tmp}/pullall.XXXXXX"); then
   fail 'repository list creation; projects not attempted' 1

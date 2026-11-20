@@ -136,6 +136,20 @@ class PullAllTests(unittest.TestCase):
       {"dotfiles", "direct", "nested repo"},
     )
 
+  def test_wiki_checkout_is_pulled_only_when_present(self):
+    (self.home / "sannux-data" / "docs").mkdir(parents=True)
+    result = self.run_pullall()
+    self.assertEqual(result.returncode, 0, result.stderr)
+    self.assertIn("1 updated, 0 dirty, 0 non-repository, 0 failed", result.stdout)
+    self.repository(self.home / "sannux-data" / "docs")
+    result = self.run_pullall()
+    self.assertEqual(result.returncode, 0, result.stderr)
+    self.assertIn("2 updated, 0 dirty, 0 non-repository, 0 failed", result.stdout)
+    self.assertEqual(
+      (self.home / "pulls").read_text().splitlines(),
+      ["dotfiles", "dotfiles", "docs"],
+    )
+
   def test_timed_out_pull_is_reported_and_remaining_repositories_continue(self):
     self.repository(self.projects / "updated")
     result = self.run_pullall(STALLED_REPO="dotfiles")

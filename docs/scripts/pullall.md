@@ -1,11 +1,11 @@
 # `pullall`
 
-`scripts/pullall` updates `~/dotfiles` and Git checkouts directly under
-`PROJECTS_DIR`. When a direct child is not a checkout, it also searches that
-child's immediate subdirectories (for example, `PROJECTS_DIR/learn/my-repo`).
-It never searches deeper or descends into an existing checkout, including
-worktrees and submodules identified by a `.git` file. Directory symlinks are not
-followed.
+`scripts/pullall` updates `~/dotfiles`, the private wiki at `~/sannux-data/docs`
+(when that checkout exists), and Git checkouts directly under `PROJECTS_DIR`.
+When a direct child is not a checkout, it also searches that child's immediate
+subdirectories (for example, `PROJECTS_DIR/learn/my-repo`). It never searches
+deeper or descends into an existing checkout, including worktrees and submodules
+identified by a `.git` file. Directory symlinks are not followed.
 
 ## Behavior
 
@@ -33,8 +33,9 @@ Each pull has a 60-second timeout, followed by TERM and up to 5 seconds before
 KILL. This bounds each pull, not the whole command or Git inspection.
 
 GNU coreutils `timeout` or `gtimeout` must be on PATH. It is provided by
-coreutils on Linux and by `homebrew/Brewfile` on macOS. The script aborts instead
-of falling back to an unbounded pull when the command is missing or incompatible.
+coreutils on Linux and by `homebrew/Brewfile` on macOS. The script aborts
+instead of falling back to an unbounded pull when the command is missing or
+incompatible.
 
 Exit 124 means timeout. Exit 137 is reported as timeout or SIGKILL because GNU
 timeout cannot distinguish its escalation from an external KILL.
