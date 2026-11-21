@@ -14,6 +14,4 @@ Codex CLI options are passed through literally.
 The ompi Pi extension uses this helper but explicitly supplies its own model and
 reasoning flags for every intent (`gpt-6-astra` at `medium` reasoning), so these
 direct-helper defaults and environment overrides do not select Pi's extension
-route. Consult ompi's README and background-tools context for its intent and
-authorization boundaries. Updating this source script does not update previously
-installed copies; deploy separately when ready.
+route; see ompi's README for that route.

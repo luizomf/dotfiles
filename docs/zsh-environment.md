@@ -1,120 +1,61 @@
 # Zsh environment ownership
 
-Zsh reads the global file before the personal file at each applicable stage:
+Zsh reads the global file before the personal file at each stage:
 
-1. `.zshenv`: every normal Zsh invocation, including non-interactive SSH
-   commands.
+1. `.zshenv`: every Zsh invocation, including non-interactive SSH commands.
 2. `.zprofile`: login shells.
 3. `.zshrc`: interactive shells.
 4. `.zlogin`: login shells, after the other stages.
 
-A variable set in `.zshenv` is not necessarily the final value. Alpine's global
-login profile resets PATH through `/etc/profile`; macOS runs `path_helper`,
-which reorders it. Later interactive toolchain initialization can modify PATH
-again. Startup-disabling flags such as `zsh -f` can bypass personal startup
-files.
+A value set in `.zshenv` is not necessarily final: Alpine's `/etc/profile`
+resets PATH, macOS's `path_helper` reorders it, and interactive toolchain setup
+changes it again.
 
 ## Where to edit
 
-- **`zsh/config/path`**: the single basic PATH policy for scripts, local
-  binaries, Cargo, Docker, and an active/inherited nvm Node. It is sourced from
-  `.zshenv`, `.zprofile`, and the end of interactive toolchain setup in
-  `config/exports`. Reapplication restores priority without duplicate entries.
-  Dotfiles scripts precede an active/inherited nvm; nvm precedes local binaries,
-  Cargo/Docker and inherited paths. This keeps application-bundled Node links in
-  `~/.local/bin` from shadowing the selected nvm runtime while preserving
-  wrappers. The initial `.zshenv` call moves system fallback directories to the
-  end, preserving its previous behavior for inherited virtualenv/custom paths.
-  Later calls preserve toolchain ordering and append missing fallbacks.
-- **`zsh/config/env`**: public defaults needed by non-interactive Zsh too, such
-  as `OLLAMA_*` and `LOCAL_MODEL`. Loaded by `.zshenv`; no credential lookup or
-  toolchain initialization belongs here. Existing overrides remain supported;
-  `MODEL` deliberately continues to follow `LOCAL_MODEL`, as before.
-- **`zsh/config/exports`**: interactive preferences and toolchain initialization
-  (Homebrew, pyenv, nvm, Bun, pnpm, completions). Tool-specific paths remain
-  beside the initialization that needs them rather than being enabled in every
-  script.
-- **`config/paths.sh`**: shared host directory variables used by shell and other
-  scripts, such as `PROJECTS_DIR`. This is not the executable PATH list.
-- **`~/.env/.env.*`**: private/local service configuration. The existing
-  interactive loader in `config/use_this_to_load` sources all these files; it
-  also supports a legacy single `~/.env` file. This behavior is unchanged. Do
-  not move these files or their Keychain lookups into `.zshenv`.
+- **`zsh/config/path`**: the single PATH policy for scripts, local binaries,
+  Cargo, Docker, and an active nvm Node. It is applied from `.zshenv`,
+  `.zprofile`, and the end of toolchain setup in `config/exports`, without
+  duplicates. Order: dotfiles scripts, nvm, local binaries, Cargo/Docker, then
+  inherited paths, so app-bundled Node links in `~/.local/bin` cannot shadow
+  nvm. The first call moves system fallback directories to the end.
+- **`zsh/config/env`**: public defaults that non-interactive Zsh also needs,
+  such as `OLLAMA_*` and `LOCAL_MODEL` (`MODEL` follows `LOCAL_MODEL`). No
+  credential lookups or toolchain initialization here.
+- **`zsh/config/exports`**: interactive preferences and toolchain setup
+  (Homebrew, pyenv, nvm, Bun, pnpm, completions). Keep tool-specific paths
+  beside the initialization that needs them.
+- **`config/paths.sh`**: shared host directories such as `PROJECTS_DIR`, not the
+  executable PATH.
+- **`~/.env/.env.*`**: private service configuration, sourced by the interactive
+  loader in `config/use_this_to_load` (a single legacy `~/.env` file also
+  works). Do not move these files or their Keychain lookups into `.zshenv`.
 
-The existing Docker Desktop block in `.zprofile` remains intact. Our shared PATH
-is applied after it, but this does not prevent Docker Desktop from editing the
-file. Managing Docker Desktop's own installation preferences is separate.
-
-This config applies to Zsh processes, not automatically to GUI applications,
-services or containers. Existing shells keep their environment until reloaded;
-open a new shell to exercise the complete startup order. No login or credential
-reset is required by this reorganization.
+The Docker Desktop block in `.zprofile` stays; the shared PATH is applied after
+it. None of this reaches GUI applications, services, or containers, and running
+shells keep their environment until reopened.
 
 ## History retention
 
-`zsh/config/config` owns `HISTSIZE` (entries retained in memory) and `SAVEHIST`
-(entries saved to disk), both set to 1,000,000. These are Zsh parameters; they
-do not need to be exported. Keep their assignments in one place.
+`zsh/config/config` sets `HISTSIZE` and `SAVEHIST` to 1,000,000 in one place.
+`scripts/zsh_history_sync.py` merges entries without a cap, and Zsh applies its
+own retention afterward, so keep the limits the same on every synced machine: a
+shell with a lower limit trims the merged history.
 
-`scripts/zsh_history_sync.py` merges all parsed entries without a size cap; Zsh
-applies its own retention and duplicate-removal settings afterward. Existing
-shells retain their old limits: open new shells or set
-`HISTSIZE=1000000 SAVEHIST=1000000` in each running shell. Update the
-configuration on every synced machine so an older shell does not trim the merged
-history back to its previous limit. Raising the limit does not restore entries
-already lost.
+## Terminal-only startup
 
-## Startup titles
-
-The interactive loader calls `scripts/title` only for an interactive shell with
-both stdin and stdout attached to a terminal. Forced-interactive SSH commands
-with pipes still load their environment and config, but do not request a title
-update. Terminal-backed tmux shells retain the asynchronous title request;
-manual `title` invocations retain their existing diagnostics. This guard does
-not change third-party plugin or ZLE initialization.
-
-## fzf terminal initialization
-
-`config/exports` sources `~/.fzf.zsh` only in interactive shells with both stdin
-and stdout attached to a terminal. Other environment/toolchain initialization
-continues unchanged, including Oh My Zsh and its configured plugins. Direct
-`fzf` commands are not disabled.
-
-With Zsh 5.9 and fzf 0.74.5, fzf's `completion.zsh` and `key-bindings.zsh` each
-save and restore the shell's option map. In a forced-interactive shell with
-neither stdin nor stdout on a TTY (`zsh -l -i +m -c`), each restoration attempts
-to enable ZLE and emits `(eval):1: can't change option: zle`. An isolated HOME
-reproduces both warnings without Oh My Zsh; loading Oh My Zsh twice without fzf
-does not reproduce them. The guard skips fzf's terminal widgets in redirected
-sessions rather than suppressing stderr or changing shell options globally.
-Normal terminal-backed startup still registers fzf widgets. Open a new shell to
-use the updated startup guard; no login/authentication reset is needed.
+The interactive loader requests a window title through `scripts/title`, and
+`config/exports` sources `~/.fzf.zsh`, only when both stdin and stdout are
+terminals. Forced-interactive commands with pipes, such as
+`ssh host 'zsh -l -i +m -c ...'`, still load the environment and config. Without
+the guard, fzf's scripts print `(eval):1: can't change option: zle` there.
 
 ## Checks
 
-`python3 -m unittest tests.test_zsh_environment` exercises non-interactive,
-interactive, login-only and login-interactive startup in temporary homes. It
-checks a simulated login PATH reset and native system startup files, shared path
-priority, an inherited nvm Node, no duplicate entries, public
-defaults/overrides, and repeated PATH application. Private env files and real
-user toolchain startup files are not loaded. Interactive tool initialization
-uses a neutral `OSTYPE` and stub `uname`/`pyenv` functions, avoiding installed
-Homebrew/pyenv initialization. These tests do not validate installed toolchain
-behavior. A separate ordering regression covers fallback-first inherited PATHs
-on simulated macOS/Linux, both at initial startup and after toolchain setup. A
-synthetic loader fixture with real PTY descriptors checks that startup titles
-require interactive terminal input and output, while environment/config loading
-continues for redirected sessions. It does not run a real title backend or tmux.
-A synthetic `~/.fzf.zsh` reproduces fzf's option save/restore through the real
-`config/exports`, covering piped, mixed-TTY, terminal-backed and non-interactive
-sessions. It asserts clean stderr, terminal-only initialization and continued
-exports/PATH setup without requiring fzf to be installed.
+```sh
+python3 -m unittest tests.test_zsh_environment
+```
 
-The fzf guard was also checked with installed fzf 0.74.5 scripts and Oh My Zsh
-in a temporary HOME/cache with updates disabled, repository config, synthetic
-local env and neutralized toolchain startup. The baseline emitted exactly two
-ZLE warnings for piped stdin/stdout; the guarded config emitted none. Terminal
-startup retained fzf, syntax-highlighting and autosuggestion functions, and the
-same history/beep preferences and PATH priority. This does not validate every
-plugin version or the original remote host, and no live SSH or private startup
-files were used.
+Covers each startup mode in temporary homes, PATH priority and deduplication,
+public defaults and overrides, and the terminal-only title and fzf guards. It
+does not load private env files or real toolchains.

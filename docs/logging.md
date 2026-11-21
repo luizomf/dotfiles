@@ -28,11 +28,10 @@ Only the label is colored, and only when its destination stream is a terminal. A
 nonempty `NO_COLOR` or `TERM=dumb` disables color. Redirected output has no ANSI
 color escapes added by these commands. Message contents are not sanitized.
 
-All levels return success when printing succeeds: `logerror` reports an error
-but does not exit the caller. Exit or return explicitly when needed. Each level
-command starts Bash and replaces itself with the adjacent `logbase` script using
-`exec`; neither script requires external utilities. Keep these commands and
-`logbase` together when copying them. Bash 3.2 and newer are supported.
+All levels return success: `logerror` does not exit the caller. Each level
+`exec`s the adjacent `logbase`, so keep them together when copying. Bash 3.2 and
+newer are supported; no external utilities are needed. There is no generic `log`
+command, to avoid colliding with macOS `log`.
 
 ## Custom labels with `logbase`
 
@@ -58,18 +57,3 @@ from arguments, not ambient `TAG`, `TEXT`, or color variables. `NO_COLOR` and
 Run the focused regression checks with `bash tests/test_logging.sh`. Set
 `BASH_BIN` to select the interpreter for direct test invocations; the
 executables still resolve Bash through their `#!/usr/bin/env bash` shebang.
-
-## Migration from Zsh functions
-
-Start a new Zsh session to stop using the old in-memory logging functions.
-Merely sourcing the edited function file does not remove definitions from an
-existing shell. No live shell reload is performed by this change.
-
-- Replace `logwarning` with `logwarn` and plain `log` calls with `loginfo`.
-- `loginfo`, `logsuccess`, and `logerror` retain their names.
-- All arguments are now printed, rather than only the first one.
-- Labels replace emoji, and warnings/errors now use stderr.
-- The former global color variables in `zsh/config/functions` are removed.
-
-No generic `log` executable is installed, avoiding a collision with macOS `log`.
-The installer's own logging functions remain separate and unchanged.

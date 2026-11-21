@@ -1,117 +1,66 @@
 # Neovim updates and targeted recovery
 
-Configuration, plugins, parsers and language-server executables have different
-update mechanisms. Installed artifacts stay outside Git because they are
-machine-local state, not portable dotfiles.
+Configuration, plugins, parsers, and language-server executables update through
+different mechanisms. Installed artifacts stay outside Git.
 
 ## Normal updates
 
-- After pulling dotfiles, use the
-  [locked restore command](#locked-plugin-restoration) below to apply
-  `nvim/lazy-lock.json`, including on fresh or incomplete installations. Pulling
-  the repository alone does not restore installed plugin versions. The installer
-  uses this same command.
-- Use `:Lazy update` when intentionally upgrading plugins beyond the current
-  lockfile. Review the resulting lockfile changes before publishing them.
-- The Tree-sitter build loads its configuration (including the custom tmux
-  parser), waits for missing configured parsers to install, then waits for
-  installed supported parsers to update. Each phase has a ten-minute wait limit;
-  unsuccessful results, task exceptions and timeouts fail the build rather than
-  being reported as completed work. The installer uses the same synchronization.
-- Lazy runs the build when that plugin needs it, not on every startup or every
-  unrelated plugin update. To synchronize parsers explicitly, including after a
-  custom parser revision changes without a plugin update, run
-  `:Lazy build nvim-treesitter`. No plugin checkout update is needed for this
-  command. The native `:TSUpdate` command remains asynchronous: wait for its
-  completion messages and inspect `:TSLog` on errors.
-- Mason is separate: `:MasonUpdate` refreshes registries, **not installed tool
-  versions**. In `:Mason`, `C` checks outdated packages, `u` updates/reinstalls
-  the selected package, and `U` updates all installed packages. Prefer a
-  targeted update when diagnosing one server. The bootstrap installs missing
-  Mason tools; it does not upgrade every installed executable. Lazy's lockfile
-  does not pin Mason package versions or project dependencies.
-- Project dependencies (including native TypeScript and project-local Ruff)
-  belong to that project's package manager. See the TypeScript/Ruff sections of
-  [development.md](development.md) for executable selection.
+- After pulling dotfiles, run the [locked restore](#locked-plugin-restoration)
+  to apply `nvim/lazy-lock.json`. Pulling alone does not change installed plugin
+  versions.
+- `:Lazy update` upgrades plugins beyond the lockfile; review the lockfile diff
+  before committing it.
+- The Tree-sitter build installs missing configured parsers (including the
+  custom tmux parser), then updates installed ones, failing on errors or after a
+  ten-minute limit per phase. Lazy runs it only when the plugin needs a build;
+  run `:Lazy build nvim-treesitter` to sync parsers explicitly. `:TSUpdate` is
+  asynchronous: wait for its messages and check `:TSLog` on errors.
+- `:MasonUpdate` refreshes registries, **not installed tools**. In `:Mason`, `C`
+  checks outdated packages, `u` updates the selected one, `U` updates all. The
+  bootstrap installs missing tools but never upgrades existing ones.
+- Project dependencies (native TypeScript, project-local Ruff) belong to the
+  project's package manager.
 
-Restart Neovim after plugin/parser updates. Already loaded Lua modules, parser
-libraries and LSP clients need not change just because files on disk changed. Do
-not start overlapping update commands or quit while work is still running.
+Restart Neovim after updates; loaded modules, parsers, and LSP clients do not
+reload by themselves. Do not run overlapping update commands.
 
 ## Locked plugin restoration
 
-Close other Neovim sessions before maintenance, then run:
+Close other Neovim sessions, then run:
 
 ```sh
 cd ~/dotfiles
 nvim --clean --headless -i NONE -l ./nvim/restore.lua
 ```
 
-This loads the checkout's configuration in a dedicated process, without first
-loading the installed user init or ShaDa. Missing Lazy still bootstraps from
-`stable` at `stdpath("data")/lazy/lazy.nvim`; existing manager directories are
-reused. The explicit restore then selects the tracked commits, including Lazy's
-own pin. Normal editor startup retains its existing stable-clone/reuse policy;
-it does **not** automatically switch an existing manager on every launch.
+This bootstraps a missing Lazy from `stable`, installs missing plugins, and
+restores every configured Git plugin to its tracked commit, including Lazy's own
+pin. The lockfile is never rewritten. Invalid locks, spec errors, unpinned
+plugins, and failed restores exit nonzero; local plugin edits are not discarded.
+A failure can leave some checkouts restored, so fix the reported cause and rerun
+instead of deleting user data.
 
-The restore process suppresses Lazy's lockfile writer **before** setup.
-Automatic missing-plugin installation and the subsequent synchronous restore
-therefore share the original lock snapshot, even when some existing plugins are
-at other revisions. It rejects plugin-spec resolution errors (including later
-spec reloads), checks installation/restore task failures and verifies the final
-commits of configured nonlocal Git plugins. The input lockfile is never
-regenerated by this command, on success or failure. Invalid locks and failed
-restores exit nonzero; local plugin edits are not discarded. This is not a
-transaction: a failure can leave some plugin checkouts or builds completed.
-Inspect the reported error, fix its cause, and rerun; do not delete user data.
+Do not use `nvim --headless '+Lazy! restore' +qa`: normal startup installs
+missing plugins and then rewrites the lockfile with every installed revision
+before restore reads it
+([issue #11](https://github.com/luizomf/dotfiles/issues/11)). `restore.lua`
+suppresses the lockfile writer through Lazy's internal `manage.lock.update` API,
+so recheck its test when updating Lazy.
 
-The narrowly scoped writer suppression uses Lazy's internal `manage.lock.update`
-API and the pre-install `LazyPlugins` event to reject failed spec imports and
-unpinned Git plugins before installation. Their behavior is tested against the
-tracked manager and the stable revision that exposed the bug. Recheck the
-regression when deliberately updating Lazy. Normal `:Lazy update` still writes
-new pins. Review and commit intentional updates; this command requires pins for
-configured nonlocal Git plugins. Disabled plugin entries remain in the input
-lockfile without being installed.
-
-The tracked lockfile now uses Lazy's native one-entry-per-line serialization and
-is excluded from Prettier. No semantic pins changed with that formatting choice.
-Native Lazy operations can write identical bytes when the installed revisions
-match the lock. Do not reformat this generated file with another formatter.
-
-Why not just `nvim --headless '+Lazy! restore' +qa`? Normal startup installs
-missing plugins first, then Lazy writes **all** installed revisions, including
-the running manager. That can replace the original pins before restore reads
-them ([issue #11](https://github.com/luizomf/dotfiles/issues/11)). In an already
-open editor, `:Lazy restore` cannot recover pins overwritten during startup. Use
-the dedicated command after pulling and before opening a fresh/incomplete
-installation. If an older bootstrap already changed your lockfile, preserve and
-review its diff first; restore the intended repository version only after
-separating any intentional updates. The command uses the current file, not Git
-history, and never resets it on your behalf.
-
-Restart Neovim after restoration so loaded modules match the restored files. No
-installer rerun, plugin upgrade or data-directory migration is needed.
+The lockfile uses Lazy's native one-entry-per-line format and is excluded from
+Prettier; do not reformat it.
 
 ## When an update fails
 
-Read the failed Lazy task and `:TSLog` before retrying. A download, compiler or
-ABI error requires addressing its reported cause; waiting correctly cannot
-repair every installation. A timeout can leave background work still finishing.
+Read the failed Lazy task and `:TSLog` before retrying. Force-reinstall one
+confirmed broken parser with `:TSInstall! typescript` (substitute the language),
+and reinstall a broken Mason tool from its UI.
 
-For a confirmed broken parser, `:TSInstall! typescript` force-reinstalls only
-that parser; substitute the affected language, such as `tsx`. This is an
-explicit repair operation, not a default startup action. Restart afterward and
-retest. For a broken Mason tool, update/reinstall that package from its UI
-instead.
-
-Do not delete the entire Neovim data directory as an update strategy: it can
-contain personal spelling additions, saved sessions and unrelated tools. Legacy
-plugin-local parser files can coexist with current `site/parser` files; check
-runtime selection before assuming they are active or deleting them. For example,
-inspect `:lua =vim.api.nvim_get_runtime_file('parser/typescript.so', true)`. The
-first candidate is the normal parser lookup winner; duplicate files alone are
-not evidence that the stale one is loaded.
+Do not delete the Neovim data directory as an update strategy: it holds spelling
+additions, sessions, and unrelated tools. Old plugin-local parser files can
+coexist with `site/parser`; check which one loads with
+`:lua =vim.api.nvim_get_runtime_file('parser/typescript.so', true)` (the first
+result wins).
 
 ## Verification
 
@@ -120,22 +69,5 @@ nvim --clean --headless -i NONE -l tests/test_nvim_locked_restore.lua
 nvim --clean --headless -i NONE -l tests/test_nvim_treesitter_update.lua
 ```
 
-The locked-restore test reads installed public Lazy source (or an explicit
-checkout path passed after the test filename), copies its Git objects into
-temporary fixtures, and enforces file-only Git transport. It needs both manager
-revisions named in the test available locally; it downloads nothing. Isolated
-HOME/XDG paths and inert local plugin repositories cover the original self-pin
-drift, clean/partial installations, fresh-process repeats, final installed
-commits, disabled entries, byte equality, native serialization, dirty plugin
-protection, unpinned-plugin rejection, initial/reloaded spec-import errors and
-failure exits. It does not load the real plugin configuration, run the installer
-or update installed plugins.
-
-The Tree-sitter check below has separate prerequisites:
-
-Requires installed nvim-treesitter. This checks the configured Lazy build and
-installer entry point using real Tree-sitter async tasks and a synthetic
-backend. It verifies waiting, failed results, exceptions and installer failure
-exits without downloads, compilation, Mason operations or loading real parser
-binaries. It does not reproduce the maintainer's historical incident or prove
-every parser is current.
+The locked-restore test needs the Lazy revisions named in the test available
+locally and downloads nothing. The Tree-sitter test needs nvim-treesitter.

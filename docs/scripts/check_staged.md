@@ -11,15 +11,9 @@ standalone equivalent is:
 scripts/check_staged
 ```
 
-It explicitly reports when nothing was checked because nothing is staged, and
-prints a success summary after the configured checks pass. On failure, the final
-message reminds you to fix the reported issue, stage the fix, and rerun
-`commit --check`.
-
-It exits successfully when nothing is staged, fails on a failed check or missing
-required executable, and refuses files that have both staged and unstaged edits.
-It never stages, unstages, restores, or auto-fixes source files. Resolve partial
-staging before retrying; the gate does not stash work behind your back.
+It exits successfully when nothing is staged, fails on a failed check or a
+missing required executable, and refuses files with both staged and unstaged
+edits. It never stages, restores, stashes, or auto-fixes files.
 
 ## Checks and dependencies
 
@@ -51,15 +45,12 @@ available on the calling process's `PATH`. ESLint and TypeScript use
 configuration in `package.json`. No tools are installed or synchronized, and no
 package scripts are run.
 
-The deployed checker deliberately does not use the dotfiles development `.venv`.
-Tool versions come from these executables, not `uv.lock`; use the
+The checker does not use the development `.venv`, so tool versions come from
+PATH, not `uv.lock`; use the
 [locked development commands](../development.md#focused-checks) for pinned
-manual verification. The installer provisions ShellCheck on all supported
-platforms and global Ruff/Pyright/Prettier unless toolchain setup is skipped.
-Existing installations may need those tools prepared separately. IDEs and
-non-interactive callers must provide their own appropriate `PATH`; the hook does
-not source interactive shell startup files. A tool installed under an old NVM
-Node version or a Homebrew prefix is not necessarily visible to SSH.
+checks. The installer provisions these tools unless toolchain setup is skipped.
+The hook does not source interactive startup files, so IDEs and SSH callers must
+provide a PATH that includes them.
 
 ## Activate in this checkout
 
@@ -73,11 +64,9 @@ installer:
 commit --help
 ```
 
-The setup command only changes this checkout's local Git configuration. It
-preserves any existing `core.hooksPath` (including inherited configuration) and
-any non-sample files in the default hooks directory. Repeated setup is safe; a
-preserved custom setup is reported as **not activated**, not silently replaced.
-It does not install tools, run checks, change global Git config, or commit.
+The setup only changes this checkout's local Git configuration. It preserves an
+existing `core.hooksPath` (including an inherited one) and non-sample files in
+the default hooks directory, reporting that case as **not activated**.
 
 To inspect activation or resolve a preserved custom setup manually:
 
@@ -99,13 +88,9 @@ Once activated, normal `git commit`, including commits made by agents and
 hook also runs `python3 -m unittest tests.test_clear_projects` when
 `scripts/clear_projects`, `tests/test_clear_projects.py`, or
 `.githooks/pre-commit` has staged changes. This focused deletion-safety suite
-uses temporary directories, not real projects, and requires `python3` on `PATH`.
-It is hook-specific: `commit --check` alone does not run this suite. The hook
-itself does not call a model and does not need `MODEL`. `commit` checks on the
-host before and after message generation, and an enabled hook checks again when
-the host makes the commit. Its model container only writes the message in a
-temporary workspace; it never needs to run the repository's hooks. There is no
-skip flag passed between these steps.
+uses temporary directories and is hook-only: `commit --check` does not run it.
+The hook never calls a model. `commit` checks before and after generating the
+message, and the hook checks again when the commit is made.
 
 To undo a newly added setting, use `git config --local --unset core.hooksPath`.
 If you replaced a previous local value, restore that value instead. This hook is
@@ -126,13 +111,10 @@ Checkers may create their normal caches or build metadata; `tsc --noEmit` can
 still update `.tsbuildinfo` for incremental/composite projects. Project tool
 configuration may execute code, so run checks only in trusted repositories.
 
-Missing configuration is reported for recognized Python/JS/TS/Prettier file
-families; it is not an error. Other files receive only the Git diff check. The
-shared checker has no Biome, StyLua, general behavior-test runner, secret
-scanner, query/N+1 detector, or architectural review. The dotfiles hook's
-focused cleanup regression suite is the exception described above. A passing
-gate only means the selected checks passed.
+Missing configuration for a recognized Python/JS/TS/Prettier file is reported,
+not an error; other files get only the Git diff check. There is no StyLua,
+secret scanning, or general test runner, so a passing gate only means the
+selected checks passed.
 
-Local hooks are bypassable (`--no-verify`, changed configuration, or edited hook
-code). They are workflow guardrails, not a security boundary. Required CI and
-branch protection would be a separate remote enforcement decision.
+Local hooks are bypassable (`--no-verify`, configuration, or edited hook code):
+they are guardrails, not a security boundary.

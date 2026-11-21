@@ -11,25 +11,18 @@ I have tested clean installations on:
 
 - Ubuntu 24.04 and 26.04 on ARM;
 - macOS Sequoia and macOS 26 on Apple Silicon;
-- Omarchy on ARM64 (disposable VM, including a repeat installation).
+- Omarchy on ARM64.
 
-I also use them daily on Fedora Asahi Remix 44 (ARM64), but Fedora has not been
-tested from a clean installation yet. Traditional Fedora and plain Arch are
-accepted; plain Arch and x86_64 Omarchy have not had clean-install tests. Debian
-is also accepted (Debian 13 ARM64 packages checked, full install not yet
-tested). Alpine has a native `apk` path (Alpine 3.24 ARM64 components tested;
-full installer and repeat full install not yet verified). LFS has a native-first
-Homebrew path; see its [base requirements](docs/installation.md#lfs). Atomic or
-OSTree variants and other Linux distributions are rejected by the installer.
+I also use them daily on Fedora Asahi Remix 44 (ARM64). Traditional Fedora,
+plain Arch, Debian, Alpine (native `apk` path), and LFS (native-first Homebrew
+path; see its [base requirements](docs/installation.md#lfs)) are accepted but
+not clean-install tested. Atomic or OSTree variants and other distributions are
+rejected by the installer.
 
 Package selections live in [`config/packages.list`](config/packages.list),
-shared by all supported systems and the macOS Brewfile. See
-[installer maintenance](docs/installation.md) for adding packages and the
-Debian/Arch/Omarchy/Alpine/LFS policies. Supported distro IDs and package
-managers live in
-[`config/install-platforms.list`](config/install-platforms.list); adding a
-distro with an existing package manager no longer requires new dispatch
-branches.
+shared by all supported systems and the macOS Brewfile; supported distro IDs
+live in [`config/install-platforms.list`](config/install-platforms.list). See
+[installer maintenance](docs/installation.md) for adding packages or distros.
 
 No major problems have shown up so far. That is not a promise that the installer
 will work on your machine.

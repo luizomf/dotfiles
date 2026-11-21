@@ -14,16 +14,11 @@ clear_projects
 `--dry-run` prints shell-escaped paths without deleting anything. The default
 uses `rm -rf`, not the trash. There is no confirmation or undo.
 
-After project cleanup, it also prunes unused Docker build cache (including
-internal/frontend cache), targeting 5 GB with
-`docker buildx prune --all --force --max-used-space 5GB`. It does not stop
-Docker or remove images, containers or volumes. Repeated runs are supported, but
-later builds may need to rebuild or fetch evicted cache. In-use/shared records
-can keep usage above the target. Only the default context's verified local Unix
-socket and default builder are used; remote context/host/builder environment
-overrides are ignored. Missing Docker, an unavailable daemon or old Buildx
-without the budget option is skipped. A prune failure warns without failing
-project cleanup. Dry runs, help and invalid arguments never invoke Docker.
+After project cleanup, it prunes unused Docker build cache to 5 GB
+(`docker buildx prune --all --force --max-used-space 5GB`) on the local default
+context and builder only. Images, containers, and volumes are never removed.
+Missing Docker or an old Buildx is skipped, a prune failure only warns, and dry
+runs never invoke Docker.
 
 ## Safety and requirements
 
@@ -38,26 +33,17 @@ project cleanup. Dry runs, help and invalid arguments never invoke Docker.
   removed, not followed by `rm`.
 - Missing cleanup directories and nondirectory project entries are skipped.
   Empty targets are a no-op. Hidden contents are included.
-- This is not a security boundary against concurrent filesystem changes or mount
-  points inside cleanup targets. Stop builds and other writers before cleanup;
-  do not use it on untrusted or mounted scratch trees.
-- A project cleanup failure stops the run; earlier deletions are not rolled
-  back. The `ERR` trap reports the failing command where Bash supports it, not
-  every expansion error.
-
-No installer or shell reload is needed when using the existing scripts path.
+- It does not guard against concurrent changes or mounts inside the targets:
+  stop builds and other writers first.
+- A failure stops the run; earlier deletions are not rolled back.
 
 ## Regression checks
 
-Run `python3 -m unittest tests.test_clear_projects` from the repository root.
-The suite launches the real Bash command with isolated `HOME` and `PROJECTS_DIR`
-fixtures in temporary directories. It checks actual deletion, preservation of
-outside files, symlinks, hidden entries, empty reruns, invalid roots and dry
-runs. Docker is replaced by a fixture executable, checking local-only routing,
-cache-only arguments, skip/failure behavior and no calls on dry runs or invalid
-input. No test contacts a real daemon. The tests also verify that the hook
-blocks a simulated failing regression suite.
+```sh
+python3 -m unittest tests.test_clear_projects
+```
 
-The [dotfiles pre-commit hook](scripts/check_staged.md) runs this suite for
-staged changes to the command, its tests or the hook. Python is a test
-dependency, not a runtime dependency of `clear_projects`.
+The suite runs the real command against temporary `HOME` and `PROJECTS_DIR`
+fixtures with a fake Docker. The
+[dotfiles pre-commit hook](scripts/check_staged.md) runs it when the command,
+its tests, or the hook are staged.
