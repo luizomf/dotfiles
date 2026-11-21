@@ -7,24 +7,6 @@ if [[ -t 0 ]]; then
   exit 2
 fi
 
-# Antigravity has no prompt-stdin mode. Sannux mounts the caller workspace at
-# /workspace, so keep large prompts out of argv and let the agent read a file.
-workspace="${CURDIR:-$PWD}"
-if [[ ! -d "$workspace" || ! -w "$workspace" ]]; then
-  printf 'sannux_agy_stdin: workspace is not a writable directory: %s\n' "$workspace" >&2
-  exit 2
-fi
-
-prompt_file="$(mktemp "$workspace/.sannux-agy-prompt.XXXXXX")"
-output_file="$(mktemp)"
-trap 'rm -f "$prompt_file" "$output_file"' EXIT
-cat > "$prompt_file"
-
-if [[ ! -s "$prompt_file" ]]; then
-  printf 'sannux_agy_stdin: stdin prompt is empty\n' >&2
-  exit 2
-fi
-
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ "${1:-}" == "agy" ]]; then
@@ -39,7 +21,8 @@ if [[ ! "$print_timeout_seconds" =~ ^[1-9][0-9]*$ ]]; then
 fi
 
 has_print_timeout=0
-for arg in "${agy_args[@]}"; do
+# The ${a[@]+...} form keeps empty arrays safe under set -u in Bash 3.2.
+for arg in ${agy_args[@]+"${agy_args[@]}"}; do
   if [[ "$arg" == "--print-timeout" || "$arg" == --print-timeout=* ]]; then
     has_print_timeout=1
     break
@@ -49,27 +32,59 @@ if (( ! has_print_timeout )); then
   agy_args+=(--print-timeout "${print_timeout_seconds}s")
 fi
 
-start_marker='<<<SANNUX_FINAL_RESPONSE>>>'
-end_marker='<<<SANNUX_END_RESPONSE>>>'
-prompt_path="/workspace/$(basename -- "$prompt_file")"
-launcher_prompt="Read and follow the complete task in ${prompt_path}. In your final response, print ${start_marker} on its own line, then the requested answer, then ${end_marker} on its own line. Do not place progress updates inside those markers."
+message_file="$(mktemp)"
+output_file="$(mktemp)"
+trap 'rm -f "$message_file" "$output_file"' EXIT
+
+# Antigravity's stream-json input reads each turn from stdin, so large prompts
+# stay out of argv. Do not ask the agent to read the prompt from a file: that
+# costs extra tool turns, and short prompts can spiral into minutes of tools.
+python3 -c '
+import json, sys
+prompt = sys.stdin.read()
+if not prompt:
+    sys.exit("sannux_agy_stdin: stdin prompt is empty")
+message = {"event": "user", "message": {"role": "user", "content": prompt}}
+print(json.dumps(message))
+' >"$message_file" || exit 2
 
 set +e
-"$script_dir/sannux_ephemeral" agy "${agy_args[@]}" --print "$launcher_prompt" </dev/null >"$output_file"
+"$script_dir/sannux_ephemeral" agy ${agy_args[@]+"${agy_args[@]}"} \
+  --input-format stream-json --output-format stream-json --print "" \
+  <"$message_file" >"$output_file"
 status=$?
 set -e
 
-if (( status != 0 )); then
-  cat "$output_file"
-  exit "$status"
-fi
+# Print only the final answer of a complete, successful turn.
+python3 - "$output_file" "$status" <<'PY'
+import json
+import sys
 
-if ! awk -v start="$start_marker" -v end="$end_marker" '
-  $0 == start { found = 1; next }
-  found && $0 == end { complete = 1; exit }
-  found { print }
-  END { if (!found || !complete) exit 1 }
-' "$output_file"; then
-  printf 'sannux_agy_stdin: Antigravity response did not contain final-response markers\n' >&2
-  exit 1
-fi
+path, status = sys.argv[1], int(sys.argv[2])
+result = None
+with open(path, encoding="utf-8", errors="replace") as stream:
+    for line in stream:
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(event, dict) and event.get("event") == "result":
+            result = event.get("result") or {}
+
+
+def fail(reason: str) -> None:
+    print(f"sannux_agy_stdin: {reason}", file=sys.stderr)
+    sys.exit(status or 1)
+
+
+if status:
+    detail = f": {result.get('error')}" if result and result.get("error") else ""
+    fail(f"Antigravity exited with {status}{detail}")
+if result is None:
+    fail("Antigravity stream had no result event")
+if result.get("status") != "SUCCESS":
+    fail(f"Antigravity status {result.get('status')}: {result.get('error', '')}")
+if result.get("finished_reason"):
+    fail(f"Antigravity turn ended early: {result['finished_reason']}")
+sys.stdout.write(result.get("response", ""))
+PY
