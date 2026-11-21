@@ -110,9 +110,12 @@ ping_agents() {
     run_ping "$host/claude-sannux" remote_command "$host" sannux run claude-code \
       -p --model "${KEEPWARM_CLAUDE_MODEL:-haiku}" --no-session-persistence
 
-    # sannux_agy_stdin mounts its working directory, so give it a scratch one.
+    # Pass the short prompt in argv: sannux_agy_stdin makes Gemini read it from
+    # a file, which sends it into a minutes-long tool loop for a one-word reply.
+    # sannux_ephemeral mounts its working directory, so give it a scratch one.
+    # shellcheck disable=SC2016 # $(cat) must expand on the remote host.
     run_ping "$host/agy-sannux" remote_command "$host" bash -c \
-      'mkdir -p ~/.cache/keepwarm-agy && cd ~/.cache/keepwarm-agy && exec sannux_agy_stdin --model "Gemini 3.8 Flash (High)" --dangerously-skip-permissions'
+      'mkdir -p ~/.cache/keepwarm-agy && cd ~/.cache/keepwarm-agy && exec sannux_ephemeral agy --model gemini-3.8-flash-low --dangerously-skip-permissions --print-timeout 120s --print "$(cat)"'
 
     # OpenAI logins paused on 2026-11-10 (back on Claude). Uncomment to resume.
     # # Preserve the maintenance model unless the owner overrides it.

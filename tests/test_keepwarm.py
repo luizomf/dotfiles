@@ -18,7 +18,7 @@ REPOSITORY = Path(__file__).resolve().parents[1]
 
 
 class KeepwarmTests(unittest.TestCase):
-  def test_once_checks_all_fifteen_ssh_targets_without_replacing_a_worker(self):
+  def test_once_checks_all_eight_ssh_targets_without_replacing_a_worker(self):
     with tempfile.TemporaryDirectory() as temporary:
       root = Path(temporary)
       home = root / "home"
@@ -81,12 +81,16 @@ class KeepwarmTests(unittest.TestCase):
             output.seek(0)
             stdout = output.read()
           records = [json.loads(line) for line in ssh_log.read_text().splitlines()]
-          self.assertEqual(len(records), 15)
+          self.assertEqual(len(records), 8)
           self.assertFalse((home / "unexpected-kill").exists())
           self.assertEqual(state_file.read_text(), "existing-worker-token\n")
           self.assertEqual(status, int(bool(failed_host)))
-          for index, host in enumerate(("m132", "m4128", "fedoraair")):
-            host_records = records[index * 5 : (index + 1) * 5]
+          # The daily driver skips its host Claude login.
+          per_host = {"m132": 2, "m4128": 3, "fedoraair": 3}
+          start = 0
+          for host, count in per_host.items():
+            host_records = records[start : start + count]
+            start += count
             self.assertTrue(all(row["args"][-2] == host for row in host_records))
             for row in host_records:
               self.assertEqual(
@@ -96,24 +100,14 @@ class KeepwarmTests(unittest.TestCase):
               self.assertIn("ConnectTimeout=10", row["args"])
               shell = shlex.split(row["args"][-1])
               self.assertEqual(shell[:5], ["zsh", "-l", "-i", "+m", "-c"])
-            nested = shlex.split(shlex.split(host_records[-1]["args"][-1])[-1])
-            self.assertEqual(
-              nested[:9],
-              [
-                "sannux",
-                "compose",
-                "pi",
-                "run",
-                "--rm",
-                "-T",
-                "--entrypoint",
-                "codex",
-                "agent",
-              ],
-            )
-            self.assertIn(f"{host}/codex-in-pi ping", stdout)
+            agy = shlex.split(shlex.split(host_records[-1]["args"][-1])[-1])
+            self.assertEqual(agy[:2], ["bash", "-c"])
+            # The prompt goes in argv, not through sannux_agy_stdin's file.
+            self.assertIn("exec sannux_ephemeral agy ", agy[2])
+            self.assertIn('--print "$(cat)"', agy[2])
+            self.assertIn(f"{host}/agy-sannux ping", stdout)
           self.assertIn(
-            "10 successful, 5 failed" if failed_host else "15 successful, 0 failed",
+            "5 successful, 3 failed" if failed_host else "8 successful, 0 failed",
             stdout,
           )
 
@@ -347,7 +341,7 @@ class KeepwarmTests(unittest.TestCase):
           self.assertLess(time.monotonic(), deadline, "inflight worker did not retire")
           time.sleep(0.02)
         self.assertEqual((home / "requests").read_text().splitlines().count("old"), 1)
-        self.assertIn("m132/codex-host ping ok: Oi", log.read_text())
+        self.assertIn("m132/claude-sannux ping ok: Oi", log.read_text())
         self.assertFalse((home / "unexpected-kill").exists())
       finally:
         for process in processes:
