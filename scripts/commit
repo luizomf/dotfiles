@@ -18,7 +18,6 @@ Quick workflow:
 Use --check on its own. Unstaged files are not selected for per-file checks.
 No staged changes means nothing was checked, not that the repository is clean.
 Inspect the active hook: git config --show-origin --get core.hooksPath
-Docs: dotfiles/docs/scripts/commit.md and check_staged.md
 EOF
 }
 

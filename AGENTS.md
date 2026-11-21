@@ -12,7 +12,8 @@ Preserve personal preferences and keep changes focused on the requested task.
 - Prefer code that is easy to understand and maintain. Add abstractions,
   dependencies, or shared helpers only when they solve a concrete current need.
 - Do not grow this file with task history, obvious advice, or speculative rules.
-  Put lasting technical details in `docs/`, preferably beside existing guidance.
+  Put lasting technical details in a script's header or `--help` first, and in
+  `docs/` only when the code cannot tell them.
 
 ## Real safety boundaries
 
@@ -30,8 +31,10 @@ Preserve personal preferences and keep changes focused on the requested task.
 
 ## Repository conventions
 
-- `README.md` covers installation and safety; `docs/` holds maintenance details.
-  Correct affected documentation when changing behavior.
+- `README.md` covers installation and safety for humans. `docs/` is
+  agent-facing: only cross-repo contracts, safety boundaries, and non-obvious
+  gotchas. Describe current behavior; change history and test reports belong in
+  commits. Correct affected documentation when changing behavior.
 - `config/paths.sh` owns shared host paths. Preserve supported `OM_PATHS_FILE`
   overrides, platform compatibility, interpreter contracts, executable bits, and
   unattended execution requirements. Prefer `$HOME` and existing path variables

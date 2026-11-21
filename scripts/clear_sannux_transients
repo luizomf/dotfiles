@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 Luiz Otávio Miranda
-"""Explicit idle maintenance, not runtime-history retention or launcher cleanup."""
+"""Remove disposable Sannux ephemeral-run homes during explicit idle maintenance.
+
+Without flags it only previews. Deleting needs `--apply --idle-confirmed`, after
+confirming nothing uses these homes. It refuses to run while matching processes
+or containers are active, and skips persistent homes, unexpected entries, and
+symlinked, foreign, mounted, or changed trees. Test: tests/test_idle_cleanup.py
+"""
 
 import argparse
 import json

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+#
+# pullall — fast-forward ~/dotfiles, ~/sannux-data/docs (if present), and the
+# Git checkouts directly under PROJECTS_DIR (or one level below a non-repository
+# child). Dirty checkouts are skipped; one failure does not stop the others.
+# Each pull has a 60s timeout (GNU timeout or gtimeout is required; there is no
+# unbounded fallback). An interrupted pull is not rolled back: inspect the
+# checkout before retrying. Test: python3 -m unittest tests.test_pullall
 
 set -uo pipefail
 

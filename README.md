@@ -63,7 +63,7 @@ The installer also enables this checkout's pre-commit checks, unless an existing
 hook setup must be preserved. A plain clone does not activate Git hooks. For an
 existing installation, run `./scripts/setup_git_hooks` after updating, without
 rerunning the installer. Use `commit --help` and `commit --check` for the quick
-workflow; see [hook setup and dependencies](docs/scripts/check_staged.md).
+workflow.
 
 **⚠️ This will replace your configuration. You have been warned. Tamo junto.**
 

@@ -19,7 +19,7 @@ if hooks_path="$(git config --get core.hooksPath)"; then
     printf 'Dotfiles hook directory is already configured.\n'
   else
     printf 'Existing core.hooksPath preserved; dotfiles hook not activated.\n'
-    printf 'See docs/scripts/check_staged.md before changing the hook setup.\n'
+    printf 'To activate anyway (replaces, not composes, existing hooks): git config --local core.hooksPath .githooks\n'
   fi
   exit 0
 else
@@ -34,7 +34,7 @@ for hook in "$hooks_dir"/*; do
   [[ -e "$hook" || -L "$hook" ]] || continue
   [[ "$hook" != *.sample ]] || continue
   printf 'Existing hooks directory preserved; dotfiles hook not activated.\n'
-  printf 'See docs/scripts/check_staged.md before changing the hook setup.\n'
+  printf 'To activate anyway (replaces, not composes, existing hooks): git config --local core.hooksPath .githooks\n'
   exit 0
 done
 

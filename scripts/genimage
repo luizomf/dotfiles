@@ -3,6 +3,9 @@
 # genimage — generate one image with a local open model through mflux.
 # Runs where mflux is installed (m4128); elsewhere it runs there over SSH and
 # copies the PNG back. Extra arguments after `--` go straight to mflux.
+# Only models whose license allows commercial use (z-image, qwen: Apache 2.0;
+# flux3, the default: FLUX Kommunity, free under US$5M yearly revenue). Check
+# the license before adding another.
 
 set -euo pipefail
 

@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+#
+# check_staged — non-fixing checks on the staged selection, shared by `commit`
+# and .githooks/pre-commit. Refuses files with both staged and unstaged edits;
+# never stages, stashes, or fixes. Tools come from PATH (not the dev .venv);
+# ESLint and tsc from the repository's node_modules/.bin. Configuration is
+# discovered at the repository root only, so whole-project checks (Pyright,
+# tsc) also see unstaged and untracked files. Run it only in trusted repos:
+# project tool configuration can execute code.
 
 set -euo pipefail
 

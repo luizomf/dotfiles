@@ -141,7 +141,7 @@ fi
 rsync_remote='PATH="/opt/homebrew/bin:/usr/local/bin:$PATH" rsync'
 
 # Ordinary sync never stops services or prunes their state. Idle maintenance
-# remains a separate explicit operation with its own guards (see docs/scripts/).
+# remains a separate explicit operation with its own guards.
 history_ready=0
 if run_step 'history merge (offline peers are optional)' "$script_dir/zsh_history_sync.py"; then
   history_ready=1

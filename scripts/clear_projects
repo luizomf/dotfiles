@@ -17,7 +17,6 @@
 # or protect mounted trees inside the targets. Never validate changes by running
 # cleanup against real projects: use tests/test_clear_projects.py and its
 # temporary fixtures. Keep the pre-commit regression gate intact.
-# See docs/clear_projects.md for the contract and remaining limitations.
 
 set -Eeuo pipefail
 
