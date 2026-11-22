@@ -30,16 +30,18 @@ snippets:
         sleep 1;
       done &&
         run_all_hosts '. ~/.zshrc ; sudo wg-quick up wg0 || true';
-        ssh nas '/home/luizotavio/scripts/restart_vpn'
+        prline;
+        echo "NAS";
+        ssh nas '/home/luizotavio/scripts/restart_vpn';
+        prline;
 
       ping -n -c 3 192.168.0.109;
       echo '\n';
       ping -n -c 3 10.100.0.109;
       echo '\n';
       ping -n -c 3 8.8.8.8;
-      echo '\n' ;
+      echo '\n';
       curl -fSsL ifconfig.me;
-      echo '\n'
     description: Use ssh to restart WireGuard in all local hosts.
     execute: false
 
