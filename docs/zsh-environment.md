@@ -18,7 +18,10 @@ changes it again.
   `.zprofile`, and the end of toolchain setup in `config/exports`, without
   duplicates. Order: dotfiles scripts, nvm, local binaries, Cargo/Docker, then
   inherited paths, so app-bundled Node links in `~/.local/bin` cannot shadow
-  nvm. The first call moves system fallback directories to the end.
+  nvm. The first call moves system fallback directories to the end. Homebrew
+  (`/opt/homebrew`, or `/home/linuxbrew/.linuxbrew` on Linux) is a fallback too,
+  so non-interactive SSH commands find brew tools such as `trash`; interactive
+  shells move it ahead in `config/exports`.
 - **`zsh/config/env`**: public defaults that non-interactive Zsh also needs,
   such as `OLLAMA_*` and `LOCAL_MODEL` (`MODEL` follows `LOCAL_MODEL`). No
   credential lookups or toolchain initialization here.

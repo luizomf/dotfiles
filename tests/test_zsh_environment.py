@@ -398,6 +398,32 @@ class ZshEnvironmentTests(unittest.TestCase):
         else:
           self.assertLess(paths.index("/usr/bin"), paths.index("/fixture/brew/bin"))
 
+  def test_linuxbrew_is_a_fallback_for_non_interactive_linux_shells(self):
+    linuxbrew = "/home/linuxbrew/.linuxbrew/bin"
+    for platform in ("linux-gnu", "darwin-test"):
+      with self.subTest(platform=platform):
+        # The sourced path is the repository-owned config, not external input.
+        result = subprocess.run(  # noqa: S603
+          [
+            str(ZSH),
+            "-dfc",
+            (
+              f'OSTYPE={platform}; source "{REPO}/zsh/config/path" --initial; '
+              "print -l -- $path"
+            ),
+          ],
+          env={"HOME": "/nonexistent", "PATH": "/usr/bin:/bin"},
+          capture_output=True,
+          text=True,
+          check=True,
+        )
+        paths = result.stdout.splitlines()
+        if platform == "linux-gnu":
+          self.assertIn(linuxbrew, paths)
+          self.assertLess(paths.index("/usr/bin"), paths.index(linuxbrew))
+        else:
+          self.assertNotIn(linuxbrew, paths)
+
   def test_path_can_be_reapplied_without_duplicates(self):
     # The sourced path is the repository-owned config, not external input.
     result = subprocess.run(  # noqa: S603

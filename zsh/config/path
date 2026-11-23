@@ -8,6 +8,9 @@
 
   if [[ "$OSTYPE" == darwin* ]]; then
     fallbacks+=(/opt/homebrew/bin /opt/homebrew/sbin)
+  elif [[ "$OSTYPE" == linux* ]]; then
+    # Non-interactive SSH never reaches config/exports' brew shellenv.
+    fallbacks+=(/home/linuxbrew/.linuxbrew/bin /home/linuxbrew/.linuxbrew/sbin)
   fi
 
   if [[ ${1:-} == --initial ]]; then
