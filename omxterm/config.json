@@ -27,8 +27,8 @@
   },
   "window": {
     "alwaysOnTop": false,
-    "blur": true,
-    "transparency": 0.2,
+    "blur": false,
+    "transparency": 0,
     "showTabBar": true,
     "showTitleBar": false,
     "auxiliaryPanelSide": "right"
