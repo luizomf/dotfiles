@@ -87,7 +87,7 @@ with consumers idle. It does not log in.
 `m4128`, and `fedoraair` over SSH: host Claude Code (skipped on the daily
 driver, whose macOS Keychain login is unreachable over SSH), Sannux Claude Code
 (`haiku`, override with `KEEPWARM_CLAUDE_MODEL`), and Sannux Antigravity
-(`gemini-3.8-flash-low`, 120-second print timeout). The OpenAI targets are
+(`gemini-4-neon-low`, 120-second print timeout). The OpenAI targets are
 commented out in the script.
 
 The `agy` ping passes its prompt in argv, not through `sannux_agy_stdin`: Gemini

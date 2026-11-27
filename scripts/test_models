@@ -114,8 +114,8 @@ for model in "${claude_models[@]}"; do
     sannux run claude-code -p --model "$model" --no-session-persistence
 done
 
-check_model 'Antigravity ephemeral home / Gemini 3.8 Flash (High)' \
-  sannux_agy_stdin --model 'Gemini 3.8 Flash (High)' --dangerously-skip-permissions
+check_model 'Antigravity ephemeral home / Gemini 4 Neon (High)' \
+  sannux_agy_stdin --model gemini-4-neon --effort high --dangerously-skip-permissions
 
 if [[ "$refresh_ok" == true ]]; then
   daily_runner="$PROJECTS_DIR/daily-paper/runners/run-pi-ephemeral.sh"
